@@ -1,4 +1,14 @@
 # 🎲 SoundBoardHTMLMaker
+<img width="663" height="462" alt="image" src="https://github.com/user-attachments/assets/4f4c43c4-777d-4db0-ab89-86984013ee00" />
+
+Editor : 
+<img width="1892" height="941" alt="image" src="https://github.com/user-attachments/assets/998db916-731f-4130-8f3d-aed2f6ce9ded" />
+<img width="1107" height="666" alt="image" src="https://github.com/user-attachments/assets/91b18f52-1fba-409a-818b-f7991e467dc6" />
+
+Player : 
+<img width="3840" height="1206" alt="image" src="https://github.com/user-attachments/assets/cb3791bd-c195-40bf-ae37-dc0e4af14aa8" />
+
+
 
 Un **template générique** pour transformer un dossier de mp3 en une **soundboard HTML autonome**, prête à être ouverte sur ordinateur ou tablette en `file://`. Pensé pour les MJ de jeux de société (Loup-Garou, JdR, Dixit, jeux narratifs…) qui veulent un panneau d'ambiances + effets sonores adaptable à n'importe quel jeu.
 
