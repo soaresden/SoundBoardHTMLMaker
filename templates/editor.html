@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Soundboard Editor</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<script>
+	console.log("🔥 HTML OK chargé");
+</script>
+<body>
+  <div class="app">
+    <div class="header">
+      <div class="header-title">🧰 Soundboard Editor</div>
+      <div class="header-project">
+        <label>Project:&nbsp;</label>
+        <input id="projectName" placeholder="My game" style="padding:4px 8px;">
+
+        <label style="margin-left:14px;">C1:</label>
+        <input type="color" id="themeColor" value="#667eea" title="Couleur principale"
+               oninput="editor.setThemeColor1(this.value)">
+
+        <label style="margin-left:6px;">C2:</label>
+        <input type="color" id="themeColor2" value="#764ba2" title="Couleur secondaire"
+               oninput="editor.setThemeColor2(this.value)">
+
+        <button class="btn btn-small" style="margin-left:10px;"
+                onclick="editor.openAutoThemePicker()" title="Générer un thème depuis une cover">
+          🎨 Auto
+        </button>
+      </div>
+      <div class="header-actions">
+        <button class="btn" onclick="editor.rescan()">🔄 Rescan</button>
+        <button class="btn btn-green" onclick="editor.save()">💾 Save config.json</button>
+      </div>
+    </div>
+
+    <div class="content" id="resizableContent">
+      <div class="panel panel-music" data-panel="music">
+        <div class="panel-header">🎵 Music</div>
+        <div class="panel-content">
+          <div id="musicTable"></div>
+        </div>
+      </div>
+
+      <div class="splitter" data-splitter="1"></div>
+
+      <div class="panel panel-sfx" data-panel="sfx">
+        <div class="panel-header">🔊 SFX</div>
+        <div class="panel-content">
+          <div id="sfxTable"></div>
+        </div>
+      </div>
+
+      <div class="splitter" data-splitter="2"></div>
+
+      <div class="panel panel-now" data-panel="cat">
+        <div class="panel-header">🏷️ Categories</div>
+        <div class="panel-content">
+          <div id="catTable"></div>
+          <div class="status-bar" id="statusBar"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale "Auto thème" : sélection d'une cover -->
+  <div id="autoThemeModal" class="modal-overlay" style="display:none;"
+       onclick="if(event.target===this) editor.closeAutoThemePicker()">
+    <div class="modal-box">
+      <div class="modal-title">🎨 Auto thème — choisis une cover</div>
+      <div class="modal-hint">Les 2 couleurs dominantes (saturées) deviennent C1 et C2.</div>
+      <div id="autoThemeGrid" class="cover-grid"></div>
+      <div style="text-align:right; margin-top:12px;">
+        <button class="btn btn-small" onclick="editor.closeAutoThemePicker()">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- splitters drag logic -->
+  <script>
+    (function() {
+      const container = document.getElementById("resizableContent");
+      if (!container) return;
+
+      // Largeurs initiales en flex (libres). On switch en pixels au premier drag.
+      const panels = container.querySelectorAll(".panel");
+      const splitters = container.querySelectorAll(".splitter");
+
+      splitters.forEach((sp) => {
+        sp.addEventListener("mousedown", (ev) => {
+          ev.preventDefault();
+          const left = sp.previousElementSibling;
+          const right = sp.nextElementSibling;
+          if (!left || !right) return;
+
+          const startX = ev.clientX;
+          const leftStart = left.getBoundingClientRect().width;
+          const rightStart = right.getBoundingClientRect().width;
+          // Fige tous les panels en pixel pour ne pas que flex rebatte
+          panels.forEach(p => {
+            const w = p.getBoundingClientRect().width;
+            p.style.flex = "0 0 " + w + "px";
+          });
+
+          const onMove = (e) => {
+            const dx = e.clientX - startX;
+            const newLeft = Math.max(160, leftStart + dx);
+            const newRight = Math.max(160, rightStart - dx);
+            left.style.flex = "0 0 " + newLeft + "px";
+            right.style.flex = "0 0 " + newRight + "px";
+          };
+          const onUp = () => {
+            document.removeEventListener("mousemove", onMove);
+            document.removeEventListener("mouseup", onUp);
+            document.body.style.cursor = "";
+          };
+          document.body.style.cursor = "col-resize";
+          document.addEventListener("mousemove", onMove);
+          document.addEventListener("mouseup", onUp);
+        });
+      });
+    })();
+  </script>
+
+  <script>
+    // cache-buster automatique pour forcer le reload de editor.js après modif
+    const s = document.createElement('script');
+    s.src = '/editor.js?v=' + Date.now();
+    document.body.appendChild(s);
+  </script>
+</body>
+</html>

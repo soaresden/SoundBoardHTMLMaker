@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Soundboard</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    {{STYLE}}
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <div class="header">
+      <div class="header-title" id="headerTitle">Soundboard</div>
+      <div class="header-actions">
+        <button class="btn btn-green" id="btnStopAll" title="Stop music + sfx">⏹ Stop all</button>
+      </div>
+    </div>
+
+    <div class="content" id="resizableContent">
+
+      <!-- NOW PLAYING -->
+      <div class="panel panel-now" data-panel="now">
+        <div class="panel-header">🎧 Now Playing</div>
+        <div class="panel-content">
+          <div class="now-card">
+            <div class="cover" id="cover">🎲</div>
+            <div class="now-title" id="nowTitle">Aucune musique</div>
+            <div class="now-sub" id="nowSub">Choisis une track à droite</div>
+
+            <div class="progress-wrap">
+              <div class="progress">
+                <div class="progress-bar" id="progressBar"></div>
+              </div>
+              <div class="time">
+                <span id="tCur">0:00</span> / <span id="tDur">0:00</span>
+              </div>
+            </div>
+
+            <div class="controls">
+              <button class="btn" id="btnPrev">⏮</button>
+              <button class="btn btn-green" id="btnPlayPause">▶</button>
+              <button class="btn btn-red" id="btnStop">⏹</button>
+              <button class="btn" id="btnNext">⏭</button>
+            </div>
+
+            <div class="sliders">
+              <div class="slider-row">
+                <div class="slider-label">🎵 Music</div>
+                <input type="range" id="musicVol" min="0" max="100" value="70">
+                <div class="slider-val" id="musicVolTxt">70%</div>
+              </div>
+              <div class="slider-row">
+                <div class="slider-label">🔊 SFX</div>
+                <input type="range" id="sfxVol" min="0" max="100" value="100">
+                <div class="slider-val" id="sfxVolTxt">100%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="splitter" data-splitter="1"></div>
+
+      <!-- MUSIC LIST -->
+      <div class="panel panel-music" data-panel="music">
+        <div class="panel-header">🎵 Music</div>
+        <div class="panel-content">
+          <div class="toolbar">
+            <input class="search" id="musicSearch" placeholder="🔎 Music…">
+            <button class="btn-view" id="btnViewMode" title="Basculer liste / vignettes">⊞</button>
+          </div>
+          <div id="musicList" class="list"></div>
+        </div>
+      </div>
+
+      <div class="splitter" data-splitter="2"></div>
+
+      <!-- SFX -->
+      <div class="panel panel-sfx" data-panel="sfx">
+        <div class="panel-header">🔊 SFX</div>
+        <div class="panel-content">
+          <div class="toolbar">
+            <input class="search" id="sfxSearch" placeholder="🔎 SFX…">
+          </div>
+          <div id="sfxList" class="sfx-container"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const CONFIG = {{CONFIG}};
+  </script>
+
+  <script>
+    // ---- SPLITTERS : drag pour redimensionner les 3 panneaux ----
+    (function() {
+      const container = document.getElementById("resizableContent");
+      if (!container) return;
+      const panels = container.querySelectorAll(".panel");
+      const splitters = container.querySelectorAll(".splitter");
+      splitters.forEach((sp) => {
+        const begin = (clientX) => {
+          const left = sp.previousElementSibling;
+          const right = sp.nextElementSibling;
+          if (!left || !right) return null;
+          const startX = clientX;
+          const leftStart = left.getBoundingClientRect().width;
+          const rightStart = right.getBoundingClientRect().width;
+          panels.forEach(p => {
+            const w = p.getBoundingClientRect().width;
+            p.style.flex = "0 0 " + w + "px";
+          });
+          return { left, right, startX, leftStart, rightStart };
+        };
+        const move = (state, clientX) => {
+          if (!state) return;
+          const dx = clientX - state.startX;
+          const newLeft = Math.max(160, state.leftStart + dx);
+          const newRight = Math.max(160, state.rightStart - dx);
+          state.left.style.flex = "0 0 " + newLeft + "px";
+          state.right.style.flex = "0 0 " + newRight + "px";
+        };
+        sp.addEventListener("mousedown", (ev) => {
+          ev.preventDefault();
+          const state = begin(ev.clientX);
+          if (!state) return;
+          const onMove = (e) => move(state, e.clientX);
+          const onUp = () => {
+            document.removeEventListener("mousemove", onMove);
+            document.removeEventListener("mouseup", onUp);
+            document.body.style.cursor = "";
+          };
+          document.body.style.cursor = "col-resize";
+          document.addEventListener("mousemove", onMove);
+          document.addEventListener("mouseup", onUp);
+        });
+        sp.addEventListener("touchstart", (ev) => {
+          const state = begin(ev.touches[0].clientX);
+          if (!state) return;
+          const onMove = (e) => move(state, e.touches[0].clientX);
+          const onEnd = () => {
+            document.removeEventListener("touchmove", onMove);
+            document.removeEventListener("touchend", onEnd);
+          };
+          document.addEventListener("touchmove", onMove, { passive: true });
+          document.addEventListener("touchend", onEnd);
+        }, { passive: true });
+      });
+    })();
+  </script>
+
+  <script>
+    {{PLAY_JS}}
+  </script>
+
+  <script>
+    {{EDITOR_JS}}
+  </script>
+
+</body>
+</html>
