@@ -132,7 +132,7 @@
     currentIndex = idx;
     const t = musics[currentIndex];
     lastTrack = t;
-    musicAudio.src = "music/" + t.file;
+    musicAudio.src = (t.file && t.file.startsWith("data:")) ? t.file : ("music/" + t.file);
     musicAudio.volume = Math.max(0, Math.min(1, (t.volume ?? musicVolume)));
     musicAudio.currentTime = 0;
     musicAudio.play();
@@ -179,7 +179,8 @@
   // ----- SFX -----
   const sfxPool = [];
   const playSfx = (file, perTrackVol) => {
-    const a = new Audio("sfx/" + file);
+    const src = (file && file.startsWith("data:")) ? file : ("sfx/" + file);
+    const a = new Audio(src);
     const v = (perTrackVol == null ? 1.0 : Number(perTrackVol)) * sfxVolume;
     a.volume = Math.max(0, Math.min(1, v));
     a.preload = "auto";

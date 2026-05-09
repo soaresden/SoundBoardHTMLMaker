@@ -898,3 +898,115 @@ input[type="range"]{ width:100%; accent-color:var(--accent); }
 .splitter:hover, .splitter:active {
   background: rgba(102,126,234,0.5);
 }
+
+/* =================================================================
+   RESPONSIVE — TABLETTE (≤ 1024px)
+   ================================================================= */
+@media (max-width: 1024px) {
+  .header { padding: 8px 12px; }
+  .header-title { font-size: 16px; }
+  .panel-music { min-width: 0; flex: 1.2; }
+  .panel-sfx   { min-width: 0; }
+  .panel-now   { min-width: 220px; }
+  .sfx-grid    { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 4px; }
+  .sfx-btn     { height: 34px; font-size: 11px; }   /* + tactile */
+}
+
+/* =================================================================
+   RESPONSIVE — TÉLÉPHONE (≤ 700px)
+   ================================================================= */
+@media (max-width: 700px) {
+  html, body { overflow: auto; height: auto; }
+  .app { height: auto; min-height: 100vh; }
+
+  /* Header en colonne */
+  .header {
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 10px;
+    text-align: center;
+  }
+  .header-title { font-size: 15px; line-height: 1.2; }
+  .header-actions { width: 100%; justify-content: center; }
+
+  /* Panneaux empilés en colonne, plus de splitters */
+  .content {
+    flex-direction: column;
+    overflow: visible;
+    padding: 6px;
+    gap: 6px;
+    height: auto;
+  }
+  .splitter { display: none; }
+  .panel {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-height: none;
+  }
+  .panel-content { overflow-y: visible; }
+
+  /* Now Playing : compact, cover plus petite */
+  .panel-now { order: 1; }
+  .panel-now .now-card { display: grid; grid-template-columns: 90px 1fr; gap: 10px; }
+  .panel-now .cover {
+    width: 90px; height: 90px; aspect-ratio: 1;
+    margin-bottom: 0;
+    font-size: 22px;
+  }
+  .panel-now .now-title { font-size: 12px; }
+  .panel-now .now-sub { font-size: 10px; }
+  .panel-now .progress-wrap,
+  .panel-now .controls,
+  .panel-now .sliders { grid-column: 1 / -1; }
+  .panel-now .controls { gap: 6px; }
+  .panel-now .controls .btn { padding: 8px; font-size: 13px; }
+  .panel-now .sliders { gap: 6px; }
+  .panel-now .slider-row { grid-template-columns: 60px 1fr 40px; }
+
+  /* Music : ordre 2 */
+  .panel-music { order: 2; }
+
+  /* SFX : ordre 3, boutons gros pour le tactile */
+  .panel-sfx { order: 3; }
+  .sfx-grid {
+    grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+    gap: 5px;
+  }
+  .sfx-btn {
+    height: 42px;          /* tactile : >40px = confort */
+    font-size: 12px;
+    padding: 0 4px;
+  }
+
+  /* Music vignettes : encore plus petites pour gagner */
+  .list.list-grid .music-cat > .track-grid-wrap {
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+    gap: 4px;
+  }
+  .list.list-grid .track-name { font-size: 9px; }
+
+  /* Toolbar */
+  .toolbar { flex-direction: row; }
+  .search { font-size: 12px; height: 30px; }
+  .btn-view { width: 30px; height: 30px; }
+
+  /* Header de panel */
+  .panel-header { padding: 8px 10px; font-size: 11px; }
+}
+
+/* =================================================================
+   RESPONSIVE — TÉLÉPHONE PORTRAIT ÉTROIT (≤ 380px)
+   ================================================================= */
+@media (max-width: 380px) {
+  .panel-now .now-card {
+    grid-template-columns: 1fr;     /* cover au-dessus, infos en-dessous */
+    text-align: center;
+  }
+  .panel-now .cover { width: 100%; max-width: 180px; height: auto; margin: 0 auto; }
+  .sfx-grid { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
+  .sfx-btn { font-size: 11px; height: 38px; }
+  .list.list-grid .music-cat > .track-grid-wrap {
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  }
+}

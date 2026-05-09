@@ -1,24 +1,16 @@
 # =========================================
-#  CONTENU UTILISATEUR (mp3 perso, covers générées)
-#  -> chacun son contenu, on partage que le code/template
+#  Le projet 'Loup-Garou' fourni est un EXEMPLE versionné
+#  pour montrer une utilisation concrète du template.
+#  Si tu fork pour ton propre jeu : tu peux soit tout garder
+#  pour tester, soit dégager music/ sfx/ covers/ config.json.
 # =========================================
-music/*
-sfx/*
-covers/*
-!music/.gitkeep
-!sfx/.gitkeep
-!covers/.gitkeep
 
 # =========================================
-#  BUILD OUTPUTS (régénérés à chaque build/scan)
+#  BUILD OUTPUTS (régénérés à chaque build)
 # =========================================
 FOLDERTOEXPORT/
 output.html
-
-# =========================================
-#  CONFIG LOCAL (généré au scan, propre à chaque projet)
-# =========================================
-config.json
+output_portable.html
 
 # =========================================
 #  PYTHON
@@ -43,9 +35,3 @@ desktop.ini
 *.swp
 *.swo
 *~
-
-# =========================================
-#  Anciens fichiers (à la racine, non utilisés)
-#  scan_files.py / build_config.py / build_html.py à la racine
-#  sont legacy et peuvent être supprimés manuellement.
-# =========================================

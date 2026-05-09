@@ -25,6 +25,7 @@ echo 2. Ouvrir Editor
 echo 3. Build Player
 echo 4. Scan + Build
 echo 5. Build + Open Player
+echo 6. Build PORTABLE (un seul fichier HTML, ideal tablette)
 echo 0. Quit (kill serveur)
 echo.
 set /p choice=Choix :
@@ -34,6 +35,7 @@ if "%choice%"=="2" goto edit
 if "%choice%"=="3" goto build
 if "%choice%"=="4" goto scanbuild
 if "%choice%"=="5" goto launch
+if "%choice%"=="6" goto portable
 if "%choice%"=="0" goto quit
 
 goto menu
@@ -69,6 +71,20 @@ echo Scan + Build...
 python build.py scan
 python build.py build
 echo ✅ Terminé !
+pause
+goto menu
+
+:portable
+cls
+echo Build PORTABLE (mp3 + covers inlines en base64)...
+echo Patience, ca peut prendre 30s+ selon la taille des mp3.
+python build.py portable
+
+IF EXIST FOLDERTOEXPORT\output_portable.html (
+    echo.
+    echo Fichier pret : FOLDERTOEXPORT\output_portable.html
+    echo Copie-le sur ta tablette, il se suffit a lui-meme.
+)
 pause
 goto menu
 
