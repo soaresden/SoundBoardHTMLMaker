@@ -6,7 +6,8 @@ Editor :
 <img width="1107" height="666" alt="image" src="https://github.com/user-attachments/assets/91b18f52-1fba-409a-818b-f7991e467dc6" />
 
 Player : 
-<img width="3840" height="1206" alt="image" src="https://github.com/user-attachments/assets/cb3791bd-c195-40bf-ae37-dc0e4af14aa8" />
+<img width="1881" height="947" alt="image" src="https://github.com/user-attachments/assets/ef1c5615-bb63-4e80-afa3-e071cb132cbd" />
+
 
 
 
