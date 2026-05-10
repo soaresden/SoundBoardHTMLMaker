@@ -11,8 +11,16 @@
       "pos": 1
     },
     {
-      "name": "Jour",
+      "name": "Nuit - Lycans",
       "pos": 2
+    },
+    {
+      "name": "Jour",
+      "pos": 3
+    },
+    {
+      "name": "Vie du Village",
+      "pos": 4
     }
   ],
   "sfxCategories": [
@@ -135,8 +143,8 @@
       "title": "Veillée des loups",
       "disc": 0,
       "track": 0,
-      "category": "Jour",
-      "pos": 5,
+      "category": "Vie du Village",
+      "pos": 1,
       "volume": 0.7,
       "cover": "covers/Veillée_des_loups.mp3.jpg"
     },
@@ -145,10 +153,50 @@
       "title": "Qui est mort ?!",
       "disc": 0,
       "track": 5,
-      "category": "Jour",
-      "pos": 6,
+      "category": "Vie du Village",
+      "pos": 2,
       "volume": 0.7,
       "cover": "covers/05_Mission_Objective.mp3.jpg"
+    },
+    {
+      "file": "Wolfsbane Square (1).mp3",
+      "title": "Wolfsbane Square",
+      "disc": 0,
+      "track": 0,
+      "category": "Nuit",
+      "pos": 1,
+      "volume": 0.7,
+      "cover": "covers/Wolfsbane_Square__1_.mp3.jpg"
+    },
+    {
+      "file": "Wolfsbane Square.mp3",
+      "title": "Wolfsbane Square",
+      "disc": 0,
+      "track": 0,
+      "category": "Nuit",
+      "pos": 2,
+      "volume": 0.7,
+      "cover": "covers/Wolfsbane_Square.mp3.jpg"
+    },
+    {
+      "file": "Moonlit Village (1).mp3",
+      "title": "Moonlit Village",
+      "disc": 0,
+      "track": 0,
+      "category": "Nuit - Lycans",
+      "pos": 1,
+      "volume": 0.7,
+      "cover": "covers/Moonlit_Village__1_.mp3.jpg"
+    },
+    {
+      "file": "Moonlit Village.mp3",
+      "title": "Moonlit Village",
+      "disc": 0,
+      "track": 0,
+      "category": "Nuit - Lycans",
+      "pos": 2,
+      "volume": 0.7,
+      "cover": "covers/Moonlit_Village.mp3.jpg"
     }
   ],
   "sfx": [

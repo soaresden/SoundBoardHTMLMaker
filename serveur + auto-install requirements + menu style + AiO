@@ -1,0 +1,19 @@
+warning: in the working copy of 'build.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'runme.bat', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server_static.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/build_html.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'templates/base.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'templates/editor.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'templates/play.js', LF will be replaced by CRLF the next time Git touches it
+ README.md            |   4 [32m+[m[31m-[m
+ build.py             | 180 [32m++++++++++++++++++++++++++++++++++++++++[m[31m-----------[m
+ config.json          |  58 [32m+++++++++++++++[m[31m--[m
+ covers/.gitkeep      |   2 [31m-[m
+ runme.bat            | 173 [32m++++++++++++++++++++++++++++++++++[m[31m---------------[m
+ server_static.py     | 109 [32m++++++++++++++++++++++++++++++[m[31m-[m
+ src/build_html.py    |  24 [32m++++[m[31m---[m
+ templates/base.html  |  48 [32m++++++++++++++[m
+ templates/editor.js  |  91 [32m+++++++++++++++++++++++++[m[31m-[m
+ templates/play.js    |  64 [32m+++++++++++++++++[m[31m-[m
+ templates/styles.css |  34 [32m++++++++++[m
+ 11 files changed, 675 insertions(+), 112 deletions(-)

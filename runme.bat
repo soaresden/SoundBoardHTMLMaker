@@ -1,103 +1,174 @@
 @echo off
 chcp 65001 >nul
+setlocal enabledelayedexpansion
 cls
 
-echo 🔥 Reset serveur...
+REM ============================================================
+REM   CHECK PYTHON
+REM ============================================================
+where python >nul 2>&1
+if errorlevel 1 (
+    echo.
+    echo [ERREUR] Python n'est pas installe ou pas dans le PATH.
+    echo Installe Python 3 depuis https://www.python.org/downloads/
+    echo et coche "Add Python to PATH" pendant l'installation.
+    pause
+    exit /b 1
+)
+
+REM ============================================================
+REM   CHECK REQUIREMENTS (mutagen)
+REM ============================================================
+python -c "import mutagen" >nul 2>&1
+if errorlevel 1 (
+    echo.
+    echo [SETUP] Installation des dependances Python...
+    python -m pip install -r requirements.txt
+    if errorlevel 1 (
+        echo [ERREUR] L'installation a echoue. Lance manuellement :
+        echo    pip install -r requirements.txt
+        pause
+        exit /b 1
+    )
+    echo [OK] Dependances installees.
+    timeout /t 2 >nul
+)
+
+REM ============================================================
+REM   RESET + LANCE LE SERVEUR EN ARRIERE-PLAN
+REM ============================================================
 taskkill /IM pythonw.exe /F >nul 2>&1
 taskkill /F /FI "WINDOWTITLE eq SoundboardServer*" >nul 2>&1
-
-echo 🚀 Lancement serveur static (silencieux, en arrière-plan)...
-REM pythonw.exe = Python sans fenêtre console -> 1 seule fenêtre au total
 start "SoundboardServer" /B pythonw "%~dp0server_static.py"
-
 timeout /t 2 >nul
 
 :menu
 cls
-echo =============================
-echo SOUNDBOARD BUILDER
-echo =============================
 echo.
-echo Serveur: http://127.0.0.1:8765/editor (silencieux)
+echo  ╔═══════════════════════════════════════════════════════╗
+echo  ║                                                       ║
+echo  ║   ♬   S O U N D B O A R D   B U I L D E R   ♪         ║
+echo  ║                                                       ║
+echo  ║   ▸ Editor live  : http://127.0.0.1:8765/editor       ║
+echo  ║   ▸ Project root : %~dp0
+echo  ║                                                       ║
+echo  ╚═══════════════════════════════════════════════════════╝
 echo.
-echo 1. Scan fichiers (config.json)
-echo 2. Ouvrir Editor
-echo 3. Build Player
-echo 4. Scan + Build
-echo 5. Build + Open Player
-echo 6. Build PORTABLE (un seul fichier HTML, ideal tablette)
-echo 0. Quit (kill serveur)
+echo    ┌─ ACTIONS ──────────────────────────────────────────┐
+echo    │                                                    │
+echo    │   [1]  Scan fichiers       (mp3 → config.json)     │
+echo    │   [2]  Ouvrir Editor       (browser)               │
+echo    │   ──                                               │
+echo    │   [3]  Build LIGHT         + Open Player           │
+echo    │   [4]  Build AiO           + Open Player           │
+echo    │   [5]  Build TOUT          + Open Player           │
+echo    │   ──                                               │
+echo    │   [0]  Quit  (kill serveur)                        │
+echo    │                                                    │
+echo    └────────────────────────────────────────────────────┘
 echo.
-set /p choice=Choix :
+set /p choice=    ▸ Ton choix :
 
 if "%choice%"=="1" goto scan
 if "%choice%"=="2" goto edit
-if "%choice%"=="3" goto build
-if "%choice%"=="4" goto scanbuild
-if "%choice%"=="5" goto launch
-if "%choice%"=="6" goto portable
+if "%choice%"=="3" goto build_light
+if "%choice%"=="4" goto build_aio
+if "%choice%"=="5" goto build_all
 if "%choice%"=="0" goto quit
 
 goto menu
 
 :quit
-echo 🛑 Arrêt du serveur...
+cls
+echo.
+echo    ▸ Arret du serveur Soundboard...
 taskkill /IM pythonw.exe /F >nul 2>&1
+echo    ▸ Bye.
+timeout /t 1 >nul
 exit
 
 :scan
 cls
-echo Scan des fichiers...
+echo.
+echo  ▸▸▸ SCAN des fichiers mp3
+echo  ─────────────────────────────────────
 python build.py scan
+echo.
 pause
 goto menu
 
 :edit
 cls
-echo Ouverture de l editor...
+echo  ▸▸▸ Ouverture de l'editor dans le navigateur...
 start http://127.0.0.1:8765/editor
 goto menu
 
-:build
+:build_light
 cls
-echo Build du player...
+echo.
+echo  ▸▸▸ BUILD LIGHT (index.html + dossiers)
+echo  ─────────────────────────────────────
 python build.py build
+
+set "PLAYER="
+for /f "usebackq delims=" %%I in (`python "_get_export_path.py" output`) do set "PLAYER=%%I"
+
+IF DEFINED PLAYER (
+    IF EXIST "%PLAYER%" (
+        echo.
+        echo  ▸ Ouverture : %PLAYER%
+        start "" "%PLAYER%"
+    ) ELSE (
+        echo  [ERR] fichier non trouve : "%PLAYER%"
+    )
+)
+echo.
 pause
 goto menu
 
-:scanbuild
+:build_aio
 cls
-echo Scan + Build...
-python build.py scan
-python build.py build
-echo ✅ Terminé !
-pause
-goto menu
-
-:portable
-cls
-echo Build PORTABLE (mp3 + covers inlines en base64)...
-echo Patience, ca peut prendre 30s+ selon la taille des mp3.
+echo.
+echo  ▸▸▸ BUILD ALL-IN-ONE (un seul fichier autonome)
+echo  ─────────────────────────────────────
+echo  Patience, encodage base64 en cours...
 python build.py portable
 
-IF EXIST FOLDERTOEXPORT\output_portable.html (
-    echo.
-    echo Fichier pret : FOLDERTOEXPORT\output_portable.html
-    echo Copie-le sur ta tablette, il se suffit a lui-meme.
+set "PLAYER="
+for /f "usebackq delims=" %%I in (`python "_get_export_path.py" portable`) do set "PLAYER=%%I"
+
+IF DEFINED PLAYER (
+    IF EXIST "%PLAYER%" (
+        echo.
+        echo  ▸ Ouverture : %PLAYER%
+        start "" "%PLAYER%"
+    ) ELSE (
+        echo  [ERR] fichier non trouve : "%PLAYER%"
+    )
 )
+echo.
 pause
 goto menu
 
-:launch
+:build_all
 cls
-echo Build + ouverture...
-python build.py build
+echo.
+echo  ▸▸▸ BUILD COMPLET (light + all-in-one)
+echo  ─────────────────────────────────────
+python build.py all
 
-IF EXIST FOLDERTOEXPORT\output.html (
-    start "" "FOLDERTOEXPORT\output.html"
-) ELSE (
-    echo ERR FOLDERTOEXPORT\output.html introuvable !
+set "PLAYER="
+for /f "usebackq delims=" %%I in (`python "_get_export_path.py" output`) do set "PLAYER=%%I"
+
+IF DEFINED PLAYER (
+    IF EXIST "%PLAYER%" (
+        echo.
+        echo  ▸ Ouverture (light) : %PLAYER%
+        start "" "%PLAYER%"
+    ) ELSE (
+        echo  [ERR] fichier non trouve : "%PLAYER%"
+    )
 )
-
+echo.
 pause
 goto menu

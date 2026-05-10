@@ -18,10 +18,57 @@
 </head>
 
 <body>
+  <!-- ===== INITIAL LOADER (visible immédiatement, retiré au DOMContentLoaded) ===== -->
+  <div id="initialLoader" style="
+       position:fixed; inset:0; z-index:99999;
+       background:#0a0612; color:#fff;
+       display:flex; flex-direction:column; align-items:center; justify-content:center;
+       font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;
+       transition:opacity 0.35s ease;">
+    <div style="font-size:22px; font-weight:800; letter-spacing:0.5px;">🎵 Soundboard</div>
+    <div style="font-size:11px; opacity:0.55; margin-top:4px;" id="initialLoaderSub">Préparation de l'audio…</div>
+    <div style="width:240px; height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; margin-top:18px;">
+      <div id="initialLoaderBar" style="height:100%; width:0%;
+           background:linear-gradient(90deg, #5174db, #c77dff);
+           transition:width 0.25s ease; border-radius:3px;"></div>
+    </div>
+    <div style="font-size:9px; opacity:0.35; margin-top:14px; font-family:monospace;" id="initialLoaderPct">0%</div>
+  </div>
+  <script>
+    // Loader fake-progress qui monte vite jusqu'à ~90% puis attend DOMContentLoaded.
+    // Visible quelques ms en mode light, plusieurs secondes en portable (HTML lourd).
+    (function(){
+      var bar = document.getElementById("initialLoaderBar");
+      var pct = document.getElementById("initialLoaderPct");
+      var p = 0;
+      var t = setInterval(function(){
+        p = Math.min(92, p + (100 - p) * 0.06);
+        bar.style.width = p + "%";
+        pct.textContent = Math.floor(p) + "%";
+      }, 80);
+      window.__finishLoader = function(){
+        clearInterval(t);
+        bar.style.width = "100%";
+        pct.textContent = "100%";
+        var loader = document.getElementById("initialLoader");
+        if (loader) {
+          loader.style.opacity = "0";
+          setTimeout(function(){ loader.remove(); }, 350);
+        }
+      };
+    })();
+  </script>
+
   <div class="app">
     <div class="header">
       <div class="header-title" id="headerTitle">Soundboard</div>
       <div class="header-actions">
+        <a class="btn btn-switch" id="btnSwitchVersion"
+           href="{{OTHER_VERSION}}"
+           title="{{SWITCH_TITLE}}">{{SWITCH_LABEL}}</a>
+        <button class="btn btn-switch" id="btnDownload"
+                title="Télécharger ce HTML autonome (un seul fichier)"
+                style="display:none;">⬇ Télécharger</button>
         <button class="btn btn-green" id="btnStopAll" title="Stop music + sfx">⏹ Stop all</button>
       </div>
     </div>
@@ -91,6 +138,7 @@
         <div class="panel-content">
           <div class="toolbar">
             <input class="search" id="sfxSearch" placeholder="🔎 SFX…">
+            <button class="btn-stop-sfx" id="btnStopSfx" title="Stop tous les SFX en cours (laisse la musique)">⏹</button>
           </div>
           <div id="sfxList" class="sfx-container"></div>
         </div>

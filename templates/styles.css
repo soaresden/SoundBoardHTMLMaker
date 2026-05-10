@@ -100,6 +100,19 @@ body {
 
 .btn-green { background: linear-gradient(135deg, #00c853, #64dd17); color: #06120a; }
 .btn-red { background: linear-gradient(135deg, #ff1744, #ff6e40); color: #210105; }
+.btn-switch {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  color: #fff;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  font-weight: 700;
+}
+.btn-switch:hover {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 65%, transparent);
+}
 
 /* NOW PLAYING CARD */
 .now-card{
@@ -211,6 +224,27 @@ input[type="range"]{ width:100%; accent-color:var(--accent); }
 .btn-view:hover {
   background: color-mix(in srgb, var(--accent) 22%, transparent);
   border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+/* Bouton "Stop SFX" dans la toolbar du panel SFX */
+.btn-stop-sfx {
+  width: 26px; height: 26px;
+  background: rgba(255,80,80,0.15);
+  border: 1px solid rgba(255,80,80,0.35);
+  color: #ff8a8a;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  display:flex; align-items:center; justify-content:center;
+  transition: 0.12s;
+}
+.btn-stop-sfx:hover {
+  background: rgba(255,80,80,0.30);
+  border-color: rgba(255,80,80,0.55);
+}
+.btn-stop-sfx:active {
+  transform: scale(0.94);
 }
 .hint{ font-size: 10px; color:#a0a9b8; }
 

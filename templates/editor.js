@@ -14,6 +14,8 @@ const editor = {
       const r = await fetch("config.json?ts=" + Date.now(), { cache: "no-store" });
       this.cfg = await r.json();
       this._ensureShape();
+      // Détecte (pour info) les orphelins au load — ils seront fixés au save.
+      this._cleanOrphans();
       this.initAudio();
       this.render();
     } catch (e) {
@@ -272,7 +274,9 @@ const editor = {
            ondragend="editor._dragEnd(event)">
         <span class="drag-handle" title="Glisse pour réordonner">⋮⋮</span>
         <input class="cat-input" value="${this._esc(c.name)}"
-               oninput="editor.renameCategory('${kind}', ${i}, this.value)">
+               oninput="editor.renameCategory('${kind}', ${i}, this.value)"
+               onchange="editor.render()"
+               onblur="editor.render()">
         <button class="btn-x" onclick="editor.deleteCategory('${kind}', ${i})" title="Supprimer">✕</button>
       </div>`).join("");
   },
@@ -344,6 +348,33 @@ const editor = {
     const oldName = list[idx].name;
     list[idx].name = newName;
     items.forEach(it => { if (it.category === oldName) it.category = newName; });
+
+    // Propage IMMEDIATEMENT le rename dans tous les <select> de la table
+    // correspondante, pour pas attendre un re-render (qui casserait le focus
+    // de l'input de rename).
+    const tableId = kind === "music" ? "musicTable" : "sfxTable";
+    const tableEl = document.getElementById(tableId);
+    if (!tableEl) return;
+    tableEl.querySelectorAll("select").forEach(sel => {
+      sel.querySelectorAll("option").forEach(opt => {
+        if (opt.value === oldName) {
+          opt.value = newName;
+          opt.textContent = newName;
+        }
+      });
+      // Met aussi a jour le séparateur de catégorie dans la table
+      // (les data-cat des rows et le label visible)
+    });
+    tableEl.querySelectorAll("tr.cat-separator").forEach(sep => {
+      if (sep.dataset.cat === oldName) {
+        sep.dataset.cat = newName;
+        const td = sep.querySelector("td");
+        if (td) td.textContent = newName;
+      }
+    });
+    tableEl.querySelectorAll("tr[data-cat]").forEach(row => {
+      if (row.dataset.cat === oldName) row.dataset.cat = newName;
+    });
   },
 
   deleteCategory(kind, idx) {
@@ -625,6 +656,14 @@ const editor = {
   // ============================================================
   async save() {
     if (!this.cfg) { alert("Aucune config chargée"); return; }
+
+    // Cleanup défensif : retire les catégories orphelines avant d'écrire
+    const fixed = this._cleanOrphans();
+    if (fixed > 0) {
+      // Re-render pour que l'UI reflète le cleanup
+      this.render();
+    }
+
     const json = JSON.stringify(this.cfg, null, 2);
     console.log("[save] POST /save (" + json.length + " octets)");
     try {
@@ -636,7 +675,10 @@ const editor = {
       if (r.ok) {
         const data = await r.json().catch(() => ({}));
         if (data.ok) {
-          alert("✅ config.json sauvegardé sur disque\n(lisible par build.py)");
+          const summary = data.summary || "";
+          console.log("[save] OK", summary);
+          alert("✅ config.json sauvegardé\n\n" + summary +
+                "\n\n→ Tu peux maintenant Build (option 3 ou 5).");
           return;
         }
       }
@@ -652,7 +694,50 @@ const editor = {
     }
   },
 
-  rescan() { location.reload(); }
+  // ============================================================
+  //  RESCAN : relance vraiment le scan des dossiers music/sfx,
+  //  puis recharge la page avec le config.json mis à jour.
+  // ============================================================
+  async rescan() {
+    if (!confirm("Rescan : relire les fichiers dans music/ et sfx/ ?\n(Tes catégories, ordres et volumes sont préservés.)")) return;
+    try {
+      const r = await fetch("/scan", { method: "POST" });
+      if (r.ok) {
+        const data = await r.json().catch(() => ({}));
+        console.log("[rescan] OK", data);
+        location.reload();
+        return;
+      }
+      throw new Error("HTTP " + r.status);
+    } catch (e) {
+      console.warn("[rescan] /scan KO, fallback simple reload:", e);
+      alert("Le scan serveur a échoué. La page va juste recharger config.json.\nLance 'option 1' dans runme.bat pour un vrai scan.");
+      location.reload();
+    }
+  },
+
+  // Cleanup : tout item dont la catégorie n'existe plus = remis sans catégorie
+  _cleanOrphans() {
+    const mNames = new Set((this.cfg.musicCategories || []).map(c => c.name));
+    const sNames = new Set((this.cfg.sfxCategories  || []).map(c => c.name));
+    let fixed = 0;
+    (this.cfg.music || []).forEach(m => {
+      if (m.category && !mNames.has(m.category)) {
+        console.warn("[cleanup] music orpheline:", m.file, "cat:", m.category, "-> ''");
+        m.category = "";
+        fixed++;
+      }
+    });
+    (this.cfg.sfx || []).forEach(s => {
+      if (s.category && !sNames.has(s.category)) {
+        console.warn("[cleanup] sfx orpheline:", s.file, "cat:", s.category, "-> ''");
+        s.category = "";
+        fixed++;
+      }
+    });
+    if (fixed > 0) console.log(`[cleanup] ${fixed} item(s) orphelin(s) corrigé(s)`);
+    return fixed;
+  }
 };
 
 // expose en global

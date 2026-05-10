@@ -60,21 +60,118 @@ class Handler(SimpleHTTPRequestHandler):
     def do_POST(self):
         path = unquote(self.path.split("?", 1)[0])
 
-        if path == "/save":
-            length = int(self.headers.get("Content-Length", "0"))
-            raw = self.rfile.read(length) if length > 0 else b""
+        # ============================================================
+        # POST /scan : relance le scan complet et écrit config.json
+        # ============================================================
+        if path == "/scan":
             try:
-                data = json.loads(raw.decode("utf-8"))
+                import sys as _sys
+                if ROOT not in _sys.path:
+                    _sys.path.insert(0, ROOT)
+                # Force la lecture fraîche (pas de cache module)
+                if "src.scan" in _sys.modules:
+                    import importlib
+                    importlib.reload(_sys.modules["src.scan"])
+                from src.scan import scan_project
+
+                old = {}
+                if os.path.exists(CONFIG_FILE):
+                    try:
+                        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                            old = json.load(f)
+                    except Exception:
+                        old = {}
+
+                cfg = scan_project()
+                # Préserve project.* (name, themeColor, themeColor2) de l'ancien
+                op = old.get("project") or {}
+                np = cfg.get("project") or {}
+                cfg["project"] = {
+                    "name":         op.get("name")        or np.get("name")        or "",
+                    "version":      op.get("version")     or np.get("version")     or 1,
+                    "themeColor":   op.get("themeColor")  or np.get("themeColor")  or "#667eea",
+                    "themeColor2":  op.get("themeColor2") or np.get("themeColor2") or "#764ba2",
+                }
+
                 with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-                    json.dump(data, f, ensure_ascii=False, indent=2)
-                body = b'{"ok":true,"path":"config.json"}'
+                    json.dump(cfg, f, ensure_ascii=False, indent=2)
+                    f.flush()
+                    try: os.fsync(f.fileno())
+                    except OSError: pass
+
+                body = json.dumps({
+                    "ok": True,
+                    "music": len(cfg.get("music", [])),
+                    "sfx":   len(cfg.get("sfx", [])),
+                    "musicCategories": len(cfg.get("musicCategories", [])),
+                    "sfxCategories":   len(cfg.get("sfxCategories", [])),
+                }, ensure_ascii=False).encode("utf-8")
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
                 self.send_header("Content-Length", str(len(body)))
                 self.send_header("Access-Control-Allow-Origin", "*")
                 self.end_headers()
                 self.wfile.write(body)
-                print("config.json sauvegarde (" + str(len(raw)) + " octets)")
+
+                try:
+                    import datetime
+                    ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    with open(os.path.join(ROOT, "server.log"), "a", encoding="utf-8") as lf:
+                        lf.write(f"{ts}  [SCAN] music={len(cfg.get('music', []))} sfx={len(cfg.get('sfx', []))}\n")
+                except Exception:
+                    pass
+            except Exception as e:
+                err = json.dumps({"ok": False, "error": str(e)}).encode("utf-8")
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Content-Length", str(len(err)))
+                self.end_headers()
+                self.wfile.write(err)
+            return
+
+        if path == "/save":
+            length = int(self.headers.get("Content-Length", "0"))
+            raw = self.rfile.read(length) if length > 0 else b""
+            try:
+                data = json.loads(raw.decode("utf-8"))
+                # Ecriture + flush + fsync pour garantir que ca arrive sur disque
+                with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+                    f.flush()
+                    try: os.fsync(f.fileno())
+                    except OSError: pass
+
+                # Resume pour log
+                proj = (data.get("project") or {}).get("name", "?")
+                mcats = len(data.get("musicCategories", []))
+                scats = len(data.get("sfxCategories", []))
+                nm = len(data.get("music", []))
+                ns = len(data.get("sfx", []))
+                summary = (f"[SAVE] project={proj!r} "
+                           f"mcats={mcats} scats={scats} "
+                           f"music={nm} sfx={ns} bytes={len(raw)}")
+
+                # Log dans server.log (le serveur tourne en pythonw, pas de console)
+                try:
+                    import datetime
+                    ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    with open(os.path.join(ROOT, "server.log"), "a", encoding="utf-8") as lf:
+                        lf.write(f"{ts}  {summary}\n")
+                except Exception:
+                    pass
+
+                body = json.dumps({
+                    "ok": True,
+                    "path": "config.json",
+                    "summary": summary,
+                }, ensure_ascii=False).encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                self.wfile.write(body)
+                print(summary)
             except Exception as e:
                 err = json.dumps({"ok": False, "error": str(e)}).encode("utf-8")
                 self.send_response(400)
@@ -82,6 +179,14 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_header("Content-Length", str(len(err)))
                 self.end_headers()
                 self.wfile.write(err)
+                # log error aussi
+                try:
+                    import datetime
+                    ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    with open(os.path.join(ROOT, "server.log"), "a", encoding="utf-8") as lf:
+                        lf.write(f"{ts}  [SAVE-ERROR] {e}\n")
+                except Exception:
+                    pass
                 print("Erreur save:", e)
             return
 

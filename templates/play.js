@@ -37,6 +37,8 @@
   const btnPrev = document.getElementById("btnPrev");
   const btnNext = document.getElementById("btnNext");
   const btnStopAll = document.getElementById("btnStopAll");
+  const btnStopSfx = document.getElementById("btnStopSfx");
+  const btnDownload = document.getElementById("btnDownload");
 
   const musicVol = document.getElementById("musicVol");
   const sfxVol = document.getElementById("sfxVol");
@@ -170,10 +172,14 @@
     playIndex(idx);
   };
 
-  const stopAll = () => {
-    stopMusic();
+  const stopAllSfxOnly = () => {
     sfxPool.forEach(a => { try { a.pause(); a.currentTime = 0; } catch(e){} });
     sfxPool.length = 0;
+  };
+
+  const stopAll = () => {
+    stopMusic();
+    stopAllSfxOnly();
   };
 
   // ----- SFX -----
@@ -378,6 +384,7 @@
   btnPrev.addEventListener("click", prev);
   btnNext.addEventListener("click", next);
   btnStopAll.addEventListener("click", stopAll);
+  if (btnStopSfx) btnStopSfx.addEventListener("click", stopAllSfxOnly);
 
   musicVol.addEventListener("input", () => {
     musicVolume = Number(musicVol.value) / 100;
@@ -423,6 +430,59 @@
   renderMusic("");
   renderSfx("");
   updateNow();
+
+  // ----- Détection mode all-in-one + bouton Download -----
+  const isPortable = !!(tracks[0] && tracks[0].file && tracks[0].file.startsWith("data:"));
+  if (btnDownload && isPortable) {
+    btnDownload.style.display = "";
+    const safeName = (projectName || "soundboard")
+      .replace(/[<>:"/\\|?*\x00-\x1f]/g, "_").trim() || "soundboard";
+    const filename = safeName + "_aio.html";
+
+    btnDownload.addEventListener("click", async (ev) => {
+      ev.preventDefault();
+      const orig = btnDownload.textContent;
+      btnDownload.textContent = "⏳ Préparation…";
+      btnDownload.disabled = true;
+      try {
+        let blob;
+        // Méthode 1 : fetch la page courante (idéal sur HTTP/HTTPS, garde le HTML original tel quel)
+        try {
+          const r = await fetch(window.location.href, { cache: "no-store" });
+          if (!r.ok) throw new Error("fetch HTTP " + r.status);
+          blob = await r.blob();
+        } catch (e1) {
+          console.warn("[download] fetch KO, fallback outerHTML:", e1);
+          // Méthode 2 (fallback file://) : reconstruit depuis le DOM courant
+          const html = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+          blob = new Blob([html], { type: "text/html;charset=utf-8" });
+        }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        // Libère le blob après un délai (le download a déjà commencé)
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+        btnDownload.textContent = "✅ Téléchargé";
+        setTimeout(() => { btnDownload.textContent = orig; }, 1800);
+      } catch (e) {
+        console.error("[download] failed:", e);
+        alert("Le téléchargement a échoué : " + e.message);
+        btnDownload.textContent = orig;
+      } finally {
+        btnDownload.disabled = false;
+      }
+    });
+  }
+
+  // ----- Termine le loader (visible jusqu'ici) -----
+  if (window.__finishLoader) {
+    // Petit délai pour que l'utilisateur voie le 100% se remplir
+    setTimeout(window.__finishLoader, 100);
+  }
 
   // Fallback emojis monochromes pour les navigateurs sans font-variant-emoji.
   // On parcourt les nœuds texte des en-têtes & libellés et on insère VS-15.

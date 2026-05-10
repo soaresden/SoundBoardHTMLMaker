@@ -3,6 +3,7 @@ import base64
 import json
 import mimetypes
 import os
+import re
 import sys
 import shutil
 
@@ -10,9 +11,35 @@ from src.scan import scan_project
 from src.build_html import build_output_html
 
 CONFIG_FILE = "config.json"
-OUTPUT_FILE = "output.html"
-PORTABLE_FILE = "output_portable.html"
+OUTPUT_FILE = "index.html"           # version light, auto-servi par GitHub Pages
+PORTABLE_FILE = "index_aio.html"     # all-in-one : tout inliné en base64
 EXPORT_DIR = "FOLDERTOEXPORT"
+
+
+def _sanitize_name(name: str) -> str:
+    """
+    Transforme un nom de projet en nom de dossier sain :
+    - vire les caracteres interdits Windows (<>:\"/\\|?*)
+    - vire les emojis (non alnum unicode)
+    - garde lettres (accents inclus), chiffres, espaces, tirets, etc.
+    """
+    if not name:
+        return "soundboard"
+    # caracteres interdits Windows
+    name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "", name)
+    # garde alnum unicode + ponctuation safe
+    safe = "".join(c for c in name if c.isalnum() or c in " -_().,")
+    safe = safe.strip(" .")
+    safe = re.sub(r"\s+", " ", safe)   # collapse spaces multiples
+    safe = safe[:80]                    # limite raisonnable
+    return safe or "soundboard"
+
+
+def _project_export_dir(cfg) -> str:
+    """Retourne FOLDERTOEXPORT/<nom-projet-sanitize>/."""
+    proj_name = (cfg or {}).get("project", {}).get("name") or "soundboard"
+    sub = _sanitize_name(proj_name)
+    return os.path.join(EXPORT_DIR, sub)
 
 
 def load_config():
@@ -92,11 +119,72 @@ def cmd_scan():
 # ------------------------------------------------------------------
 #  BUILD : produit FOLDERTOEXPORT/ avec tout dedans
 # ------------------------------------------------------------------
+def _summarize_config(cfg, label="CONFIG"):
+    """Imprime un résumé du config pour vérifier ce qui sera buildé."""
+    proj = cfg.get("project", {}) or {}
+    mcats = cfg.get("musicCategories", []) or []
+    scats = cfg.get("sfxCategories", []) or []
+    musics = cfg.get("music", []) or []
+    sfx = cfg.get("sfx", []) or []
+    print("=" * 60)
+    print(f"[{label}]  config.json mtime: {_mtime(CONFIG_FILE)}")
+    print(f"  Project   : {proj.get('name')!r}")
+    print(f"  Theme     : {proj.get('themeColor')} / {proj.get('themeColor2')}")
+    print(f"  Music cats ({len(mcats)}): {[c.get('name') for c in mcats]}")
+    print(f"  SFX cats   ({len(scats)}): {[c.get('name') for c in scats]}")
+    print(f"  Music tracks: {len(musics)}  |  SFX tracks: {len(sfx)}")
+    # Détail par cat (pour voir l'ordre intra-cat)
+    if musics:
+        from collections import Counter
+        by_cat = Counter(m.get("category") or "(sans cat)" for m in musics)
+        print(f"    music par cat: {dict(by_cat)}")
+    if sfx:
+        from collections import Counter
+        by_cat = Counter(s.get("category") or "(sans cat)" for s in sfx)
+        print(f"    sfx par cat  : {dict(by_cat)}")
+    print("=" * 60)
+
+
+def _mtime(path):
+    try:
+        import datetime
+        return datetime.datetime.fromtimestamp(os.path.getmtime(path)).strftime("%Y-%m-%d %H:%M:%S")
+    except OSError:
+        return "?"
+
+
+def _clean_orphans(cfg):
+    """Retire les catégories orphelines des items (cat -> ''),
+    avec un warning explicite par item concerné. Modifie cfg en place.
+    """
+    m_names = {c.get("name") for c in (cfg.get("musicCategories") or [])}
+    s_names = {c.get("name") for c in (cfg.get("sfxCategories")   or [])}
+    fixed = 0
+    for m in cfg.get("music", []) or []:
+        if m.get("category") and m.get("category") not in m_names:
+            print(f"  WARN: music '{m.get('file')}' avait cat orpheline "
+                  f"{m.get('category')!r} -> remis sans cat")
+            m["category"] = ""
+            fixed += 1
+    for s in cfg.get("sfx", []) or []:
+        if s.get("category") and s.get("category") not in s_names:
+            print(f"  WARN: sfx '{s.get('file')}' avait cat orpheline "
+                  f"{s.get('category')!r} -> remis sans cat")
+            s["category"] = ""
+            fixed += 1
+    if fixed:
+        print(f"  -> {fixed} orphelin(s) corrige(s) (config.json NON modifie, juste le build).")
+    return fixed
+
+
 def cmd_build():
     cfg = load_config()
     if not cfg:
         print("ERR Pas de config.json. Lance d'abord: python build.py scan")
         sys.exit(1)
+
+    _summarize_config(cfg, "BUILD")
+    _clean_orphans(cfg)
 
     # Transforme le config en format runtime player.
     # ORDRE FINAL = ordre des catégories (par cat.pos), puis ordre intra-tableau.
@@ -137,15 +225,16 @@ def cmd_build():
         "tracks": tracks,
     }
 
-    html = build_output_html(runtime)
+    html = build_output_html(runtime, is_portable=False)
 
-    # 1) On crée FOLDERTOEXPORT/ propre
-    if os.path.exists(EXPORT_DIR):
-        shutil.rmtree(EXPORT_DIR)
-    os.makedirs(EXPORT_DIR, exist_ok=True)
+    # 1) Sous-dossier projet : FOLDERTOEXPORT/<nom-projet>/
+    project_dir = _project_export_dir(cfg)
+    if os.path.exists(project_dir):
+        shutil.rmtree(project_dir)
+    os.makedirs(project_dir, exist_ok=True)
 
-    # 2) On écrit output.html dedans
-    out_path = os.path.join(EXPORT_DIR, OUTPUT_FILE)
+    # 2) On écrit output.html dans le sous-dossier projet
+    out_path = os.path.join(project_dir, OUTPUT_FILE)
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(html)
 
@@ -155,25 +244,25 @@ def cmd_build():
     used_sfx = {s["file"] for s in cfg.get("sfx", []) if s.get("file")}
     used_covers = {m["cover"] for m in cfg.get("music", []) if m.get("cover")}
 
-    _copy_subset("music", os.path.join(EXPORT_DIR, "music"), used_music)
-    _copy_subset("sfx",   os.path.join(EXPORT_DIR, "sfx"),   used_sfx)
+    _copy_subset("music", os.path.join(project_dir, "music"), used_music)
+    _copy_subset("sfx",   os.path.join(project_dir, "sfx"),   used_sfx)
 
-    # Les covers sont en chemin relatif (ex: "covers/xxx.jpg")
+    # Covers (chemins relatifs depuis racine, ex: "covers/xxx.jpg")
     if used_covers:
-        target_cov = os.path.join(EXPORT_DIR, "covers")
-        os.makedirs(target_cov, exist_ok=True)
+        os.makedirs(os.path.join(project_dir, "covers"), exist_ok=True)
         for rel in used_covers:
-            src = rel  # déjà relatif depuis racine projet
-            if os.path.exists(src):
-                dst = os.path.join(EXPORT_DIR, rel)
+            if os.path.exists(rel):
+                dst = os.path.join(project_dir, rel)
                 os.makedirs(os.path.dirname(dst), exist_ok=True)
-                shutil.copy2(src, dst)
+                shutil.copy2(rel, dst)
 
-    # 4) Aussi : on garde une copie du config.json pour debug
-    shutil.copy2(CONFIG_FILE, os.path.join(EXPORT_DIR, CONFIG_FILE))
+    # 4) Copie du config.json pour debug
+    shutil.copy2(CONFIG_FILE, os.path.join(project_dir, CONFIG_FILE))
 
-    print(f"OK FOLDERTOEXPORT/ pret ({_dir_size_mb(EXPORT_DIR):.1f} MB)")
-    print(f"   -> ouvre {out_path} en double-clic, ou copie tout {EXPORT_DIR}/ sur tablette.")
+    rel_project_dir = os.path.relpath(project_dir).replace("\\", "/")
+    print(f"OK {rel_project_dir}/ pret ({_dir_size_mb(project_dir):.1f} MB)")
+    print(f"   -> ouvre {os.path.relpath(out_path)} en double-clic,")
+    print(f"      ou copie tout {rel_project_dir}/ sur tablette.")
 
 
 def _copy_subset(src_dir: str, dst_dir: str, files: set):
@@ -221,21 +310,22 @@ def _file_to_data_uri(path: str) -> str | None:
     return f"data:{mime};base64,{b64}"
 
 
-def cmd_build_portable():
+def cmd_build_portable(clean: bool = True):
     """
-    Build PORTABLE : produit un SEUL fichier HTML auto-suffisant, avec
-    TOUS les mp3 et toutes les covers inlinés en base64.
-    Ouvrable n'importe où (file://, content://, http://, etc.) sans dossiers
-    associés. Idéal tablette/Android où content:// casse les chemins relatifs.
+    Build ALL-IN-ONE : produit un SEUL fichier HTML auto-suffisant
+    (index_aio.html), avec tous les mp3 + covers inlinés en base64.
 
-    Attention : le fichier peut faire plusieurs dizaines de MB selon la taille
-    de tes mp3 (base64 = ~1.33x la taille brute).
+    `clean=True` (défaut) vide le sous-dossier projet avant écriture.
+    `clean=False` ajoute juste index_aio.html à un dossier existant
+    (utile depuis cmd_build_all qui a déjà créé le light).
     """
     cfg = load_config()
     if not cfg:
         print("ERR Pas de config.json. Lance d'abord: python build.py scan")
         sys.exit(1)
 
+    _summarize_config(cfg, "BUILD PORTABLE")
+    _clean_orphans(cfg)
     print("Encodage en base64 en cours (peut prendre 30s+ si beaucoup de mp3)...")
 
     # Map fichier -> data URI (cache pour éviter de relire le même mp3 plusieurs fois)
@@ -300,18 +390,32 @@ def cmd_build_portable():
         "project": cfg.get("project", {}),
         "tracks": tracks,
     }
-    html = build_output_html(runtime)
+    html = build_output_html(runtime, is_portable=True)
 
-    # Sortie : dans FOLDERTOEXPORT/ aussi (à côté de output.html)
-    if not os.path.exists(EXPORT_DIR):
-        os.makedirs(EXPORT_DIR, exist_ok=True)
-    out_path = os.path.join(EXPORT_DIR, PORTABLE_FILE)
+    # Sortie dans le sous-dossier projet
+    project_dir = _project_export_dir(cfg)
+    if clean and os.path.exists(project_dir):
+        shutil.rmtree(project_dir)
+    os.makedirs(project_dir, exist_ok=True)
+    out_path = os.path.join(project_dir, PORTABLE_FILE)
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(html)
 
     size_mb = os.path.getsize(out_path) / (1024 * 1024)
-    print(f"OK {out_path} ({size_mb:.1f} MB) — un SEUL fichier auto-suffisant.")
+    rel = os.path.relpath(out_path).replace("\\", "/")
+    print(f"OK {rel} ({size_mb:.1f} MB) -- un SEUL fichier auto-suffisant.")
     print(f"   Copie-le sur ta tablette, ouvre-le n'importe comment, ca marche.")
+
+
+def cmd_build_all():
+    """Build LIGHT puis ALL-IN-ONE dans le meme sous-dossier projet.
+    Resultat : index.html + index_aio.html + music/ + sfx/ + covers/.
+    """
+    print(">> [1/2] Build LIGHT (index.html + dossiers)")
+    cmd_build()
+    print()
+    print(">> [2/2] Build ALL-IN-ONE (index_aio.html, base64)")
+    cmd_build_portable(clean=False)
 
 
 def main():
@@ -322,8 +426,10 @@ def main():
         cmd_build()
     elif arg == "portable":
         cmd_build_portable()
+    elif arg == "all":
+        cmd_build_all()
     else:
-        print("Usage: python build.py [scan|build|portable]")
+        print("Usage: python build.py [scan|build|portable|all]")
 
 
 if __name__ == "__main__":

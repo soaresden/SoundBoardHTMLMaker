@@ -6,19 +6,27 @@ def read_file(path):
         return f.read()
 
 
-def build_output_html(config):
+def build_output_html(config, is_portable: bool = False):
     """
-    Genere output.html : HTML autonome (CONFIG, CSS, JS du player tous inlines).
-    Le fichier resultat marche en file:// du moment que les dossiers
-    music/, sfx/, covers/ sont a cote.
-
-    Note : on N'INJECTE PAS editor.js dans le player final (inutile et risque
-    de bug), seulement play.js.
+    Genere index.html (light) ou index_portable.html (autonome).
+    Le bouton 'switch version' dans le header pointe vers l'autre fichier
+    et ne s'affiche que si ce fichier existe (verifie en JS via fetch HEAD).
     """
     html = read_file("templates/base.html")
     html = html.replace("{{CONFIG}}", json.dumps(config, ensure_ascii=False))
     html = html.replace("{{STYLE}}", read_file("templates/styles.css"))
     html = html.replace("{{PLAY_JS}}", read_file("templates/play.js"))
-    # editor.js retire du build : il ne sert que dans l'editor live.
     html = html.replace("{{EDITOR_JS}}", "")
+
+    if is_portable:
+        # On est dans la version ALL-IN-ONE -> bouton vers la version LIGHT
+        html = html.replace("{{OTHER_VERSION}}", "index.html")
+        html = html.replace("{{SWITCH_LABEL}}", "🪶 Light")
+        html = html.replace("{{SWITCH_TITLE}}", "Basculer vers la version légère (utilise music/sfx/covers/ à côté)")
+    else:
+        # On est dans la version LIGHT -> bouton vers la version ALL-IN-ONE
+        html = html.replace("{{OTHER_VERSION}}", "index_aio.html")
+        html = html.replace("{{SWITCH_LABEL}}", "📦 All-in-one")
+        html = html.replace("{{SWITCH_TITLE}}", "Basculer vers la version all-in-one (un seul fichier auto-suffisant)")
+
     return html

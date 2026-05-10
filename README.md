@@ -12,7 +12,7 @@ Player :
 
 Un **template générique** pour transformer un dossier de mp3 en une **soundboard HTML autonome**, prête à être ouverte sur ordinateur, tablette ou téléphone en `file://` ou `http://`. Pensé pour les MJ de jeux de société (Loup-Garou, JdR, Dixit, jeux narratifs…) qui veulent un panneau d'ambiances + effets sonores adaptable à n'importe quel jeu.
 
-> Tu déposes tes mp3 dans `music/` et `sfx/`, tu lances `runme.bat`, tu mets en forme dans l'éditeur web, tu builds → un dossier `FOLDERTOEXPORT/` autonome est créé. Tu le copies sur ta tablette / ton téléphone, tu ouvres `output.html` (ou `output_portable.html` pour Android) → ça marche.
+> Tu déposes tes mp3 dans `music/` et `sfx/`, tu lances `runme.bat`, tu mets en forme dans l'éditeur web, tu builds → un dossier `FOLDERTOEXPORT/` autonome est créé. Tu le copies sur ta tablette / ton téléphone, tu ouvres `output.html` (ou `index_aio.html` pour Android) → ça marche.
 
 > 🎮 **Le projet `Loup-Garou` est inclus en exemple** dans ce repo (mp3, covers, config). Clone, lance `runme.bat`, choix `5` → tu vois le rendu directement, sans avoir à scanner tes propres mp3.
 
@@ -86,7 +86,7 @@ Le menu propose :
 - Léger (la taille de tes mp3, sans duplication).
 - ⚠️ Sur **Android**, l'ouvrir via un explorateur de fichiers force le scheme `content://` qui **casse les chemins relatifs** : audio/covers ne chargent pas. Utilise plutôt Firefox + URL `file:///...` directe, ou bascule sur le mode portable ci-dessous.
 
-#### 📦 Mode portable — `FOLDERTOEXPORT/output_portable.html` (un seul fichier)
+#### 📦 Mode portable — `FOLDERTOEXPORT/index_aio.html` (un seul fichier)
 - **Choix `6`** dans le menu `runme.bat`.
 - Tous les mp3 et toutes les covers sont **inlinés en base64** dans le HTML.
 - ✅ Un **seul fichier** auto-suffisant. Tu le copies sur ta tablette / ton téléphone, tu l'ouvres avec n'importe quoi (Brave, Chrome, Firefox, Xplore via `content://`) : ça marche.
