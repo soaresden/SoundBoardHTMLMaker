@@ -11,11 +11,14 @@
 #  (visite : https://soaresden.github.io/myhtml/Loup%20Garou%20by%20Denis/).
 #  Si tu fork pour ton propre projet, ajoute "FOLDERTOEXPORT/"
 #  dans ton .gitignore local pour ne pas tracker tes builds.
+#
+#  Le "/" devant force le match a la RACINE seulement,
+#  pas dans FOLDERTOEXPORT/<projet>/ ou ils sont legitimes.
 # =========================================
-output.html
-output_portable.html
-index.html
-index_aio.html
+/output.html
+/output_portable.html
+/index.html
+/index_aio.html
 
 # =========================================
 #  PYTHON

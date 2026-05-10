@@ -1,0 +1,1763 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0612">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Soundboard</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    /* ================================================================
+   THEME : tout est dérivé de --accent (couleur unique du profil).
+   --accent-2 est la même teinte décalée ; modifié dynamiquement par
+   le color-picker de l'editor (cf. editor.js / play.js).
+   ================================================================ */
+:root {
+  --accent: var(--accent);
+  --accent-2: var(--accent-2);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; }
+
+body {
+  font-family: 'Poppins', sans-serif;
+  /* Background dérivé des couleurs du profil : sombre mais TEINTÉ. */
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--accent)   10%, #07070d) 0%,
+    color-mix(in srgb, var(--accent-2) 16%, #0e0a18) 100%);
+  color: #e0e6ed;
+  /* Emojis monochromes par défaut partout */
+  font-variant-emoji: text;
+}
+
+.app { width: 100%; height: 100%; display: flex; flex-direction: column; }
+
+/* HEADER */
+.header {
+  background: color-mix(in srgb, var(--accent-2) 12%, rgba(0,0,0,0.85));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+  padding: 10px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.header-title {
+  font-size: 18px;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-variant-emoji: text;
+}
+
+/* Tous les emojis de l'UI en présentation "text" (monochrome) */
+.panel-header, .header-title, .header-project, .modal-title,
+.cat-block-title, .sfx-title, .cat-title, .toolbar .hint, .now-sub {
+  font-variant-emoji: text;
+}
+
+.header-actions { display:flex; gap:8px; }
+
+/* CONTENT */
+.content { flex: 1; overflow: hidden; display: flex; gap: 10px; padding: 10px; }
+
+.panel {
+  background: color-mix(in srgb, var(--accent-2) 14%, rgba(0,0,0,0.45));
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel-now { flex: 0.35; min-width: 260px; }
+.panel-music { flex: 1; min-width: 420px; }
+.panel-sfx { flex: 0.55; min-width: 320px; }
+
+.panel-header {
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+
+.panel-content { flex: 1; overflow-y: auto; padding: 10px; }
+.panel-content::-webkit-scrollbar { width: 6px; }
+.panel-content::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 3px; }
+
+.btn {
+  padding: 6px 12px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  transition: all 0.15s ease;
+}
+
+.btn:hover { transform: translateY(-1px); box-shadow: 0 8px 22px color-mix(in srgb, var(--accent) 35%, transparent); }
+.btn:active { transform: translateY(0px) scale(0.98); }
+
+.btn-green { background: linear-gradient(135deg, #00c853, #64dd17); color: #06120a; }
+.btn-red { background: linear-gradient(135deg, #ff1744, #ff6e40); color: #210105; }
+.btn-switch {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  color: #fff;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  font-weight: 700;
+}
+.btn-switch:hover {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 65%, transparent);
+}
+
+/* NOW PLAYING CARD */
+.now-card{
+  background: rgba(0,0,0,0.22);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.cover{
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 14px;
+  background: radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--accent) 60%, transparent), color-mix(in srgb, var(--accent-2) 25%, transparent));
+  border: 1px solid rgba(255,255,255,0.1);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size: 28px;
+  margin-bottom: 10px;
+}
+
+.now-title { font-weight: 800; font-size: 13px; line-height: 1.2; }
+.now-sub { font-size: 11px; color: #a0a9b8; margin-top: 4px; }
+
+.progress-wrap { margin-top: 12px; }
+.progress {
+  height: 10px;          /* + cliquable */
+  background: rgba(0,0,0,0.30);
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.progress:hover {
+  background: color-mix(in srgb, var(--accent) 12%, rgba(0,0,0,0.30));
+}
+.progress-bar{
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: width 0.08s linear;
+  pointer-events: none;
+}
+.time{
+  margin-top: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: #a0a9b8;
+}
+
+.controls{
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.sliders{ margin-top: 12px; display:flex; flex-direction:column; gap:10px; }
+.slider-row{ display:grid; grid-template-columns: 70px 1fr 50px; gap:10px; align-items:center; }
+.slider-label{ font-size: 11px; font-weight: 700; color: #fff; }
+.slider-val{ font-size: 11px; color: #a0a9b8; text-align:right; font-family:'JetBrains Mono', monospace; }
+input[type="range"]{ width:100%; accent-color:var(--accent); }
+
+.loop-info{
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  font-size: 10px;
+  color: #cfd6ff;
+  font-family:'JetBrains Mono', monospace;
+}
+
+/* TOOLBAR + SEARCH (compact) */
+.toolbar{ display:flex; align-items:center; gap:6px; margin-bottom:6px; }
+.search{
+  flex:1;
+  padding: 4px 9px;
+  height: 26px;
+  background: rgba(0,0,0,0.30);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 7px;
+  color: #e0e6ed;
+  font-size: 10.5px;
+  transition: 0.15s;
+}
+.search::placeholder { color: #6b7280; font-size: 10.5px; }
+.search:focus{
+  outline:none;
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, rgba(0,0,0,0.30));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.btn-view {
+  width: 26px; height: 26px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
+  color: #fff;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  display:flex; align-items:center; justify-content:center;
+  transition: 0.12s;
+}
+.btn-view:hover {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+/* Bouton "Stop SFX" dans la toolbar du panel SFX */
+.btn-stop-sfx {
+  width: 26px; height: 26px;
+  background: rgba(255,80,80,0.15);
+  border: 1px solid rgba(255,80,80,0.35);
+  color: #ff8a8a;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  display:flex; align-items:center; justify-content:center;
+  transition: 0.12s;
+}
+.btn-stop-sfx:hover {
+  background: rgba(255,80,80,0.30);
+  border-color: rgba(255,80,80,0.55);
+}
+.btn-stop-sfx:active {
+  transform: scale(0.94);
+}
+.hint{ font-size: 10px; color:#a0a9b8; }
+
+/* MUSIC LIST */
+.list{ display:flex; flex-direction:column; gap:6px; }
+
+/* === MODE GRILLE / VIGNETTES === */
+.list.list-grid {
+  display: block;        /* on laisse les .music-cat empiler */
+}
+.list.list-grid .music-cat {
+  display: block;
+}
+.list.list-grid .music-cat + .music-cat {
+  margin-top: 10px;
+  padding-top: 10px;
+}
+.list.list-grid .music-cat .cat-title {
+  margin-bottom: 6px;
+}
+/* Les rows deviennent une grille de mini-cards */
+.list.list-grid .music-cat > .track-grid-wrap {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 6px;
+}
+.list.list-grid .track {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  padding: 4px;
+  text-align: center;
+}
+.list.list-grid .track .track-cover {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 6px;
+  background-size: cover;
+  background-position: center;
+  background-color: color-mix(in srgb, var(--accent) 25%, rgba(0,0,0,0.5));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  position: relative;
+}
+.list.list-grid .track-play { display: none; }
+.list.list-grid .track-name {
+  font-size: 9.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.list.list-grid .track-meta { display: none; }
+/* Mode liste : la cover affichée à la place du chip play */
+.list:not(.list-grid) .track-cover {
+  width: 26px; height: 26px;
+  border-radius: 6px;
+  background-size: cover;
+  background-position: center;
+  background-color: color-mix(in srgb, var(--accent) 18%, transparent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.music-cat{
+  margin-top: 4px;
+}
+.music-cat + .music-cat {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  position: relative;
+}
+.music-cat + .music-cat::before {
+  /* petit trait dégradé qui matérialise la séparation */
+  content: "";
+  position: absolute;
+  top: -1px; left: 10%; right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent,
+    color-mix(in srgb, var(--accent) 70%, transparent), transparent);
+  pointer-events: none;
+}
+.cat-title{
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  color: color-mix(in srgb, var(--accent) 60%, #cbd1dd);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+/* ===== Collapse / chevron pour catégories ===== */
+.cat-toggle {
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px;
+  border-radius: 6px;
+  transition: background 0.12s;
+}
+.cat-toggle:hover {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.cat-chevron {
+  display: inline-block;
+  font-size: 10px;
+  transition: transform 0.18s ease;
+  width: 10px;
+  text-align: center;
+  opacity: 0.85;
+}
+.cat-name { flex: 1; }
+.cat-count {
+  font-size: 9px;
+  opacity: 0.6;
+  background: rgba(255,255,255,0.06);
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+
+/* État replié */
+.music-cat.collapsed .cat-chevron,
+.sfx-category.collapsed .cat-chevron {
+  transform: rotate(-90deg);
+}
+.music-cat.collapsed .track-grid-wrap,
+.sfx-category.collapsed .sfx-grid {
+  display: none !important;
+}
+
+.track{
+  padding: 6px 8px;
+  background: rgba(0,0,0,0.18);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 9px;
+  display:flex;
+  gap:8px;
+  align-items:center;
+  cursor:pointer;
+  transition: 0.12s ease;
+}
+
+.track:hover{
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.track.active{
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 65%, transparent);
+  animation: trackGlow 2.4s ease-in-out infinite;
+}
+
+@keyframes trackGlow {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent),
+      0 0 14px color-mix(in srgb, var(--accent) 28%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--accent) 60%, transparent),
+      0 0 28px color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+}
+
+@keyframes coverGlow {
+  0%, 100% {
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--accent) 40%, transparent),
+      0 0 24px color-mix(in srgb, var(--accent) 35%, transparent),
+      0 0 60px color-mix(in srgb, var(--accent-2) 25%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--accent) 70%, transparent),
+      0 0 48px color-mix(in srgb, var(--accent) 60%, transparent),
+      0 0 100px color-mix(in srgb, var(--accent-2) 50%, transparent);
+  }
+}
+.cover.playing { animation: coverGlow 2.6s ease-in-out infinite; }
+
+@keyframes barShimmer {
+  0%   { background-position: -100% 0; }
+  100% { background-position:  200% 0; }
+}
+.progress-bar.playing {
+  background: linear-gradient(90deg,
+      var(--accent) 0%,
+      color-mix(in srgb, white 35%, var(--accent)) 50%,
+      var(--accent) 100%);
+  background-size: 200% 100%;
+  animation: barShimmer 2s linear infinite;
+}
+
+@keyframes btnPulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.06); }
+}
+#btnPlayPause.playing { animation: btnPulse 1.6s ease-in-out infinite; }
+
+/* Mini reveal au mount */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.track, .sfx-btn { animation: fadeUp 0.25s ease-out both; }
+
+.track-play{
+  width: 26px; height: 26px;
+  border-radius: 8px;
+  display:flex; align-items:center; justify-content:center;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  font-weight: 800;
+  font-size: 11px;
+}
+
+.track-main{ flex:1; min-width:0; }
+.track-name{ font-weight: 700; font-size: 11.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.track-meta{ margin-top: 1px; font-size: 9.5px; color:#a0a9b8; display:flex; gap:6px; flex-wrap:wrap; }
+.chip{
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.09);
+  font-family:'JetBrains Mono', monospace;
+  font-size: 9px;
+}
+
+/* SFX : chaque catégorie = une "boîte" avec bordure, titre et grille de boutons */
+.sfx-container{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.sfx-category{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  background: color-mix(in srgb, var(--accent) 7%, rgba(0,0,0,0.30));
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  border-radius: 10px;
+  padding: 8px 10px 10px;
+  /* plus de séparateur ::before, la boîte se suffit */
+}
+.sfx-category + .sfx-category { margin-top: 0; padding-top: 8px; border-top: 1px solid color-mix(in srgb, var(--accent) 28%, transparent); }
+.sfx-category + .sfx-category::before { content: none; }
+
+.sfx-title{
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--accent) 70%, #e8ecf4);
+  letter-spacing: 0.6px;
+  padding: 0 2px;
+  border-bottom: 1px dashed color-mix(in srgb, var(--accent) 35%, transparent);
+  padding-bottom: 5px;
+  margin-bottom: 2px;
+}
+
+.sfx-grid{
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+  /* "auto-fill" + minmax = colonnes égales, contenu aligné en grille parfaite */
+  gap: 5px;
+  align-items: stretch;
+}
+
+.sfx-btn{
+  /* Hauteur FIXE pour que tout soit aligné, peu importe le label */
+  height: 30px;
+  padding: 0 6px;
+  border-radius: 7px;
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color:#fff;
+  cursor:pointer;
+  font-weight: 700;
+  font-size: 10.5px;
+  line-height: 1;
+  transition: 0.12s ease;
+  text-align:center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sfx-btn:hover{
+  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.sfx-btn:active{
+  transform: translateY(0px) scale(0.96);
+}
+
+/* petit feedback quand on déclenche un sfx */
+@keyframes sfxPing {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 70%, transparent); }
+  100% { box-shadow: 0 0 0 14px transparent; }
+}
+.sfx-btn.firing { animation: sfxPing 0.55s ease-out; }
+
+.config-row{
+  display:grid;
+  grid-template-columns: 1.5fr 1.5fr 1fr 80px 80px 80px 80px;
+  gap:10px;
+  padding:10px;
+  margin-bottom:6px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius:10px;
+  align-items:center;
+  transition:0.15s;
+}
+
+.config-row:hover{
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.config-row input{
+  padding:8px 10px;
+  background: rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:8px;
+  color:#e0e6ed;
+  font-size:11px;
+  font-weight:500;
+}
+
+.config-row input:focus{
+  outline:none;
+  border-color:var(--accent);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+/* headers */
+.table-header{
+  display:grid;
+  grid-template-columns: 1.5fr 1.5fr 1fr 80px 80px 80px 80px;
+  gap:10px;
+  padding:10px;
+  background: rgba(0,0,0,0.6);
+  border-radius:10px;
+  margin-bottom:10px;
+  font-size:10px;
+  font-weight:800;
+  text-transform:uppercase;
+  color:var(--accent);
+  position:sticky;
+  top:0;
+}
+
+/* SFX fix */
+.sfx-row{
+  grid-template-columns: 2fr 1.5fr 1fr 80px !important;
+}
+
+
+.data-table {
+  width:100%;
+  border-collapse: collapse;
+  font-size:11px;
+}
+
+.data-table thead {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.data-table th {
+  text-align:left;
+  padding:10px;
+  font-weight:800;
+  font-size:10px;
+  color:#a0a9b8;
+  border-bottom:1px solid rgba(255,255,255,0.1);
+}
+
+.data-table td {
+  padding:6px;
+  border-bottom:1px solid rgba(255,255,255,0.05);
+}
+
+.data-table tr:hover {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.data-table input {
+  width:100%;
+  background:transparent;
+  border:none;
+  color:#fff;
+  font-size:11px;
+  padding:4px;
+}
+
+.data-table input:focus {
+  outline:none;
+  background:color-mix(in srgb, var(--accent) 20%, transparent);
+  border-radius:4px;
+}
+
+.audio-mini {
+  display: none;
+}
+
+.btn-play, .btn-cover{
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.12);
+  cursor: pointer;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color:#fff;
+  font-weight: 800;
+}
+.btn-play:hover, .btn-cover:hover{ background: color-mix(in srgb, var(--accent) 28%, transparent); }
+.btn-play:disabled{ opacity: .6; cursor: default; }
+
+.cover-thumb{
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid rgba(255,255,255,0.12);
+  margin-top: 6px;
+}
+
+.mono{ font-family:'JetBrains Mono', monospace; font-size:11px; }
+.cell{ width:100%; }
+
+/* ===== EDITOR : project + categories ===== */
+.header-project {
+  display: flex;
+  align-items: center;
+  margin-left: 14px;
+  flex: 1;
+}
+.header-project input {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #fff;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.muted { opacity: 0.55; font-size: 12px; padding: 8px 4px; }
+
+.cat-block { margin-bottom: 12px; }
+.cat-block + .cat-block {
+  margin-top: 12px;
+  padding-top: 14px;
+  border-top: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  position: relative;
+}
+.cat-block + .cat-block::before {
+  content: "";
+  position: absolute;
+  top: -1px; left: 8%; right: 8%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent,
+    color-mix(in srgb, var(--accent) 80%, transparent), transparent);
+  pointer-events: none;
+}
+.cat-block-title {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: color-mix(in srgb, var(--accent) 65%, #cbd1dd);
+  margin-bottom: 8px;
+}
+
+.cat-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.cat-input {
+  flex: 1;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+.cat-input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+.btn-x {
+  background: rgba(255,80,80,0.15);
+  border: 1px solid rgba(255,80,80,0.3);
+  color: #ff8080;
+  border-radius: 6px;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.btn-x:hover { background: rgba(255,80,80,0.3); }
+
+/* ---- DRAG HANDLE & ÉTATS DRAG des catégories ---- */
+.drag-handle {
+  cursor: grab;
+  user-select: none;
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: -3px;
+  opacity: 0.45;
+  width: 20px;
+  text-align: center;
+  color: #fff;
+  padding: 2px 0;
+}
+.drag-handle:hover { opacity: 1; }
+.drag-handle:active { cursor: grabbing; }
+
+.cat-row {
+  position: relative;          /* pour les indicateurs de drop */
+  transition: background 0.12s;
+}
+.cat-row.dragging {
+  opacity: 0.45;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.cat-row.drop-before::before,
+.cat-row.drop-after::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0;
+  height: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+  border-radius: 2px;
+  pointer-events: none;
+}
+.cat-row.drop-before::before { top: -2px; }
+.cat-row.drop-after::after   { bottom: -2px; }
+
+/* ----- Séparateur de catégorie DANS la table musique/sfx ----- */
+.data-table tr.cat-separator td {
+  padding: 8px 10px 6px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--accent) 75%, #cbd1dd);
+  background: color-mix(in srgb, var(--accent) 10%, rgba(0,0,0,0.35));
+  border-top: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.data-table tr.cat-separator.drop-onto td {
+  background: color-mix(in srgb, var(--accent) 30%, rgba(0,0,0,0.35));
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+}
+
+/* ----- États drag des rows d'item ----- */
+.data-table tbody tr[draggable="true"] {
+  transition: background 0.12s;
+}
+.data-table tbody tr.dragging { opacity: 0.45; }
+.data-table tbody tr.drop-before {
+  box-shadow: 0 -2px 0 var(--accent), 0 -8px 12px -4px var(--accent);
+}
+.data-table tbody tr.drop-after {
+  box-shadow: 0 2px 0 var(--accent), 0 8px 12px -4px var(--accent);
+}
+
+.pos-cell {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: color-mix(in srgb, var(--accent) 70%, #cbd1dd);
+  text-align: center;
+}
+
+.btn-small {
+  font-size: 11px;
+  padding: 4px 10px;
+  margin-top: 4px;
+}
+
+.data-table select {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #fff;
+  padding: 3px 4px;
+  font-size: 11px;
+  border-radius: 4px;
+}
+.data-table select option { background: #1a0a2e; }
+
+.play-music, .play-sfx {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+}
+.play-music:hover, .play-sfx:hover { background: rgba(102,126,234,0.4); }
+
+/* ===== MODALE Auto-thème ===== */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(6px);
+}
+.modal-box {
+  background: color-mix(in srgb, var(--accent-2) 18%, #0a0612);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 14px;
+  padding: 20px;
+  max-width: 720px; width: 90%;
+  max-height: 85vh; overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+}
+.modal-title {
+  font-size: 16px; font-weight: 800;
+  margin-bottom: 6px; color: #fff;
+}
+.modal-hint { font-size: 11px; opacity: 0.7; margin-bottom: 14px; }
+
+.cover-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+.cover-item {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 6px;
+  cursor: pointer;
+  transition: 0.15s;
+  text-align: center;
+}
+.cover-item:hover {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  transform: translateY(-2px);
+}
+.cover-item img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
+}
+.cover-item-name {
+  font-size: 10px;
+  margin-top: 6px;
+  color: #cfd6ff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ===== SPLITTERS (drag pour redimensionner les panneaux) ===== */
+.splitter {
+  width: 6px;
+  flex: 0 0 6px;
+  background: rgba(255,255,255,0.04);
+  cursor: col-resize;
+  border-radius: 3px;
+  transition: background 0.15s;
+}
+.splitter:hover, .splitter:active {
+  background: rgba(102,126,234,0.5);
+}
+
+/* =================================================================
+   RESPONSIVE — TABLETTE (≤ 1024px)
+   ================================================================= */
+@media (max-width: 1024px) {
+  .header { padding: 8px 12px; }
+  .header-title { font-size: 16px; }
+  .panel-music { min-width: 0; flex: 1.2; }
+  .panel-sfx   { min-width: 0; }
+  .panel-now   { min-width: 220px; }
+  .sfx-grid    { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 4px; }
+  .sfx-btn     { height: 34px; font-size: 11px; }   /* + tactile */
+}
+
+/* =================================================================
+   RESPONSIVE — TÉLÉPHONE (≤ 700px)
+   ================================================================= */
+@media (max-width: 700px) {
+  html, body { overflow: auto; height: auto; }
+  .app { height: auto; min-height: 100vh; }
+
+  /* Header en colonne */
+  .header {
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 10px;
+    text-align: center;
+  }
+  .header-title { font-size: 15px; line-height: 1.2; }
+  .header-actions { width: 100%; justify-content: center; }
+
+  /* Panneaux empilés en colonne, plus de splitters */
+  .content {
+    flex-direction: column;
+    overflow: visible;
+    padding: 6px;
+    gap: 6px;
+    height: auto;
+  }
+  .splitter { display: none; }
+  .panel {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-height: none;
+  }
+  .panel-content { overflow-y: visible; }
+
+  /* Now Playing : compact, cover plus petite */
+  .panel-now { order: 1; }
+  .panel-now .now-card { display: grid; grid-template-columns: 90px 1fr; gap: 10px; }
+  .panel-now .cover {
+    width: 90px; height: 90px; aspect-ratio: 1;
+    margin-bottom: 0;
+    font-size: 22px;
+  }
+  .panel-now .now-title { font-size: 12px; }
+  .panel-now .now-sub { font-size: 10px; }
+  .panel-now .progress-wrap,
+  .panel-now .controls,
+  .panel-now .sliders { grid-column: 1 / -1; }
+  .panel-now .controls { gap: 6px; }
+  .panel-now .controls .btn { padding: 8px; font-size: 13px; }
+  .panel-now .sliders { gap: 6px; }
+  .panel-now .slider-row { grid-template-columns: 60px 1fr 40px; }
+
+  /* Music : ordre 2 */
+  .panel-music { order: 2; }
+
+  /* SFX : ordre 3, boutons gros pour le tactile */
+  .panel-sfx { order: 3; }
+  .sfx-grid {
+    grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+    gap: 5px;
+  }
+  .sfx-btn {
+    height: 42px;          /* tactile : >40px = confort */
+    font-size: 12px;
+    padding: 0 4px;
+  }
+
+  /* Music vignettes : encore plus petites pour gagner */
+  .list.list-grid .music-cat > .track-grid-wrap {
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+    gap: 4px;
+  }
+  .list.list-grid .track-name { font-size: 9px; }
+
+  /* Toolbar */
+  .toolbar { flex-direction: row; }
+  .search { font-size: 12px; height: 30px; }
+  .btn-view { width: 30px; height: 30px; }
+
+  /* Header de panel */
+  .panel-header { padding: 8px 10px; font-size: 11px; }
+}
+
+/* =================================================================
+   RESPONSIVE — TÉLÉPHONE PORTRAIT ÉTROIT (≤ 380px)
+   ================================================================= */
+@media (max-width: 380px) {
+  .panel-now .now-card {
+    grid-template-columns: 1fr;     /* cover au-dessus, infos en-dessous */
+    text-align: center;
+  }
+  .panel-now .cover { width: 100%; max-width: 180px; height: auto; margin: 0 auto; }
+  .sfx-grid { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
+  .sfx-btn { font-size: 11px; height: 38px; }
+  .list.list-grid .music-cat > .track-grid-wrap {
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  }
+}
+  </style>
+</head>
+
+<body>
+  <!-- ===== INITIAL LOADER (visible immédiatement, retiré au DOMContentLoaded) ===== -->
+  <div id="initialLoader" style="
+       position:fixed; inset:0; z-index:99999;
+       background:#0a0612; color:#fff;
+       display:flex; flex-direction:column; align-items:center; justify-content:center;
+       font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;
+       transition:opacity 0.35s ease;">
+    <div style="font-size:22px; font-weight:800; letter-spacing:0.5px;">🎵 Soundboard</div>
+    <div style="font-size:11px; opacity:0.55; margin-top:4px;" id="initialLoaderSub">Préparation de l'audio…</div>
+    <div style="width:240px; height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; margin-top:18px;">
+      <div id="initialLoaderBar" style="height:100%; width:0%;
+           background:linear-gradient(90deg, #5174db, #c77dff);
+           transition:width 0.25s ease; border-radius:3px;"></div>
+    </div>
+    <div style="font-size:9px; opacity:0.35; margin-top:14px; font-family:monospace;" id="initialLoaderPct">0%</div>
+  </div>
+  <script>
+    // Loader fake-progress qui monte vite jusqu'à ~90% puis attend DOMContentLoaded.
+    // Visible quelques ms en mode light, plusieurs secondes en portable (HTML lourd).
+    (function(){
+      var bar = document.getElementById("initialLoaderBar");
+      var pct = document.getElementById("initialLoaderPct");
+      var p = 0;
+      var t = setInterval(function(){
+        p = Math.min(92, p + (100 - p) * 0.06);
+        bar.style.width = p + "%";
+        pct.textContent = Math.floor(p) + "%";
+      }, 80);
+      window.__finishLoader = function(){
+        clearInterval(t);
+        bar.style.width = "100%";
+        pct.textContent = "100%";
+        var loader = document.getElementById("initialLoader");
+        if (loader) {
+          loader.style.opacity = "0";
+          setTimeout(function(){ loader.remove(); }, 350);
+        }
+      };
+    })();
+  </script>
+
+  <div class="app">
+    <div class="header">
+      <div class="header-title" id="headerTitle">Soundboard</div>
+      <div class="header-actions">
+        <a class="btn btn-switch" id="btnSwitchVersion"
+           href="index_aio.html"
+           title="Basculer vers la version all-in-one (un seul fichier auto-suffisant)">📦 All-in-one</a>
+        <button class="btn btn-switch" id="btnDownload"
+                title="Télécharger ce HTML autonome (un seul fichier)"
+                style="display:none;">⬇ Télécharger</button>
+        <button class="btn btn-green" id="btnStopAll" title="Stop music + sfx">⏹ Stop all</button>
+      </div>
+    </div>
+
+    <div class="content" id="resizableContent">
+
+      <!-- NOW PLAYING -->
+      <div class="panel panel-now" data-panel="now">
+        <div class="panel-header">🎧 Now Playing</div>
+        <div class="panel-content">
+          <div class="now-card">
+            <div class="cover" id="cover">🎲</div>
+            <div class="now-title" id="nowTitle">Aucune musique</div>
+            <div class="now-sub" id="nowSub">Choisis une track à droite</div>
+
+            <div class="progress-wrap">
+              <div class="progress">
+                <div class="progress-bar" id="progressBar"></div>
+              </div>
+              <div class="time">
+                <span id="tCur">0:00</span> / <span id="tDur">0:00</span>
+              </div>
+            </div>
+
+            <div class="controls">
+              <button class="btn" id="btnPrev">⏮</button>
+              <button class="btn btn-green" id="btnPlayPause">▶</button>
+              <button class="btn btn-red" id="btnStop">⏹</button>
+              <button class="btn" id="btnNext">⏭</button>
+            </div>
+
+            <div class="sliders">
+              <div class="slider-row">
+                <div class="slider-label">🎵 Music</div>
+                <input type="range" id="musicVol" min="0" max="100" value="70">
+                <div class="slider-val" id="musicVolTxt">70%</div>
+              </div>
+              <div class="slider-row">
+                <div class="slider-label">🔊 SFX</div>
+                <input type="range" id="sfxVol" min="0" max="100" value="100">
+                <div class="slider-val" id="sfxVolTxt">100%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="splitter" data-splitter="1"></div>
+
+      <!-- MUSIC LIST -->
+      <div class="panel panel-music" data-panel="music">
+        <div class="panel-header">🎵 Music</div>
+        <div class="panel-content">
+          <div class="toolbar">
+            <input class="search" id="musicSearch" placeholder="🔎 Music…">
+            <button class="btn-view" id="btnViewMode" title="Basculer liste / vignettes">⊞</button>
+          </div>
+          <div id="musicList" class="list"></div>
+        </div>
+      </div>
+
+      <div class="splitter" data-splitter="2"></div>
+
+      <!-- SFX -->
+      <div class="panel panel-sfx" data-panel="sfx">
+        <div class="panel-header">🔊 SFX</div>
+        <div class="panel-content">
+          <div class="toolbar">
+            <input class="search" id="sfxSearch" placeholder="🔎 SFX…">
+            <button class="btn-stop-sfx" id="btnStopSfx" title="Stop tous les SFX en cours (laisse la musique)">⏹</button>
+          </div>
+          <div id="sfxList" class="sfx-container"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const CONFIG = {"project": {"name": "Loup Garou by Denis🐺", "version": 1, "themeColor": "#5174db", "themeColor2": "#0f1406"}, "tracks": [{"type": "music", "file": "Au Cœur du Village (1).mp3", "name": "Au Cœur du Village", "category": "Nuit", "order": 1, "volume": 0.7, "cover": "covers/Au_Cœur_du_Village__1_.mp3.jpg"}, {"type": "music", "file": "Au Cœur du Village.mp3", "name": "Au Cœur du Village", "category": "Nuit", "order": 2, "volume": 0.7, "cover": "covers/Au_Cœur_du_Village.mp3.jpg"}, {"type": "music", "file": "Le Village S’endort (1).mp3", "name": "Le Village S’endort", "category": "Nuit", "order": 3, "volume": 0.7, "cover": "covers/Le_Village_S_endort__1_.mp3.jpg"}, {"type": "music", "file": "Le Village S’endort (2).mp3", "name": "Le Village S’endort", "category": "Nuit", "order": 4, "volume": 0.7, "cover": "covers/Le_Village_S_endort__2_.mp3.jpg"}, {"type": "music", "file": "Wolfsbane Square (1).mp3", "name": "Wolfsbane Square", "category": "Nuit", "order": 1, "volume": 0.7, "cover": "covers/Wolfsbane_Square__1_.mp3.jpg"}, {"type": "music", "file": "Wolfsbane Square.mp3", "name": "Wolfsbane Square", "category": "Nuit", "order": 2, "volume": 0.7, "cover": "covers/Wolfsbane_Square.mp3.jpg"}, {"type": "music", "file": "Moonlit Village (1).mp3", "name": "Moonlit Village", "category": "Nuit - Lycans", "order": 1, "volume": 0.7, "cover": "covers/Moonlit_Village__1_.mp3.jpg"}, {"type": "music", "file": "Moonlit Village.mp3", "name": "Moonlit Village", "category": "Nuit - Lycans", "order": 2, "volume": 0.7, "cover": "covers/Moonlit_Village.mp3.jpg"}, {"type": "music", "file": "Le Village S’endort.mp3", "name": "Le Village S’endort", "category": "Jour", "order": 1, "volume": 0.7, "cover": "covers/Le_Village_S_endort.mp3.jpg"}, {"type": "music", "file": "Veillée des loups (1).mp3", "name": "Veillée des loups", "category": "Jour", "order": 2, "volume": 0.7, "cover": "covers/Veillée_des_loups__1_.mp3.jpg"}, {"type": "music", "file": "Veillée des loups (2).mp3", "name": "Veillée des loups", "category": "Jour", "order": 3, "volume": 0.7, "cover": "covers/Veillée_des_loups__2_.mp3.jpg"}, {"type": "music", "file": "Veillée des Loups (3).mp3", "name": "Reflexion", "category": "Jour", "order": 4, "volume": 0.7, "cover": "covers/Veillée_des_Loups__3_.mp3.jpg"}, {"type": "music", "file": "Veillée des loups.mp3", "name": "Veillée des loups", "category": "Vie du Village", "order": 1, "volume": 0.7, "cover": "covers/Veillée_des_loups.mp3.jpg"}, {"type": "music", "file": "05 Mission Objective.mp3", "name": "Qui est mort ?!", "category": "Vie du Village", "order": 2, "volume": 0.7, "cover": "covers/05_Mission_Objective.mp3.jpg"}, {"type": "sfx", "file": "Cupidon Firing Arrow.mp3", "name": "🏹", "category": "Tour01 - 1 Cupidon", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "sims-2-falling-in-love.mp3", "name": "🥰", "category": "Tour01 - 1 Cupidon", "order": 2, "volume": 1.0}, {"type": "sfx", "file": "kiss-pop.mp3", "name": "😘", "category": "Tour01 - 2 Amoureux", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "universfield-mysterious-places-30s-159313.mp3", "name": "Musique Mystique", "category": "Tour__ - 1 Voyante", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "dragon-studio-holy-spell-cast-450460.mp3", "name": "😇", "category": "Tour__ - 2 Salvateur", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "freesound_community-short-choir-6116.mp3", "name": "👼", "category": "Tour__ - 2 Salvateur", "order": 2, "volume": 1.0}, {"type": "sfx", "file": "Voicy_Howling werewolf sound effect.mp3", "name": "🐺", "category": "Tour__ - 3 Lycans", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "Voicy_Werewolves Sound Effects.mp3", "name": "💀🐾", "category": "Tour__ - 3 Lycans", "order": 2, "volume": 1.0}, {"type": "sfx", "file": "freesound_community-wolf-howl-6310.mp3", "name": "🐺", "category": "Tour__ - 3 Lycans", "order": 3, "volume": 1.0}, {"type": "sfx", "file": "universfield-wolf-howling-140235.mp3", "name": "🐺", "category": "Tour__ - 3 Lycans", "order": 4, "volume": 1.0}, {"type": "sfx", "file": "Voicy_Witch Sound Effect.mp3", "name": "😏Hihihihhiiiiiiiiiiii", "category": "Tour__ - 4 Sorciere", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "Witch Laughing.mp3", "name": "😏Hihihi", "category": "Tour__ - 4 Sorciere", "order": 2, "volume": 1.0}, {"type": "sfx", "file": "freesound_community-bubbles-003-6397.mp3", "name": "🧋", "category": "Tour__ - 4 Sorciere", "order": 3, "volume": 1.0}, {"type": "sfx", "file": "freesound_community-spas-12-89800.mp3", "name": "🔫 PAN !", "category": "Roles", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "VOXScrm_Cri wilhelm (ID 0477)_LaSonotheque.fr.mp3", "name": "🪂 Wilhelm.fr", "category": "Roles", "order": 2, "volume": 1.0}, {"type": "sfx", "file": "Voicy_Heartbeat.mp3", "name": "💓", "category": "Autres", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "Voicy_Owl hooting.mp3", "name": "🦉", "category": "Autres", "order": 2, "volume": 1.0}, {"type": "sfx", "file": "Voicy_Suspense.mp3", "name": "👀", "category": "Autres", "order": 3, "volume": 1.0}, {"type": "sfx", "file": "Voicy_Violent Thunder Sound With Rain.mp3", "name": "⚡", "category": "Autres", "order": 4, "volume": 1.0}]};
+  </script>
+
+  <script>
+    // ---- SPLITTERS : drag pour redimensionner les 3 panneaux ----
+    (function() {
+      const container = document.getElementById("resizableContent");
+      if (!container) return;
+      const panels = container.querySelectorAll(".panel");
+      const splitters = container.querySelectorAll(".splitter");
+      splitters.forEach((sp) => {
+        const begin = (clientX) => {
+          const left = sp.previousElementSibling;
+          const right = sp.nextElementSibling;
+          if (!left || !right) return null;
+          const startX = clientX;
+          const leftStart = left.getBoundingClientRect().width;
+          const rightStart = right.getBoundingClientRect().width;
+          panels.forEach(p => {
+            const w = p.getBoundingClientRect().width;
+            p.style.flex = "0 0 " + w + "px";
+          });
+          return { left, right, startX, leftStart, rightStart };
+        };
+        const move = (state, clientX) => {
+          if (!state) return;
+          const dx = clientX - state.startX;
+          const newLeft = Math.max(160, state.leftStart + dx);
+          const newRight = Math.max(160, state.rightStart - dx);
+          state.left.style.flex = "0 0 " + newLeft + "px";
+          state.right.style.flex = "0 0 " + newRight + "px";
+        };
+        sp.addEventListener("mousedown", (ev) => {
+          ev.preventDefault();
+          const state = begin(ev.clientX);
+          if (!state) return;
+          const onMove = (e) => move(state, e.clientX);
+          const onUp = () => {
+            document.removeEventListener("mousemove", onMove);
+            document.removeEventListener("mouseup", onUp);
+            document.body.style.cursor = "";
+          };
+          document.body.style.cursor = "col-resize";
+          document.addEventListener("mousemove", onMove);
+          document.addEventListener("mouseup", onUp);
+        });
+        sp.addEventListener("touchstart", (ev) => {
+          const state = begin(ev.touches[0].clientX);
+          if (!state) return;
+          const onMove = (e) => move(state, e.touches[0].clientX);
+          const onEnd = () => {
+            document.removeEventListener("touchmove", onMove);
+            document.removeEventListener("touchend", onEnd);
+          };
+          document.addEventListener("touchmove", onMove, { passive: true });
+          document.addEventListener("touchend", onEnd);
+        }, { passive: true });
+      });
+    })();
+  </script>
+
+  <script>
+    (() => {
+  const tracks = (CONFIG?.tracks || []);
+  const projectName = (CONFIG?.project?.name) || "Soundboard";
+
+  // ---- THEME : applique les 2 couleurs du profil ----
+  const themeColor  = (CONFIG?.project?.themeColor)  || "#667eea";
+  const themeColor2 = (CONFIG?.project?.themeColor2) || "#764ba2";
+  document.documentElement.style.setProperty("--accent", themeColor);
+  document.documentElement.style.setProperty("--accent-2", themeColor2);
+
+  // ---- emojis dans le titre forcés en présentation "text" (monochrome) ----
+  // Variation Selector-15 (︎) après chaque emoji = rendu noir & blanc.
+  const monoEmoji = (str) => {
+    if (!str) return str;
+    return str.replace(/(\p{Extended_Pictographic})/gu, "$1︎");
+  };
+
+  // L'ordre est défini par build.py (cat -> ordre intra-cat).
+  // On NE re-trie PAS ici : on préserve l'ordre d'arrivée des tracks.
+  const musics = tracks.filter(t => t.type === "music");
+  const sfx    = tracks.filter(t => t.type === "sfx");
+
+  const elMusic = document.getElementById("musicList");
+  const elSfx = document.getElementById("sfxList");
+
+  const headerTitle = document.getElementById("headerTitle");
+  const nowTitle = document.getElementById("nowTitle");
+  const nowSub = document.getElementById("nowSub");
+  const cover = document.getElementById("cover");
+
+  const bar = document.getElementById("progressBar");
+  const tCur = document.getElementById("tCur");
+  const tDur = document.getElementById("tDur");
+
+  const btnPlayPause = document.getElementById("btnPlayPause");
+  const btnStop = document.getElementById("btnStop");
+  const btnPrev = document.getElementById("btnPrev");
+  const btnNext = document.getElementById("btnNext");
+  const btnStopAll = document.getElementById("btnStopAll");
+  const btnStopSfx = document.getElementById("btnStopSfx");
+  const btnDownload = document.getElementById("btnDownload");
+
+  const musicVol = document.getElementById("musicVol");
+  const sfxVol = document.getElementById("sfxVol");
+  const musicVolTxt = document.getElementById("musicVolTxt");
+  const sfxVolTxt = document.getElementById("sfxVolTxt");
+
+  const musicSearch = document.getElementById("musicSearch");
+  const sfxSearch = document.getElementById("sfxSearch");
+
+  // Audio en boucle infinie pour TOUTES les musiques
+  const musicAudio = new Audio();
+  musicAudio.preload = "auto";
+  musicAudio.loop = true;
+
+  let currentIndex = -1;
+  let lastTrack = null;   // dernier track joué (pour cover persistante)
+  let musicVolume = 0.7;
+  let sfxVolume = 1.0;
+
+  // ----- helpers -----
+  const fmt = (sec) => {
+    if (!isFinite(sec)) return "0:00";
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m}:${s < 10 ? "0" : ""}${s}`;
+  };
+
+  const groupBy = (arr, key) => {
+    const map = {};
+    arr.forEach(x => {
+      const k = (x[key] || "Other").trim() || "Other";
+      if (!map[k]) map[k] = [];
+      map[k].push(x);
+    });
+    return map;
+  };
+
+  // ----- titre & header -----
+  const setHeaderTitle = (trackName) => {
+    const raw = trackName ? `Soundboard — ${trackName}` : `Soundboard — ${projectName}`;
+    const text = monoEmoji(raw);
+    if (headerTitle) headerTitle.textContent = text;
+    document.title = text;
+  };
+
+  const setCover = (track) => {
+    const t = track || lastTrack;
+    if (t && t.cover) {
+      cover.style.backgroundImage = `url('${t.cover}')`;
+      cover.style.backgroundSize = "cover";
+      cover.style.backgroundPosition = "center";
+      cover.textContent = "";
+    } else if (t) {
+      cover.style.backgroundImage = "";
+      cover.textContent = "🎵";
+    } else {
+      cover.style.backgroundImage = "";
+      cover.textContent = "🎲";
+    }
+  };
+
+  const updateNow = () => {
+    if (currentIndex < 0) {
+      // Si on a déjà joué quelque chose, on garde la dernière cover.
+      // Sinon on affiche la cover du 1er morceau dispo.
+      nowTitle.textContent = lastTrack ? lastTrack.name : (musics[0]?.name || "Aucune musique");
+      nowSub.textContent = lastTrack ? "(en pause)" : "Choisis une track à droite";
+      btnPlayPause.textContent = "▶";
+      bar.style.width = "0%";
+      tCur.textContent = "0:00";
+      tDur.textContent = "0:00";
+      setCover(lastTrack || musics[0] || null);
+      setHeaderTitle(null);
+      return;
+    }
+    const t = musics[currentIndex];
+    nowTitle.textContent = t.name || t.file;
+    nowSub.textContent = t.category || "Musique";
+    btnPlayPause.textContent = musicAudio.paused ? "▶" : "⏸";
+    setCover(t);
+    setHeaderTitle(t.name || t.file);
+  };
+
+  const highlightActive = () => {
+    document.querySelectorAll(".track").forEach(n => n.classList.remove("active"));
+    const node = document.querySelector(`.track[data-idx="${currentIndex}"]`);
+    if (node) node.classList.add("active");
+  };
+
+  // ----- player controls -----
+  const playIndex = (idx) => {
+    if (idx < 0 || idx >= musics.length) return;
+    currentIndex = idx;
+    const t = musics[currentIndex];
+    lastTrack = t;
+    musicAudio.src = (t.file && t.file.startsWith("data:")) ? t.file : ("music/" + t.file);
+    musicAudio.volume = Math.max(0, Math.min(1, (t.volume ?? musicVolume)));
+    musicAudio.currentTime = 0;
+    musicAudio.play();
+    highlightActive();
+    updateNow();
+  };
+
+  const togglePlay = () => {
+    if (currentIndex < 0) {
+      if (musics.length) playIndex(0);
+      return;
+    }
+    if (musicAudio.paused) musicAudio.play();
+    else musicAudio.pause();
+    updateNow();
+  };
+
+  const stopMusic = () => {
+    musicAudio.pause();
+    musicAudio.currentTime = 0;
+    currentIndex = -1;
+    highlightActive();
+    updateNow();
+  };
+
+  const prev = () => {
+    if (!musics.length) return;
+    const idx = currentIndex <= 0 ? musics.length - 1 : currentIndex - 1;
+    playIndex(idx);
+  };
+
+  const next = () => {
+    if (!musics.length) return;
+    const idx = currentIndex >= musics.length - 1 ? 0 : currentIndex + 1;
+    playIndex(idx);
+  };
+
+  const stopAllSfxOnly = () => {
+    sfxPool.forEach(a => { try { a.pause(); a.currentTime = 0; } catch(e){} });
+    sfxPool.length = 0;
+  };
+
+  const stopAll = () => {
+    stopMusic();
+    stopAllSfxOnly();
+  };
+
+  // ----- SFX -----
+  const sfxPool = [];
+  const playSfx = (file, perTrackVol) => {
+    const src = (file && file.startsWith("data:")) ? file : ("sfx/" + file);
+    const a = new Audio(src);
+    const v = (perTrackVol == null ? 1.0 : Number(perTrackVol)) * sfxVolume;
+    a.volume = Math.max(0, Math.min(1, v));
+    a.preload = "auto";
+    a.play();
+    sfxPool.push(a);
+    a.addEventListener("ended", () => {
+      const i = sfxPool.indexOf(a);
+      if (i >= 0) sfxPool.splice(i, 1);
+    });
+  };
+
+  // ----- helpers : état collapse persistant en localStorage -----
+  const COLL_KEY = "sb_collapsed";
+  const collapsed = (() => {
+    try { return new Set(JSON.parse(localStorage.getItem(COLL_KEY) || "[]")); }
+    catch(e) { return new Set(); }
+  })();
+  const saveCollapsed = () => {
+    try { localStorage.setItem(COLL_KEY, JSON.stringify([...collapsed])); } catch(e) {}
+  };
+  const collapseId = (kind, cat) => kind + "::" + (cat || "");
+  const toggleCollapse = (id, sectionEl) => {
+    if (collapsed.has(id)) {
+      collapsed.delete(id);
+      sectionEl.classList.remove("collapsed");
+    } else {
+      collapsed.add(id);
+      sectionEl.classList.add("collapsed");
+    }
+    saveCollapsed();
+  };
+
+  // ----- music list -----
+  const renderMusic = (filter = "") => {
+    elMusic.innerHTML = "";
+    const f = filter.trim().toLowerCase();
+    const grouped = groupBy(musics, "category");
+    Object.entries(grouped).forEach(([cat, items]) => {
+      const section = document.createElement("div");
+      section.className = "music-cat";
+      const cid = collapseId("music", cat);
+      if (collapsed.has(cid)) section.classList.add("collapsed");
+      const title = document.createElement("div");
+      title.className = "cat-title cat-toggle";
+      title.innerHTML = `<span class="cat-chevron">▾</span><span class="cat-name">${cat}</span><span class="cat-count">${items.length}</span>`;
+      title.addEventListener("click", () => toggleCollapse(cid, section));
+      section.appendChild(title);
+
+      // Wrapper pour le mode grille
+      const wrap = document.createElement("div");
+      wrap.className = "track-grid-wrap";
+
+      items.forEach((t) => {
+        const idx = musics.indexOf(t);
+        const text = `${t.name || ""} ${t.file || ""} ${t.category || ""}`.toLowerCase();
+        if (f && !text.includes(f)) return;
+        const row = document.createElement("div");
+        row.className = "track";
+        row.dataset.idx = String(idx);
+        const coverStyle = t.cover
+          ? `style="background-image:url('${t.cover}')"`
+          : ``;
+        const coverFallback = t.cover ? "" : "🎵";
+        row.innerHTML = `
+          <div class="track-cover" ${coverStyle}>${coverFallback}</div>
+          <div class="track-main">
+            <div class="track-name">${t.name || t.file}</div>
+            <div class="track-meta">
+              <span class="chip">${Math.round((t.volume ?? musicVolume) * 100)}%</span>
+              <span class="chip">#${t.order || idx+1}</span>
+            </div>
+          </div>`;
+        row.addEventListener("click", () => playIndex(idx));
+        wrap.appendChild(row);
+      });
+      section.appendChild(wrap);
+      elMusic.appendChild(section);
+    });
+    highlightActive();
+  };
+
+  // ----- sfx list -----
+  const renderSfx = (filter = "") => {
+    elSfx.innerHTML = "";
+    const f = filter.trim().toLowerCase();
+    const grouped = groupBy(sfx, "category");
+    Object.entries(grouped).forEach(([cat, items]) => {
+      const bloc = document.createElement("div");
+      bloc.className = "sfx-category";
+      const cid = collapseId("sfx", cat);
+      if (collapsed.has(cid)) bloc.classList.add("collapsed");
+      const title = document.createElement("div");
+      title.className = "sfx-title cat-toggle";
+      title.innerHTML = `<span class="cat-chevron">▾</span><span class="cat-name">${cat}</span><span class="cat-count">${items.length}</span>`;
+      title.addEventListener("click", () => toggleCollapse(cid, bloc));
+      const grid = document.createElement("div");
+      grid.className = "sfx-grid";
+      items.forEach((t) => {
+        const text = `${t.name || ""} ${t.file || ""} ${t.category || ""}`.toLowerCase();
+        if (f && !text.includes(f)) return;
+        const b = document.createElement("button");
+        b.className = "sfx-btn";
+        b.textContent = t.name || t.file;
+        b.title = t.name || t.file;   // tooltip si tronqué
+        b.addEventListener("click", () => {
+          playSfx(t.file, t.volume);
+          // re-trigger l'animation à chaque clic
+          b.classList.remove("firing");
+          void b.offsetWidth;
+          b.classList.add("firing");
+        });
+        grid.appendChild(b);
+      });
+      bloc.appendChild(title);
+      bloc.appendChild(grid);
+      elSfx.appendChild(bloc);
+    });
+  };
+
+  // ----- progress / time -----
+  musicAudio.addEventListener("timeupdate", () => {
+    if (!isFinite(musicAudio.duration) || musicAudio.duration <= 0) return;
+    if (isSeeking) return;   // ne pas écraser pendant un drag
+    const pct = (musicAudio.currentTime / musicAudio.duration) * 100;
+    bar.style.width = pct + "%";
+    tCur.textContent = fmt(musicAudio.currentTime);
+  });
+
+  // ---- SEEK : click + drag sur la barre de progression ----
+  let isSeeking = false;
+  const progressTrack = bar.parentElement;   // .progress
+  const seekFromEvent = (e) => {
+    if (!isFinite(musicAudio.duration) || musicAudio.duration <= 0) return;
+    const rect = progressTrack.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const x = Math.max(0, Math.min(rect.width, clientX - rect.left));
+    const pct = x / rect.width;
+    bar.style.width = (pct * 100) + "%";
+    tCur.textContent = fmt(pct * musicAudio.duration);
+    return pct * musicAudio.duration;
+  };
+  progressTrack.style.cursor = "pointer";
+  progressTrack.addEventListener("mousedown", (e) => {
+    if (currentIndex < 0) return;
+    isSeeking = true;
+    seekFromEvent(e);
+  });
+  document.addEventListener("mousemove", (e) => {
+    if (!isSeeking) return;
+    seekFromEvent(e);
+  });
+  document.addEventListener("mouseup", (e) => {
+    if (!isSeeking) return;
+    const t = seekFromEvent(e);
+    if (t != null) musicAudio.currentTime = t;
+    isSeeking = false;
+  });
+  // touch (tablette)
+  progressTrack.addEventListener("touchstart", (e) => {
+    if (currentIndex < 0) return;
+    isSeeking = true;
+    seekFromEvent(e);
+  }, { passive: true });
+  progressTrack.addEventListener("touchmove", (e) => {
+    if (!isSeeking) return;
+    seekFromEvent(e);
+  }, { passive: true });
+  progressTrack.addEventListener("touchend", (e) => {
+    if (!isSeeking) return;
+    const t = seekFromEvent(e.changedTouches ? { clientX: e.changedTouches[0].clientX } : e);
+    if (t != null) musicAudio.currentTime = t;
+    isSeeking = false;
+  });
+  musicAudio.addEventListener("loadedmetadata", () => {
+    tDur.textContent = fmt(musicAudio.duration);
+    updateNow();
+  });
+  musicAudio.addEventListener("play", () => {
+    cover.classList.add("playing");
+    bar.classList.add("playing");
+    if (btnPlayPause) btnPlayPause.classList.add("playing");
+    updateNow();
+  });
+  musicAudio.addEventListener("pause", () => {
+    cover.classList.remove("playing");
+    bar.classList.remove("playing");
+    if (btnPlayPause) btnPlayPause.classList.remove("playing");
+    updateNow();
+  });
+  // pas de listener "ended" : musicAudio.loop = true gère ça automatiquement
+
+  // ----- UI events -----
+  btnPlayPause.addEventListener("click", togglePlay);
+  btnStop.addEventListener("click", stopMusic);
+  btnPrev.addEventListener("click", prev);
+  btnNext.addEventListener("click", next);
+  btnStopAll.addEventListener("click", stopAll);
+  if (btnStopSfx) btnStopSfx.addEventListener("click", stopAllSfxOnly);
+
+  musicVol.addEventListener("input", () => {
+    musicVolume = Number(musicVol.value) / 100;
+    musicVolTxt.textContent = `${musicVol.value}%`;
+    if (currentIndex >= 0) musicAudio.volume = musicVolume;
+  });
+  sfxVol.addEventListener("input", () => {
+    sfxVolume = Number(sfxVol.value) / 100;
+    sfxVolTxt.textContent = `${sfxVol.value}%`;
+  });
+
+  musicSearch.addEventListener("input", () => renderMusic(musicSearch.value));
+  sfxSearch.addEventListener("input", () => renderSfx(sfxSearch.value));
+
+  // ----- toggle vue liste / vignettes -----
+  const btnViewMode = document.getElementById("btnViewMode");
+  let viewMode = "grid";
+  try { viewMode = localStorage.getItem("sb_viewMode") || "grid"; } catch(e) {}
+  const applyViewMode = () => {
+    if (viewMode === "grid") {
+      elMusic.classList.add("list-grid");
+      if (btnViewMode) btnViewMode.textContent = "☰";
+      if (btnViewMode) btnViewMode.title = "Vue liste";
+    } else {
+      elMusic.classList.remove("list-grid");
+      if (btnViewMode) btnViewMode.textContent = "⊞";
+      if (btnViewMode) btnViewMode.title = "Vue vignettes";
+    }
+  };
+  if (btnViewMode) {
+    btnViewMode.addEventListener("click", () => {
+      viewMode = (viewMode === "grid") ? "list" : "grid";
+      try { localStorage.setItem("sb_viewMode", viewMode); } catch(e) {}
+      applyViewMode();
+    });
+  }
+  applyViewMode();
+
+  // ----- init -----
+  musicVolTxt.textContent = "70%";
+  sfxVolTxt.textContent = "100%";
+  setHeaderTitle(null);
+  renderMusic("");
+  renderSfx("");
+  updateNow();
+
+  // ----- Détection mode all-in-one + bouton Download -----
+  const isPortable = !!(tracks[0] && tracks[0].file && tracks[0].file.startsWith("data:"));
+  if (btnDownload && isPortable) {
+    btnDownload.style.display = "";
+    const safeName = (projectName || "soundboard")
+      .replace(/[<>:"/\\|?*\x00-\x1f]/g, "_").trim() || "soundboard";
+    const filename = safeName + "_aio.html";
+
+    btnDownload.addEventListener("click", async (ev) => {
+      ev.preventDefault();
+      const orig = btnDownload.textContent;
+      btnDownload.textContent = "⏳ Préparation…";
+      btnDownload.disabled = true;
+      try {
+        let blob;
+        // Méthode 1 : fetch la page courante (idéal sur HTTP/HTTPS, garde le HTML original tel quel)
+        try {
+          const r = await fetch(window.location.href, { cache: "no-store" });
+          if (!r.ok) throw new Error("fetch HTTP " + r.status);
+          blob = await r.blob();
+        } catch (e1) {
+          console.warn("[download] fetch KO, fallback outerHTML:", e1);
+          // Méthode 2 (fallback file://) : reconstruit depuis le DOM courant
+          const html = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+          blob = new Blob([html], { type: "text/html;charset=utf-8" });
+        }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        // Libère le blob après un délai (le download a déjà commencé)
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+        btnDownload.textContent = "✅ Téléchargé";
+        setTimeout(() => { btnDownload.textContent = orig; }, 1800);
+      } catch (e) {
+        console.error("[download] failed:", e);
+        alert("Le téléchargement a échoué : " + e.message);
+        btnDownload.textContent = orig;
+      } finally {
+        btnDownload.disabled = false;
+      }
+    });
+  }
+
+  // ----- Termine le loader (visible jusqu'ici) -----
+  if (window.__finishLoader) {
+    // Petit délai pour que l'utilisateur voie le 100% se remplir
+    setTimeout(window.__finishLoader, 100);
+  }
+
+  // Fallback emojis monochromes pour les navigateurs sans font-variant-emoji.
+  // On parcourt les nœuds texte des en-têtes & libellés et on insère VS-15.
+  const SELECTORS = ".panel-header,.now-sub,.toolbar .hint,.slider-label,.btn";
+  document.querySelectorAll(SELECTORS).forEach(el => {
+    el.childNodes.forEach(n => {
+      if (n.nodeType === 3 && /\p{Extended_Pictographic}/u.test(n.nodeValue)) {
+        n.nodeValue = n.nodeValue.replace(/(\p{Extended_Pictographic})(?!︎)/gu, "$1︎");
+      }
+    });
+  });
+})();
+
+  </script>
+
+  <script>
+    
+  </script>
+
+</body>
+</html>
