@@ -16,7 +16,7 @@ Un **template générique** pour transformer un dossier de mp3 en une **soundboa
 
 > 🎮 **Le projet `Loup-Garou` est inclus en exemple** dans ce repo (mp3, covers, config). Clone, lance `runme.bat`, choix `5` → tu vois le rendu directement, sans avoir à scanner tes propres mp3.
 >
-> 🚀 **Démo live** sans installation : 👉 [https://soaresden.github.io/myhtml/Loup%20Garou%20by%20Denis/](https://soaresden.github.io/myhtml/Loup%20Garou%20by%20Denis/)
+> 🚀 **Démo live** sans installation : 👉 [https://soaresden.github.io/SoundBoardHTMLMaker/FOLDERTOEXPORT/Loup%20Garou%20by%20Denis/](https://soaresden.github.io/SoundBoardHTMLMaker/FOLDERTOEXPORT/Loup%20Garou%20by%20Denis/)
 
 ---
 
