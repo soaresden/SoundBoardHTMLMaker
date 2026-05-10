@@ -1,0 +1,337 @@
+{
+  "project": {
+    "name": "Loup Garou by Denis🐺",
+    "version": 1,
+    "themeColor": "#5174db",
+    "themeColor2": "#0f1406"
+  },
+  "musicCategories": [
+    {
+      "name": "Nuit",
+      "pos": 1
+    },
+    {
+      "name": "Nuit - Lycans",
+      "pos": 2
+    },
+    {
+      "name": "Jour",
+      "pos": 3
+    },
+    {
+      "name": "Vie du Village",
+      "pos": 4
+    }
+  ],
+  "sfxCategories": [
+    {
+      "name": "Tour01 - 1 Cupidon",
+      "pos": 1
+    },
+    {
+      "name": "Tour01 - 2 Amoureux",
+      "pos": 2
+    },
+    {
+      "name": "Tour__ - 1 Voyante",
+      "pos": 3
+    },
+    {
+      "name": "Tour__ - 2 Salvateur",
+      "pos": 4
+    },
+    {
+      "name": "Tour__ - 3 Lycans",
+      "pos": 5
+    },
+    {
+      "name": "Tour__ - 4 Sorciere",
+      "pos": 6
+    },
+    {
+      "name": "Roles",
+      "pos": 7
+    },
+    {
+      "name": "Autres",
+      "pos": 8
+    }
+  ],
+  "music": [
+    {
+      "file": "Au Cœur du Village (1).mp3",
+      "title": "Au Cœur du Village",
+      "disc": 0,
+      "track": 0,
+      "category": "Nuit",
+      "pos": 1,
+      "volume": 0.7,
+      "cover": "covers/Au_Cœur_du_Village__1_.mp3.jpg"
+    },
+    {
+      "file": "Au Cœur du Village.mp3",
+      "title": "Au Cœur du Village",
+      "disc": 0,
+      "track": 0,
+      "category": "Nuit",
+      "pos": 2,
+      "volume": 0.7,
+      "cover": "covers/Au_Cœur_du_Village.mp3.jpg"
+    },
+    {
+      "file": "Le Village S’endort (1).mp3",
+      "title": "Le Village S’endort",
+      "disc": 0,
+      "track": 0,
+      "category": "Nuit",
+      "pos": 3,
+      "volume": 0.7,
+      "cover": "covers/Le_Village_S_endort__1_.mp3.jpg"
+    },
+    {
+      "file": "Le Village S’endort (2).mp3",
+      "title": "Le Village S’endort",
+      "disc": 0,
+      "track": 0,
+      "category": "Nuit",
+      "pos": 4,
+      "volume": 0.7,
+      "cover": "covers/Le_Village_S_endort__2_.mp3.jpg"
+    },
+    {
+      "file": "Le Village S’endort.mp3",
+      "title": "Le Village S’endort",
+      "disc": 0,
+      "track": 0,
+      "category": "Jour",
+      "pos": 1,
+      "volume": 0.7,
+      "cover": "covers/Le_Village_S_endort.mp3.jpg"
+    },
+    {
+      "file": "Veillée des loups (1).mp3",
+      "title": "Veillée des loups",
+      "disc": 0,
+      "track": 0,
+      "category": "Jour",
+      "pos": 2,
+      "volume": 0.7,
+      "cover": "covers/Veillée_des_loups__1_.mp3.jpg"
+    },
+    {
+      "file": "Veillée des loups (2).mp3",
+      "title": "Veillée des loups",
+      "disc": 0,
+      "track": 0,
+      "category": "Jour",
+      "pos": 3,
+      "volume": 0.7,
+      "cover": "covers/Veillée_des_loups__2_.mp3.jpg"
+    },
+    {
+      "file": "Veillée des Loups (3).mp3",
+      "title": "Reflexion",
+      "disc": 0,
+      "track": 0,
+      "category": "Jour",
+      "pos": 4,
+      "volume": 0.7,
+      "cover": "covers/Veillée_des_Loups__3_.mp3.jpg"
+    },
+    {
+      "file": "Veillée des loups.mp3",
+      "title": "Veillée des loups",
+      "disc": 0,
+      "track": 0,
+      "category": "Vie du Village",
+      "pos": 1,
+      "volume": 0.7,
+      "cover": "covers/Veillée_des_loups.mp3.jpg"
+    },
+    {
+      "file": "05 Mission Objective.mp3",
+      "title": "Qui est mort ?!",
+      "disc": 0,
+      "track": 5,
+      "category": "Vie du Village",
+      "pos": 2,
+      "volume": 0.7,
+      "cover": "covers/05_Mission_Objective.mp3.jpg"
+    },
+    {
+      "file": "Wolfsbane Square (1).mp3",
+      "title": "Wolfsbane Square",
+      "disc": 0,
+      "track": 0,
+      "category": "Nuit",
+      "pos": 1,
+      "volume": 0.7,
+      "cover": "covers/Wolfsbane_Square__1_.mp3.jpg"
+    },
+    {
+      "file": "Wolfsbane Square.mp3",
+      "title": "Wolfsbane Square",
+      "disc": 0,
+      "track": 0,
+      "category": "Nuit",
+      "pos": 2,
+      "volume": 0.7,
+      "cover": "covers/Wolfsbane_Square.mp3.jpg"
+    },
+    {
+      "file": "Moonlit Village (1).mp3",
+      "title": "Moonlit Village",
+      "disc": 0,
+      "track": 0,
+      "category": "Nuit - Lycans",
+      "pos": 1,
+      "volume": 0.7,
+      "cover": "covers/Moonlit_Village__1_.mp3.jpg"
+    },
+    {
+      "file": "Moonlit Village.mp3",
+      "title": "Moonlit Village",
+      "disc": 0,
+      "track": 0,
+      "category": "Nuit - Lycans",
+      "pos": 2,
+      "volume": 0.7,
+      "cover": "covers/Moonlit_Village.mp3.jpg"
+    }
+  ],
+  "sfx": [
+    {
+      "file": "Voicy_Heartbeat.mp3",
+      "label": "💓",
+      "category": "Autres",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "Voicy_Howling werewolf sound effect.mp3",
+      "label": "🐺",
+      "category": "Tour__ - 3 Lycans",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "Voicy_Owl hooting.mp3",
+      "label": "🦉",
+      "category": "Autres",
+      "pos": 2,
+      "volume": 1
+    },
+    {
+      "file": "Voicy_Suspense.mp3",
+      "label": "👀",
+      "category": "Autres",
+      "pos": 3,
+      "volume": 1
+    },
+    {
+      "file": "Voicy_Violent Thunder Sound With Rain.mp3",
+      "label": "⚡",
+      "category": "Autres",
+      "pos": 4,
+      "volume": 1
+    },
+    {
+      "file": "Voicy_Werewolves Sound Effects.mp3",
+      "label": "💀🐾",
+      "category": "Tour__ - 3 Lycans",
+      "pos": 2,
+      "volume": 1
+    },
+    {
+      "file": "Voicy_Witch Sound Effect.mp3",
+      "label": "😏Hihihihhiiiiiiiiiiii",
+      "category": "Tour__ - 4 Sorciere",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "freesound_community-spas-12-89800.mp3",
+      "label": "🔫 PAN !",
+      "category": "Roles",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "VOXScrm_Cri wilhelm (ID 0477)_LaSonotheque.fr.mp3",
+      "label": "🪂 Wilhelm.fr",
+      "category": "Roles",
+      "pos": 2,
+      "volume": 1
+    },
+    {
+      "file": "Witch Laughing.mp3",
+      "label": "😏Hihihi",
+      "category": "Tour__ - 4 Sorciere",
+      "pos": 2,
+      "volume": 1
+    },
+    {
+      "file": "Cupidon Firing Arrow.mp3",
+      "label": "🏹",
+      "category": "Tour01 - 1 Cupidon",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "freesound_community-bubbles-003-6397.mp3",
+      "label": "🧋",
+      "category": "Tour__ - 4 Sorciere",
+      "pos": 3,
+      "volume": 1
+    },
+    {
+      "file": "freesound_community-wolf-howl-6310.mp3",
+      "label": "🐺",
+      "category": "Tour__ - 3 Lycans",
+      "pos": 3,
+      "volume": 1
+    },
+    {
+      "file": "kiss-pop.mp3",
+      "label": "😘",
+      "category": "Tour01 - 2 Amoureux",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "sims-2-falling-in-love.mp3",
+      "label": "🥰",
+      "category": "Tour01 - 1 Cupidon",
+      "pos": 2,
+      "volume": 1
+    },
+    {
+      "file": "universfield-mysterious-places-30s-159313.mp3",
+      "label": "Musique Mystique",
+      "category": "Tour__ - 1 Voyante",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "universfield-wolf-howling-140235.mp3",
+      "label": "🐺",
+      "category": "Tour__ - 3 Lycans",
+      "pos": 4,
+      "volume": 1
+    },
+    {
+      "file": "dragon-studio-holy-spell-cast-450460.mp3",
+      "label": "😇",
+      "category": "Tour__ - 2 Salvateur",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "freesound_community-short-choir-6116.mp3",
+      "label": "👼",
+      "category": "Tour__ - 2 Salvateur",
+      "pos": 2,
+      "volume": 1
+    }
+  ]
+}

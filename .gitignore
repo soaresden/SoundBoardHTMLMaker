@@ -6,11 +6,16 @@
 # =========================================
 
 # =========================================
-#  BUILD OUTPUTS (régénérés à chaque build)
+#  BUILD OUTPUTS
+#  FOLDERTOEXPORT/ est versionne pour servir d'exemple
+#  (visite : https://soaresden.github.io/myhtml/Loup%20Garou%20by%20Denis/).
+#  Si tu fork pour ton propre projet, ajoute "FOLDERTOEXPORT/"
+#  dans ton .gitignore local pour ne pas tracker tes builds.
 # =========================================
-FOLDERTOEXPORT/
 output.html
 output_portable.html
+index.html
+index_aio.html
 
 # =========================================
 #  PYTHON

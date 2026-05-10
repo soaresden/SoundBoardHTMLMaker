@@ -15,6 +15,8 @@ Un **template générique** pour transformer un dossier de mp3 en une **soundboa
 > Tu déposes tes mp3 dans `music/` et `sfx/`, tu lances `runme.bat`, tu mets en forme dans l'éditeur web, tu builds → un dossier `FOLDERTOEXPORT/` autonome est créé. Tu le copies sur ta tablette / ton téléphone, tu ouvres `output.html` (ou `index_aio.html` pour Android) → ça marche.
 
 > 🎮 **Le projet `Loup-Garou` est inclus en exemple** dans ce repo (mp3, covers, config). Clone, lance `runme.bat`, choix `5` → tu vois le rendu directement, sans avoir à scanner tes propres mp3.
+>
+> 🚀 **Démo live** sans installation : 👉 [https://soaresden.github.io/myhtml/Loup%20Garou%20by%20Denis/](https://soaresden.github.io/myhtml/Loup%20Garou%20by%20Denis/)
 
 ---
 
