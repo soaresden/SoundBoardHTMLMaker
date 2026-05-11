@@ -22,6 +22,32 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_response(204)
             self.end_headers()
             return
+        # Endpoint /list-files : retourne les mp3 reellement presents dans music/ et sfx/
+        if self.path.startswith("/list-files"):
+            try:
+                music_dir = os.path.join(ROOT, "music")
+                sfx_dir = os.path.join(ROOT, "sfx")
+                def _list(folder):
+                    if not os.path.isdir(folder):
+                        return []
+                    return sorted(f for f in os.listdir(folder) if f.lower().endswith(".mp3"))
+                payload = json.dumps({
+                    "music": _list(music_dir),
+                    "sfx":   _list(sfx_dir),
+                }, ensure_ascii=False).encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Content-Length", str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+            except Exception as e:
+                err = json.dumps({"error": str(e)}).encode("utf-8")
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Content-Length", str(len(err)))
+                self.end_headers()
+                self.wfile.write(err)
+            return
         return super().do_GET()
 
     def translate_path(self, path):

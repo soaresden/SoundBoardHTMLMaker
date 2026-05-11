@@ -14,14 +14,30 @@ const editor = {
       const r = await fetch("config.json?ts=" + Date.now(), { cache: "no-store" });
       this.cfg = await r.json();
       this._ensureShape();
-      // Détecte (pour info) les orphelins au load — ils seront fixés au save.
       this._cleanOrphans();
       this.initAudio();
+      // Fetch des fichiers disponibles sur disque (pour la liste "non-utilisés")
+      this._fetchDiskFiles().then(() => this.render());
       this.render();
     } catch (e) {
       console.error("config.json load failed", e);
       const el = document.getElementById("musicTable");
       if (el) el.innerHTML = "config.json introuvable -- lance d'abord 'python build.py scan'";
+    }
+  },
+
+  // ============================================================
+  //  FICHIERS DISQUE -> liste "non-utilisés"
+  // ============================================================
+  async _fetchDiskFiles() {
+    try {
+      const r = await fetch("/list-files?ts=" + Date.now(), { cache: "no-store" });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const data = await r.json();
+      this.diskFiles = data;
+    } catch (e) {
+      console.warn("[diskFiles] /list-files KO:", e);
+      this.diskFiles = { music: [], sfx: [] };
     }
   },
 
@@ -34,9 +50,35 @@ const editor = {
     c.sfxCategories = Array.isArray(c.sfxCategories) ? c.sfxCategories : [];
     c.music = Array.isArray(c.music) ? c.music : [];
     c.sfx = Array.isArray(c.sfx) ? c.sfx : [];
+
+    // Migration : si un item a categories: [...] (array), on le decompose en
+    // entries dupliquees avec category: "X" single (une par cat).
+    c.music = this._expandMultiCat(c.music);
+    c.sfx   = this._expandMultiCat(c.sfx);
+
     c.music.forEach(m => { if (m.volume === undefined || m.volume === null) m.volume = 0.7; });
     c.sfx.forEach(s => { if (s.volume === undefined || s.volume === null) s.volume = 1.0; });
     this.cfg = c;
+  },
+
+  // Transforme [{file, categories:["A","B"]}, ...] -> [{file, category:"A"}, {file, category:"B"}, ...]
+  _expandMultiCat(items) {
+    const out = [];
+    items.forEach(it => {
+      if (Array.isArray(it.categories) && it.categories.length > 0) {
+        it.categories.forEach(cat => {
+          const clone = Object.assign({}, it);
+          delete clone.categories;
+          clone.category = cat;
+          out.push(clone);
+        });
+      } else {
+        // Vire un eventuel `categories` vide qui traînerait
+        if ("categories" in it) delete it.categories;
+        out.push(it);
+      }
+    });
+    return out;
   },
 
   // =================================================================
@@ -224,8 +266,88 @@ const editor = {
     this.renderCategories();
     this.renderMusic();
     this.renderSfx();
+    this.renderUnused();
     this.applyTheme(this.cfg.project.themeColor, this.cfg.project.themeColor2);
     this.applyMonoEmojis();
+  },
+
+  // ============================================================
+  //  RENDU des fichiers NON UTILISES (presents sur disque mais
+  //  pas dans cfg.music / cfg.sfx). Bouton ➕ pour les remettre.
+  // ============================================================
+  renderUnused() {
+    const el = document.getElementById("unusedFiles");
+    if (!el) return;
+    const dm = (this.diskFiles && this.diskFiles.music) || [];
+    const ds = (this.diskFiles && this.diskFiles.sfx)   || [];
+    const usedM = new Set((this.cfg.music || []).map(m => m.file));
+    const usedS = new Set((this.cfg.sfx   || []).map(s => s.file));
+    const unusedM = dm.filter(f => !usedM.has(f));
+    const unusedS = ds.filter(f => !usedS.has(f));
+
+    if (!unusedM.length && !unusedS.length) {
+      el.innerHTML = `<div class="muted">Tout est utilisé ✅</div>`;
+      return;
+    }
+
+    let html = "";
+    if (unusedM.length) {
+      html += `<div class="unused-section">
+        <div class="unused-label">🎵 Music (${unusedM.length})</div>
+        ${unusedM.map(f => `
+          <div class="unused-row">
+            <span class="unused-file" title="${this._esc(f)}">${this._esc(f)}</span>
+            <button class="btn-add-back" title="Ajouter ce fichier (sans catégorie)"
+                    onclick="editor.addBackFile('music', this.getAttribute('data-file'))"
+                    data-file="${this._esc(f)}">➕</button>
+          </div>
+        `).join("")}
+      </div>`;
+    }
+    if (unusedS.length) {
+      html += `<div class="unused-section">
+        <div class="unused-label">🔊 SFX (${unusedS.length})</div>
+        ${unusedS.map(f => `
+          <div class="unused-row">
+            <span class="unused-file" title="${this._esc(f)}">${this._esc(f)}</span>
+            <button class="btn-add-back"
+                    onclick="editor.addBackFile('sfx', this.getAttribute('data-file'))"
+                    data-file="${this._esc(f)}">➕</button>
+          </div>
+        `).join("")}
+      </div>`;
+    }
+    el.innerHTML = html;
+  },
+
+  addBackFile(kind, file) {
+    if (!file) return;
+    const items = kind === "music" ? this.cfg.music : this.cfg.sfx;
+    if (items.some(it => it.file === file)) return;
+    const titleOrLabel = file.replace(/\.(mp3|wav|m4a|ogg)$/i, "");
+    const entry = kind === "music"
+      ? { file, title: titleOrLabel, disc: 0, track: 0, category: "", pos: 9999, volume: 0.7, cover: null }
+      : { file, label: titleOrLabel,                              category: "", pos: 9999, volume: 1.0 };
+    items.push(entry);
+    this._recalcPositions(kind);
+    this.render();
+  },
+
+  // Supprime DEFINITIVEMENT cette ligne du config (mais pas le fichier mp3 du disque)
+  removeRow(kind, idx) {
+    const items = kind === "music" ? this.cfg.music : this.cfg.sfx;
+    const it = items[idx];
+    if (!it) return;
+    const file = it.file;
+    const cat  = it.category;
+    const sameFile = items.filter(x => x.file === file).length;
+    const msg = sameFile > 1
+      ? `Retirer "${file}" de la cat "${cat}" ?\n(Il restera dans ${sameFile - 1} autre(s) cat.)`
+      : `Retirer "${file}" du projet ?\n(Tu pourras le remettre depuis la liste "Fichiers non utilisés".)`;
+    if (!confirm(msg)) return;
+    items.splice(idx, 1);
+    this._recalcPositions(kind);
+    this.render();
   },
 
   renderProject() {
@@ -420,7 +542,7 @@ const editor = {
     });
 
     // Construit le HTML
-    const colCount = 6;   // nb de colonnes pour le colspan du séparateur
+    const colCount = 7;   // nb de colonnes pour le colspan du séparateur (avec ✕)
     const labelTitle = kind === "music" ? "Titre" : "Texte";
     const updateLbl  = kind === "music" ? "title" : "label";
     const updateVol  = kind === "music" ? "updateMusicVol" : "updateSfxVol";
@@ -433,7 +555,7 @@ const editor = {
       <thead><tr>
         <th style="width:24px;"></th>
         <th style="width:34px;">#</th>
-        <th>File</th><th>${labelTitle}</th><th>Cat</th><th>Vol</th><th>🎧</th>
+        <th>File</th><th>${labelTitle}</th><th>Cat</th><th>Vol</th><th>🎧</th><th style="width:30px;"></th>
       </tr></thead><tbody>`;
 
     const renderGroup = (catName, arr) => {
@@ -472,6 +594,8 @@ const editor = {
             <td><input type="number" min="0" max="100" value="${volPct}" style="width:55px;"
                   oninput="editor.${updateVol}(${i}, this.value)"></td>
             <td><button class="${playClass}" data-src="${playSubdir}/${encodeURIComponent(it.file)}">▶</button></td>
+            <td><button class="btn-x" title="Retirer cette ligne"
+                  onclick="editor.removeRow('${kind}', ${i})">✕</button></td>
           </tr>`;
       });
     };
@@ -597,7 +721,12 @@ const editor = {
 
   // ---- helpers ----
   _catSelect(kind, current, idx) {
+    // Dropdown standard pour LA CAT DE CETTE LIGNE.
+    // Pour mettre le morceau dans PLUSIEURS cats (= plusieurs lignes), cliquer
+    // sur le bouton 📋 ajoute juste a cote.
+    const items = kind === "music" ? this.cfg.music : this.cfg.sfx;
     const list = kind === "music" ? this.cfg.musicCategories : this.cfg.sfxCategories;
+    const it = items[idx];
     const onchange = kind === "music"
       ? `editor.updateMusic(${idx},'category',this.value)`
       : `editor.updateSfx(${idx},'category',this.value)`;
@@ -606,7 +735,95 @@ const editor = {
       const sel = c.name === current ? "selected" : "";
       return `<option value="${this._esc(c.name)}" ${sel}>${this._esc(c.name)}</option>`;
     }).join("");
-    return `<select onchange="${onchange}">${opts}</select>`;
+
+    // Compte combien d'entries ont le meme fichier (= dans combien de cats il est)
+    const file = it ? it.file : "";
+    const sameFile = items.filter(x => x.file === file).length;
+    const badge = sameFile > 1
+      ? `<span class="multi-cat-count" title="Ce fichier apparait dans ${sameFile} cats">×${sameFile}</span>`
+      : "";
+
+    return `<div class="cat-cell">
+      <select onchange="${onchange}">${opts}</select>
+      <button class="btn-add-cat" title="Ajouter ce fichier dans une autre catégorie"
+              onclick="editor.openMultiCatPicker('${kind}', '${this._esc(file)}')">📋</button>
+      ${badge}
+    </div>`;
+  },
+
+  // ============================================================
+  //  MULTI-SELECT : popup checkboxes pour assigner un fichier
+  //  a plusieurs cats. Chaque cat cochee = une LIGNE dans la table.
+  // ============================================================
+  openMultiCatPicker(kind, file) {
+    if (!file) return;
+    const items = kind === "music" ? this.cfg.music : this.cfg.sfx;
+    const cats  = kind === "music" ? this.cfg.musicCategories : this.cfg.sfxCategories;
+    const currentCats = new Set(items.filter(it => it.file === file).map(it => it.category));
+
+    // Cherche/cree l'overlay
+    let overlay = document.getElementById("multiCatOverlay");
+    if (overlay) overlay.remove();
+    overlay = document.createElement("div");
+    overlay.id = "multiCatOverlay";
+    overlay.className = "modal-overlay";
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+    const box = document.createElement("div");
+    box.className = "modal-box";
+    box.style.maxWidth = "520px";
+    box.innerHTML = `
+      <div class="modal-title">📋 Catégories pour : ${this._esc(file)}</div>
+      <div class="modal-hint">Coche les catégories où ce fichier doit apparaître.
+        Chaque case cochée = une ligne distincte dans la table (réordonnable séparément).</div>
+      <div id="multiCatList" style="display:flex; flex-direction:column; gap:6px; max-height:55vh; overflow-y:auto; margin-top:8px;">
+        ${cats.map(c => {
+          const checked = currentCats.has(c.name) ? "checked" : "";
+          return `<label class="multi-cat-row">
+            <input type="checkbox" ${checked}
+                   onchange="editor.toggleCatForFile('${kind}', this.getAttribute('data-file'), this.getAttribute('data-cat'), this.checked)"
+                   data-file="${this._esc(file)}" data-cat="${this._esc(c.name)}">
+            <span>${this._esc(c.name)}</span>
+          </label>`;
+        }).join("")}
+      </div>
+      <div style="text-align:right; margin-top:14px;">
+        <button class="btn btn-small" onclick="document.getElementById('multiCatOverlay').remove()">Fermer</button>
+      </div>
+    `;
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+  },
+
+  toggleCatForFile(kind, file, catName, checked) {
+    const items = kind === "music" ? this.cfg.music : this.cfg.sfx;
+    if (checked) {
+      // Eviter doublon
+      if (items.some(it => it.file === file && it.category === catName)) return;
+      // Clone une entree existante pour preserver les autres props (title, volume, cover, etc.)
+      const template = items.find(it => it.file === file);
+      if (!template) return;
+      const clone = Object.assign({}, template);
+      clone.category = catName;
+      clone.pos = 9999; // sera recalculee
+      items.push(clone);
+    } else {
+      const i = items.findIndex(it => it.file === file && it.category === catName);
+      if (i < 0) return;
+      // Si c'est la SEULE entry pour ce fichier, on refuse (sinon le fichier disparait)
+      const count = items.filter(it => it.file === file).length;
+      if (count <= 1) {
+        alert("Impossible de tout decocher : un fichier doit avoir au moins une categorie.");
+        const cb = document.querySelector(`#multiCatList input[data-file="${file}"][data-cat="${catName}"]`);
+        if (cb) cb.checked = true;
+        return;
+      }
+      items.splice(i, 1);
+    }
+    this._recalcPositions(kind);
+    this.render();
+    // Re-ouvre le picker apres render pour confort
+    setTimeout(() => this.openMultiCatPicker(kind, file), 0);
   },
 
   updateMusic(i, field, value) { if (this.cfg.music[i]) this.cfg.music[i][field] = value; },

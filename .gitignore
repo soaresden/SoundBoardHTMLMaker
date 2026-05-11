@@ -20,6 +20,21 @@
 /index.html
 /index_aio.html
 
+# Les versions AiO (all-in-one) ne sont JAMAIS versionnees :
+# - leur taille depasse souvent la limite GitHub de 100MB par fichier
+# - elles sont re-generables avec `runme.bat` (option 4 ou 5)
+# - elles n'apportent rien sur GitHub Pages (les mp3 sont deja la
+#   en version light avec index.html + dossiers a cote)
+**/index_aio.html
+**/output_portable.html
+
+# Logs serveur
+server.log
+
+# Fichiers WAV bruts (briefs, voicelines) -- on garde uniquement les .mp3 utilises
+sfx/briefs/
+**/*.wav
+
 # =========================================
 #  PYTHON
 # =========================================

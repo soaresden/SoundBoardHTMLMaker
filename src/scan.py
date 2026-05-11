@@ -27,7 +27,13 @@ def _recalc_positions(items: List[Dict[str, Any]]) -> None:
     """pos = position dans la catégorie (1, 2, 3 par cat indépendamment)."""
     counters: Dict[str, int] = {}
     for it in items:
-        c = it.get("category") or ""
+        # Pour le calcul de pos, on utilise la 1ere cat du array si multi-cat,
+        # sinon la cat string. C'est l'ordre d'apparition dans la cat "primaire".
+        cats = it.get("categories")
+        if isinstance(cats, list) and cats:
+            c = cats[0] or ""
+        else:
+            c = it.get("category") or ""
         counters[c] = counters.get(c, 0) + 1
         it["pos"] = counters[c]
 
@@ -61,16 +67,20 @@ def scan_project(music_dir: str = "music",
         seen_music.add(f)
         tags = read_mp3_tags(os.path.join(music_dir, f), covers_dir=covers_dir)
         cover_rel = tags.cover_path.replace("\\", "/") if tags.cover_path else None
-        musics.append({
+        entry = {
             "file": f,
             "title": m.get("title") or tags.title or os.path.splitext(f)[0],
             "disc":  m.get("disc",  tags.disc),
             "track": m.get("track", tags.track),
             "category": m.get("category", ""),
-            "pos": m.get("pos", 0),     # sera recalculé en fin
+            "pos": m.get("pos", 0),
             "volume": m.get("volume", 0.7),
             "cover": m.get("cover") or cover_rel,
-        })
+        }
+        # Preserve `categories` (array) si defini -> support multi-cat
+        if isinstance(m.get("categories"), list) and m.get("categories"):
+            entry["categories"] = list(m["categories"])
+        musics.append(entry)
     # 2) ajouter les NOUVEAUX morceaux en queue
     for f in sorted(fs_music):
         if f in seen_music:
@@ -96,13 +106,16 @@ def scan_project(music_dir: str = "music",
         if not f or f not in fs_sfx:
             continue
         seen_sfx.add(f)
-        sfx.append({
+        entry = {
             "file": f,
             "label": s.get("label") or os.path.splitext(f)[0],
             "category": s.get("category", ""),
             "pos": s.get("pos", 0),
             "volume": s.get("volume", 1.0),
-        })
+        }
+        if isinstance(s.get("categories"), list) and s.get("categories"):
+            entry["categories"] = list(s["categories"])
+        sfx.append(entry)
     for f in sorted(fs_sfx):
         if f in seen_sfx:
             continue

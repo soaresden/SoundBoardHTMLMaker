@@ -153,25 +153,46 @@ def _mtime(path):
         return "?"
 
 
+def _item_categories(it):
+    """Retourne la liste des categories d'un item.
+    - Si `categories` est un array non-vide -> on le retourne.
+    - Sinon fallback sur `category` (string, legacy).
+    """
+    cats = it.get("categories")
+    if isinstance(cats, list) and cats:
+        return list(cats)
+    one = it.get("category")
+    return [one] if one else [""]
+
+
 def _clean_orphans(cfg):
-    """Retire les catégories orphelines des items (cat -> ''),
-    avec un warning explicite par item concerné. Modifie cfg en place.
+    """Retire les categories orphelines des items.
+    Supporte `categories` (array) ET `category` (string, legacy).
     """
     m_names = {c.get("name") for c in (cfg.get("musicCategories") or [])}
     s_names = {c.get("name") for c in (cfg.get("sfxCategories")   or [])}
     fixed = 0
+
+    def _clean(it, valid):
+        nonlocal fixed
+        if isinstance(it.get("categories"), list):
+            before = list(it["categories"])
+            kept   = [c for c in before if c in valid]
+            removed = [c for c in before if c not in valid]
+            if removed:
+                print(f"  WARN: '{it.get('file')}' cats orphelines retirees: {removed}")
+                fixed += 1
+            it["categories"] = kept
+        elif it.get("category") and it.get("category") not in valid:
+            print(f"  WARN: '{it.get('file')}' cat orpheline "
+                  f"{it.get('category')!r} -> remis sans cat")
+            it["category"] = ""
+            fixed += 1
+
     for m in cfg.get("music", []) or []:
-        if m.get("category") and m.get("category") not in m_names:
-            print(f"  WARN: music '{m.get('file')}' avait cat orpheline "
-                  f"{m.get('category')!r} -> remis sans cat")
-            m["category"] = ""
-            fixed += 1
+        _clean(m, m_names)
     for s in cfg.get("sfx", []) or []:
-        if s.get("category") and s.get("category") not in s_names:
-            print(f"  WARN: sfx '{s.get('file')}' avait cat orpheline "
-                  f"{s.get('category')!r} -> remis sans cat")
-            s["category"] = ""
-            fixed += 1
+        _clean(s, s_names)
     if fixed:
         print(f"  -> {fixed} orphelin(s) corrige(s) (config.json NON modifie, juste le build).")
     return fixed
@@ -188,32 +209,36 @@ def cmd_build():
 
     # Transforme le config en format runtime player.
     # ORDRE FINAL = ordre des catégories (par cat.pos), puis ordre intra-tableau.
+    # Si un item a `categories: [...]` (array), il est emis UNE FOIS PAR CAT.
+    # Sinon fallback sur `category` (string, legacy).
     def _emit(items_key, cats_key, type_label, name_field, default_vol, want_cover):
         items = cfg.get(items_key, [])
         cats  = cfg.get(cats_key, [])
         cat_order = [c["name"] for c in sorted(cats, key=lambda c: c.get("pos", 0))]
-        # Map cat -> liste d'items dans l'ordre du tableau plat
         groups = {c: [] for c in cat_order}
-        groups[""] = []   # bucket pour les items sans catégorie
+        groups[""] = []
         for it in items:
-            c = it.get("category") or ""
-            groups.setdefault(c, []).append(it)
+            for c in _item_categories(it):
+                groups.setdefault(c, []).append(it)
+
+        def _emit_one(it, cat_name):
+            t = _make_track(it, type_label, name_field, default_vol, want_cover)
+            t["category"] = cat_name   # override avec la cat courante
+            return t
 
         out = []
-        # Cats déclarées d'abord (dans l'ordre)
         for c in cat_order:
             for it in groups.get(c, []):
-                out.append(_make_track(it, type_label, name_field, default_vol, want_cover))
-        # Items sans cat ensuite
+                out.append(_emit_one(it, c))
         for it in groups.get("", []):
-            out.append(_make_track(it, type_label, name_field, default_vol, want_cover))
-        # Cats orphelines (présentes dans items mais pas dans cats déclarées)
+            out.append(_emit_one(it, ""))
+        # Cats orphelines (presentes dans items mais pas declarees)
         declared = set(cat_order) | {""}
         for c, lst in groups.items():
             if c in declared:
                 continue
             for it in lst:
-                out.append(_make_track(it, type_label, name_field, default_vol, want_cover))
+                out.append(_emit_one(it, c))
         return out
 
     tracks = []
@@ -346,33 +371,37 @@ def cmd_build_portable(clean: bool = True):
         return cover_cache[rel_path]
 
     tracks = []
+    # On emet UNE entree par (item, cat) si l'item a categories[].
     for m in cfg.get("music", []):
         data_audio = audio_uri("music", m["file"])
         if not data_audio:
             print(f"  WARN: music/{m['file']} introuvable, skip")
             continue
-        tracks.append({
-            "type": "music",
-            "file": data_audio,                 # data URI à la place du chemin
-            "name": m["title"],
-            "category": m["category"],
-            "order": m["pos"],
-            "volume": float(m.get("volume", 0.7)),
-            "cover": cover_uri(m.get("cover")),  # data URI pour la cover aussi
-        })
+        cover_data = cover_uri(m.get("cover"))
+        for cat in _item_categories(m):
+            tracks.append({
+                "type": "music",
+                "file": data_audio,
+                "name": m.get("title") or m["file"],
+                "category": cat,
+                "order": m.get("pos", 0),
+                "volume": float(m.get("volume", 0.7)),
+                "cover": cover_data,
+            })
     for s in cfg.get("sfx", []):
         data_audio = audio_uri("sfx", s["file"])
         if not data_audio:
             print(f"  WARN: sfx/{s['file']} introuvable, skip")
             continue
-        tracks.append({
-            "type": "sfx",
-            "file": data_audio,
-            "name": s["label"],
-            "category": s["category"],
-            "order": s["pos"],
-            "volume": float(s.get("volume", 1.0)),
-        })
+        for cat in _item_categories(s):
+            tracks.append({
+                "type": "sfx",
+                "file": data_audio,
+                "name": s.get("label") or s["file"],
+                "category": cat,
+                "order": s.get("pos", 0),
+                "volume": float(s.get("volume", 1.0)),
+            })
 
     # Réordonne selon les catégories
     cat_pos_music = {c["name"]: c.get("pos", 0) for c in cfg.get("musicCategories", [])}

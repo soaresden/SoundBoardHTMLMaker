@@ -56,9 +56,13 @@
       <div class="splitter" data-splitter="2"></div>
 
       <div class="panel panel-now" data-panel="cat">
-        <div class="panel-header">🏷️ Categories</div>
+        <div class="panel-header">🏷️ Categories &amp; 🗂 Unused</div>
         <div class="panel-content">
           <div id="catTable"></div>
+          <hr style="margin:14px 0; border-color:rgba(255,255,255,0.08);">
+          <div class="cat-block-title">🗂 Fichiers non utilisés</div>
+          <div class="modal-hint" style="margin-bottom:8px;">Fichiers présents dans <code>/music</code> ou <code>/sfx</code> mais qui ne sont assignés à aucune catégorie. Clic sur ➕ pour les ajouter.</div>
+          <div id="unusedFiles"></div>
           <div class="status-bar" id="statusBar"></div>
         </div>
       </div>
