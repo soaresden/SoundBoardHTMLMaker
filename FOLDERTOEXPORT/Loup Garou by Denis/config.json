@@ -257,7 +257,7 @@
     },
     {
       "file": "Voicy_Howling werewolf sound effect.mp3",
-      "label": "🐺Classique",
+      "label": "🐺",
       "category": "🐺04 Lycans (Tuent)",
       "pos": 1,
       "volume": 1
@@ -299,21 +299,21 @@
     },
     {
       "file": "freesound_community-spas-12-89800.mp3",
-      "label": "🔫 PAN !",
+      "label": "🔫",
       "category": "Roles",
       "pos": 1,
       "volume": 1
     },
     {
       "file": "VOXScrm_Cri wilhelm (ID 0477)_LaSonotheque.fr.mp3",
-      "label": "🪂Cri Wilhelm",
+      "label": "😱",
       "category": "Roles",
       "pos": 2,
       "volume": 1
     },
     {
       "file": "Witch Laughing.mp3",
-      "label": "😏Hihihi",
+      "label": "😏",
       "category": "🏳️09 Sorciere (1 Vie et Mort)",
       "pos": 2,
       "volume": 1
@@ -327,7 +327,7 @@
     },
     {
       "file": "freesound_community-wolf-howl-6310.mp3",
-      "label": "🐺Doux",
+      "label": "🐺",
       "category": "🐺05 Alpha (A sa mort - 1 Chacun)",
       "pos": 1,
       "volume": 1
@@ -439,7 +439,7 @@
     },
     {
       "file": "freesound_community-brahma-rooster-89888.mp3",
-      "label": "⏰-brahma-rooster-89888",
+      "label": "⏰",
       "category": "Au Matin",
       "pos": 1,
       "volume": 1
