@@ -1,617 +1,436 @@
 {
   "project": {
-    "name": "Metal Gear Board Game by Soaresden",
+    "name": "Loup Garou by Denis🐺",
     "version": 1,
-    "themeColor": "#006eff",
-    "themeColor2": "#f7f8f8"
+    "themeColor": "#5174db",
+    "themeColor2": "#0f1406"
   },
   "musicCategories": [
     {
-      "name": "❗Alert et GameOver",
+      "name": "Nuit",
       "pos": 1
     },
     {
-      "name": "⏳Stage Setup",
+      "name": "Nuit - Lycans",
       "pos": 2
     },
     {
-      "name": "Stage 1 - Caverns",
+      "name": "Jour",
       "pos": 3
     },
     {
-      "name": "Stage 2 - Heliport",
+      "name": "Vie du Village",
       "pos": 4
-    },
-    {
-      "name": "Stage 3 - Holding Cell-Armory",
-      "pos": 5
-    },
-    {
-      "name": "🐯Stage 4 - OCELOT",
-      "pos": 6
-    },
-    {
-      "name": "🪖Stage 5 - M1 TANK",
-      "pos": 7
-    },
-    {
-      "name": "Stage 6 - WarHead Storage",
-      "pos": 8
-    },
-    {
-      "name": "🥷Stage 7 - NINJA",
-      "pos": 9
-    },
-    {
-      "name": "🔮Stage 8 - PSYCHO MANTIS",
-      "pos": 10
-    },
-    {
-      "name": "Stage 9 - Escape Cell",
-      "pos": 11
-    },
-    {
-      "name": "🚁Stage 10 - HIND",
-      "pos": 12
-    },
-    {
-      "name": "🎯Stage 11 - SNIPER WOLF",
-      "pos": 13
-    },
-    {
-      "name": "🦅Stage 12 - VULCAN RAVEN",
-      "pos": 14
-    },
-    {
-      "name": "💳Stage 13 - Pan Card",
-      "pos": 15
-    },
-    {
-      "name": "🤖Stage 14 - REX",
-      "pos": 16
-    },
-    {
-      "name": "VR Stage",
-      "pos": 17
     }
   ],
   "sfxCategories": [
     {
-      "name": "Interaction",
+      "name": "🪛1 Cupidon (Rend Amoureux)",
       "pos": 1
     },
     {
-      "name": "Combat",
+      "name": "🪛2 Amoureux (Finir Ensemble)",
       "pos": 2
     },
     {
-      "name": "Guardes",
+      "name": "🪛3 Enfant Sauvage (Choisi son Idole)",
       "pos": 3
     },
     {
-      "name": "Degats",
+      "name": "🪛4 Chien Loup (Choisi Loup ou Village)",
       "pos": 4
     },
     {
-      "name": "Jingles",
+      "name": "🪛5 Montreur d'Ours (Montreur d'Ours (Grr Autour de Lui)",
       "pos": 5
+    },
+    {
+      "name": "🪛6 Chevalier Tetanos (à sa gauche)",
+      "pos": 6
+    },
+    {
+      "name": "🏳️01 Voyante (Vois les Rôles)",
+      "pos": 7
+    },
+    {
+      "name": "🏳️02 Renard (Renifle 3 et Perds Sinon)",
+      "pos": 8
+    },
+    {
+      "name": "🏳️03 Salvateur (Anticipe Infection)",
+      "pos": 9
+    },
+    {
+      "name": "🐺04 Lycans (Tuent)",
+      "pos": 10
+    },
+    {
+      "name": "🐺05 Alpha (A sa mort - 1 Chacun)",
+      "pos": 11
+    },
+    {
+      "name": "🐺06 Grand Méchant (+1 mort par Nuit tant que Aucun Loup Mort)",
+      "pos": 12
+    },
+    {
+      "name": "🐺07 Noir (Convert)",
+      "pos": 13
+    },
+    {
+      "name": "🐺08 Blanc (Solo)",
+      "pos": 14
+    },
+    {
+      "name": "🏳️09 Sorciere (1 Vie et Mort)",
+      "pos": 15
+    },
+    {
+      "name": "🏳️10 Corbeau (+2 Votes)",
+      "pos": 16
+    },
+    {
+      "name": "🏳️11 Montreur d'Ours (Grr Autour de Lui)",
+      "pos": 17
+    },
+    {
+      "name": "Roles",
+      "pos": 18
+    },
+    {
+      "name": "Autres",
+      "pos": 19
     }
   ],
   "music": [
     {
-      "file": "06. Encounter.mp3",
-      "title": "Encounter (Alert)",
+      "file": "Au Cœur du Village (1).mp3",
+      "title": "Au Cœur du Village",
       "disc": 0,
-      "track": 6,
-      "category": "❗Alert et GameOver",
+      "track": 0,
+      "category": "Nuit",
       "pos": 1,
       "volume": 0.7,
-      "cover": "covers/06._Encounter.mp3.jpg"
+      "cover": "covers/Au_Cœur_du_Village__1_.mp3.jpg"
     },
     {
-      "file": "old alert.mp3",
-      "title": "Old Alert",
+      "file": "Au Cœur du Village.mp3",
+      "title": "Au Cœur du Village",
       "disc": 0,
       "track": 0,
-      "category": "❗Alert et GameOver",
+      "category": "Nuit",
       "pos": 2,
       "volume": 0.7,
-      "cover": null
+      "cover": "covers/Au_Cœur_du_Village.mp3.jpg"
     },
     {
-      "file": "19. VR Training.mp3",
-      "title": "VR Training",
-      "disc": 1,
-      "track": 19,
-      "category": "VR Stage",
-      "pos": 1,
-      "volume": 0.7,
-      "cover": "covers/19._VR_Training.mp3.png"
-    },
-    {
-      "file": "Vr2.mp3",
-      "title": "VR 2",
+      "file": "Le Village S’endort (1).mp3",
+      "title": "Le Village S’endort",
       "disc": 0,
       "track": 0,
-      "category": "VR Stage",
-      "pos": 2,
-      "volume": 0.7,
-      "cover": null
-    },
-    {
-      "file": "vr gameover.mp3",
-      "title": "VR Game Over",
-      "disc": 0,
-      "track": 0,
-      "category": "VR Stage",
+      "category": "Nuit",
       "pos": 3,
       "volume": 0.7,
-      "cover": null
+      "cover": "covers/Le_Village_S_endort__1_.mp3.jpg"
     },
     {
-      "file": "wind.mp3",
-      "title": "Wind",
+      "file": "Le Village S’endort (2).mp3",
+      "title": "Le Village S’endort",
       "disc": 0,
       "track": 0,
-      "category": "Stage 2 - Heliport",
-      "pos": 1,
-      "volume": 0.7,
-      "cover": null
-    },
-    {
-      "file": "snowfield.mp3",
-      "title": "Snowfield",
-      "disc": 0,
-      "track": 0,
-      "category": "Stage 2 - Heliport",
-      "pos": 2,
-      "volume": 0.7,
-      "cover": null
-    },
-    {
-      "file": "01-Brief.mp3",
-      "title": "01-Brief Mission",
-      "disc": 0,
-      "track": 0,
-      "category": "Stage 1 - Caverns",
-      "pos": 1,
-      "volume": 0.7,
-      "cover": null
-    },
-    {
-      "file": "04. Cavern.mp3",
-      "title": "Cavern (Stage 1 & 9)",
-      "disc": 0,
-      "track": 4,
-      "category": "Stage 1 - Caverns",
-      "pos": 2,
-      "volume": 0.7,
-      "cover": "covers/04._Cavern.mp3.jpg"
-    },
-    {
-      "file": "05. Intruder 1.mp3",
-      "title": "Intruder 1 — Holding Cell",
-      "disc": 0,
-      "track": 5,
-      "category": "Stage 3 - Holding Cell-Armory",
-      "pos": 1,
-      "volume": 0.7,
-      "cover": "covers/05._Intruder_1.mp3.jpg"
-    },
-    {
-      "file": "07. Intruder 2.mp3",
-      "title": "Intruder 2 — Armory",
-      "disc": 0,
-      "track": 7,
-      "category": "Stage 3 - Holding Cell-Armory",
-      "pos": 2,
-      "volume": 0.7,
-      "cover": "covers/07._Intruder_2.mp3.jpg"
-    },
-    {
-      "file": "12. Duel.mp3",
-      "title": "Duel — Boss Theme",
-      "disc": 1,
-      "track": 12,
-      "category": "🐯Stage 4 - OCELOT",
-      "pos": 1,
-      "volume": 0.7,
-      "cover": "covers/12._Duel.mp3.png"
-    },
-    {
-      "file": "12. Duel.mp3",
-      "title": "Duel — Boss Theme",
-      "disc": 1,
-      "track": 12,
-      "category": "🪖Stage 5 - M1 TANK",
-      "pos": 1,
-      "volume": 0.7,
-      "cover": "covers/12._Duel.mp3.png"
-    },
-    {
-      "file": "08. Warhead Storage.mp3",
-      "title": "Warhead Storage",
-      "disc": 1,
-      "track": 8,
-      "category": "Stage 6 - WarHead Storage",
-      "pos": 1,
-      "volume": 0.7,
-      "cover": "covers/08._Warhead_Storage.mp3.png"
-    },
-    {
-      "file": "12. Duel.mp3",
-      "title": "Duel — Boss Theme",
-      "disc": 1,
-      "track": 12,
-      "category": "🥷Stage 7 - NINJA",
-      "pos": 1,
-      "volume": 0.7,
-      "cover": "covers/12._Duel.mp3.png"
-    },
-    {
-      "file": "12. Duel.mp3",
-      "title": "Duel — Boss Theme",
-      "disc": 1,
-      "track": 12,
-      "category": "🔮Stage 8 - PSYCHO MANTIS",
-      "pos": 1,
-      "volume": 0.7,
-      "cover": "covers/12._Duel.mp3.png"
-    },
-    {
-      "file": "04. Cavern.mp3",
-      "title": "Cavern (Stage 1 & 9)",
-      "disc": 0,
-      "track": 4,
-      "category": "Stage 9 - Escape Cell",
-      "pos": 1,
-      "volume": 0.7,
-      "cover": "covers/04._Cavern.mp3.jpg"
-    },
-    {
-      "file": "torture.mp3",
-      "title": "Torture",
-      "disc": 0,
-      "track": 0,
-      "category": "Stage 9 - Escape Cell",
-      "pos": 2,
-      "volume": 0.7,
-      "cover": null
-    },
-    {
-      "file": "12. Duel.mp3",
-      "title": "Duel — Boss Theme",
-      "disc": 1,
-      "track": 12,
-      "category": "🚁Stage 10 - HIND",
-      "pos": 1,
-      "volume": 0.7,
-      "cover": "covers/12._Duel.mp3.png"
-    },
-    {
-      "file": "hind.mp3",
-      "title": "HIND Theme",
-      "disc": 0,
-      "track": 0,
-      "category": "🚁Stage 10 - HIND",
-      "pos": 2,
-      "volume": 0.7,
-      "cover": null
-    },
-    {
-      "file": "12. Duel.mp3",
-      "title": "Duel — Boss Theme",
-      "disc": 1,
-      "track": 12,
-      "category": "🎯Stage 11 - SNIPER WOLF",
-      "pos": 1,
-      "volume": 0.7,
-      "cover": "covers/12._Duel.mp3.png"
-    },
-    {
-      "file": "12. Duel.mp3",
-      "title": "Duel — Boss Theme",
-      "disc": 1,
-      "track": 12,
-      "category": "🦅Stage 12 - VULCAN RAVEN",
-      "pos": 1,
-      "volume": 0.7,
-      "cover": "covers/12._Duel.mp3.png"
-    },
-    {
-      "file": "12. Duel.mp3",
-      "title": "Duel — Boss Theme",
-      "disc": 1,
-      "track": 12,
-      "category": "💳Stage 13 - Pan Card",
-      "pos": 1,
-      "volume": 0.7,
-      "cover": "covers/12._Duel.mp3.png"
-    },
-    {
-      "file": "16. Rex's Lair.mp3",
-      "title": "Rex's Lair - Normal Pan",
-      "disc": 1,
-      "track": 16,
-      "category": "💳Stage 13 - Pan Card",
-      "pos": 2,
-      "volume": 0.7,
-      "cover": "covers/16._Rex_s_Lair.mp3.png"
-    },
-    {
-      "file": "15. Colosseo.mp3",
-      "title": "Colosseo - Cold Pan",
-      "disc": 0,
-      "track": 15,
-      "category": "💳Stage 13 - Pan Card",
-      "pos": 3,
-      "volume": 0.7,
-      "cover": "covers/15._Colosseo.mp3.jpg"
-    },
-    {
-      "file": "14. Blast Furnace.mp3",
-      "title": "Blast Furnace - Heat Pan",
-      "disc": 1,
-      "track": 14,
-      "category": "💳Stage 13 - Pan Card",
+      "category": "Nuit",
       "pos": 4,
       "volume": 0.7,
-      "cover": "covers/14._Blast_Furnace.mp3.png"
+      "cover": "covers/Le_Village_S_endort__2_.mp3.jpg"
     },
     {
-      "file": "16. Rex's Lair.mp3",
-      "title": "Rex's Lair",
-      "disc": 1,
-      "track": 16,
-      "category": "🤖Stage 14 - REX",
-      "pos": 1,
-      "volume": 0.7,
-      "cover": "covers/16._Rex_s_Lair.mp3.png"
-    },
-    {
-      "file": "12. Duel.mp3",
-      "title": "Duel — Boss Theme",
-      "disc": 1,
-      "track": 12,
-      "category": "🤖Stage 14 - REX",
-      "pos": 2,
-      "volume": 0.7,
-      "cover": "covers/12._Duel.mp3.png"
-    },
-    {
-      "file": "00-BriefJeu.mp3",
-      "title": "00-Brief Jeu",
+      "file": "Le Village S’endort.mp3",
+      "title": "Le Village S’endort",
       "disc": 0,
       "track": 0,
-      "category": "⏳Stage Setup",
+      "category": "Jour",
       "pos": 1,
       "volume": 0.7,
-      "cover": null
+      "cover": "covers/Le_Village_S_endort.mp3.jpg"
+    },
+    {
+      "file": "Veillée des loups (1).mp3",
+      "title": "Veillée des loups",
+      "disc": 0,
+      "track": 0,
+      "category": "Jour",
+      "pos": 2,
+      "volume": 0.7,
+      "cover": "covers/Veillée_des_loups__1_.mp3.jpg"
+    },
+    {
+      "file": "Veillée des loups (2).mp3",
+      "title": "Veillée des loups",
+      "disc": 0,
+      "track": 0,
+      "category": "Jour",
+      "pos": 3,
+      "volume": 0.7,
+      "cover": "covers/Veillée_des_loups__2_.mp3.jpg"
+    },
+    {
+      "file": "Veillée des Loups (3).mp3",
+      "title": "Reflexion",
+      "disc": 0,
+      "track": 0,
+      "category": "Jour",
+      "pos": 4,
+      "volume": 0.7,
+      "cover": "covers/Veillée_des_Loups__3_.mp3.jpg"
+    },
+    {
+      "file": "Veillée des loups.mp3",
+      "title": "Veillée des loups",
+      "disc": 0,
+      "track": 0,
+      "category": "Vie du Village",
+      "pos": 1,
+      "volume": 0.7,
+      "cover": "covers/Veillée_des_loups.mp3.jpg"
+    },
+    {
+      "file": "05 Mission Objective.mp3",
+      "title": "Qui est mort ?!",
+      "disc": 0,
+      "track": 5,
+      "category": "Vie du Village",
+      "pos": 2,
+      "volume": 0.7,
+      "cover": "covers/05_Mission_Objective.mp3.jpg"
+    },
+    {
+      "file": "Wolfsbane Square (1).mp3",
+      "title": "Wolfsbane Square",
+      "disc": 0,
+      "track": 0,
+      "category": "Nuit",
+      "pos": 5,
+      "volume": 0.7,
+      "cover": "covers/Wolfsbane_Square__1_.mp3.jpg"
+    },
+    {
+      "file": "Wolfsbane Square.mp3",
+      "title": "Wolfsbane Square",
+      "disc": 0,
+      "track": 0,
+      "category": "Nuit",
+      "pos": 6,
+      "volume": 0.7,
+      "cover": "covers/Wolfsbane_Square.mp3.jpg"
+    },
+    {
+      "file": "Moonlit Village (1).mp3",
+      "title": "Moonlit Village",
+      "disc": 0,
+      "track": 0,
+      "category": "Nuit - Lycans",
+      "pos": 1,
+      "volume": 0.7,
+      "cover": "covers/Moonlit_Village__1_.mp3.jpg"
+    },
+    {
+      "file": "Moonlit Village.mp3",
+      "title": "Moonlit Village",
+      "disc": 0,
+      "track": 0,
+      "category": "Nuit - Lycans",
+      "pos": 2,
+      "volume": 0.7,
+      "cover": "covers/Moonlit_Village.mp3.jpg"
     }
   ],
   "sfx": [
     {
-      "file": "codec.mp3",
-      "label": "📞 Codec",
-      "category": "Interaction",
+      "file": "Voicy_Heartbeat.mp3",
+      "label": "💓",
+      "category": "Autres",
       "pos": 1,
       "volume": 1
     },
     {
-      "file": "mgs-knock-a.mp3",
-      "label": "👊🧱 Wall knock",
-      "category": "Interaction",
+      "file": "Voicy_Howling werewolf sound effect.mp3",
+      "label": "🐺Classique",
+      "category": "🐺04 Lycans (Tuent)",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "Voicy_Owl hooting.mp3",
+      "label": "🦉",
+      "category": "Autres",
       "pos": 2,
       "volume": 1
     },
     {
-      "file": "mgs-pick-up-item.mp3",
-      "label": "🎒 Pick up item",
-      "category": "Interaction",
+      "file": "Voicy_Suspense.mp3",
+      "label": "👀",
+      "category": "Autres",
       "pos": 3,
       "volume": 1
     },
     {
-      "file": "mgs-rations.mp3",
-      "label": "🍴 Ration",
-      "category": "Interaction",
+      "file": "Voicy_Violent Thunder Sound With Rain.mp3",
+      "label": "⚡",
+      "category": "Autres",
       "pos": 4,
       "volume": 1
     },
     {
-      "file": "mgs-elevator2.mp3",
-      "label": "🚪↕ Elevator",
-      "category": "Interaction",
-      "pos": 5,
-      "volume": 1
-    },
-    {
-      "file": "mgs-door-open.mp3",
-      "label": "🚪 Door opens",
-      "category": "Interaction",
-      "pos": 6,
-      "volume": 1
-    },
-    {
-      "file": "punch-guard-kox1.mp3",
-      "label": "👊 KO x1",
-      "category": "Combat",
-      "pos": 1,
-      "volume": 1
-    },
-    {
-      "file": "knock-out-guard-kox2.mp3",
-      "label": "👊✨ KO x2",
-      "category": "Combat",
+      "file": "Voicy_Werewolves Sound Effects.mp3",
+      "label": "💀🐾",
+      "category": "🐺04 Lycans (Tuent)",
       "pos": 2,
       "volume": 1
     },
     {
-      "file": "mgs-silent-takedown.mp3",
-      "label": "🤫 Silent takedown",
-      "category": "Combat",
-      "pos": 3,
-      "volume": 1
-    },
-    {
-      "file": "mgs-socom.mp3",
-      "label": "🔫 SOCOM",
-      "category": "Combat",
-      "pos": 4,
-      "volume": 1
-    },
-    {
-      "file": "mgs-socom-silenced.mp3",
-      "label": "🔫🔇 SOCOM silenced",
-      "category": "Combat",
-      "pos": 5,
-      "volume": 1
-    },
-    {
-      "file": "mgs-fa-mas.mp3",
-      "label": "🔫 FA-MAS",
-      "category": "Combat",
-      "pos": 6,
-      "volume": 1
-    },
-    {
-      "file": "mgs-grenade.mp3",
-      "label": "💣 Grenade",
-      "category": "Combat",
-      "pos": 7,
-      "volume": 1
-    },
-    {
-      "file": "mgs-grenade-chaff.mp3",
-      "label": "💣 Chaff grenade",
-      "category": "Combat",
-      "pos": 8,
-      "volume": 1
-    },
-    {
-      "file": "mgs-explosion.mp3",
-      "label": "💥 Explosion",
-      "category": "Combat",
-      "pos": 9,
-      "volume": 1
-    },
-    {
-      "file": "tindeck_1.mp3",
-      "label": "❗ ALERT",
-      "category": "Guardes",
+      "file": "freesound_community-bubbles-003-6397.mp3",
+      "label": "🧋",
+      "category": "🏳️09 Sorciere (1 Vie et Mort)",
       "pos": 1,
       "volume": 1
     },
     {
-      "file": "mgs-alert-camera.mp3",
-      "label": "❗📸 Camera ALERT",
-      "category": "Guardes",
-      "pos": 2,
-      "volume": 1
-    },
-    {
-      "file": "guard-i-heard-something_SP0Q6Fw.mp3",
-      "label": "👮❔ I heard something",
-      "category": "Guardes",
-      "pos": 3,
-      "volume": 1
-    },
-    {
-      "file": "guard-what-was-that-noise_IVtXtq7.mp3",
-      "label": "👮‍♂️❔ What was that noise?",
-      "category": "Guardes",
-      "pos": 4,
-      "volume": 1
-    },
-    {
-      "file": "guard-whats-that_8vgwEbf.mp3",
-      "label": "👮‍♂️❔ What's that?",
-      "category": "Guardes",
-      "pos": 5,
-      "volume": 1
-    },
-    {
-      "file": "guard-whos-that_x8gyPDo.mp3",
-      "label": "👮‍♂️❗ Who's that?",
-      "category": "Guardes",
-      "pos": 6,
-      "volume": 1
-    },
-    {
-      "file": "guard-there-he-is_JHZ7rPO.mp3",
-      "label": "👮‍♂️❗🔊 There he is!",
-      "category": "Guardes",
-      "pos": 7,
-      "volume": 1
-    },
-    {
-      "file": "guard-this-way_dYsTCuS.mp3",
-      "label": "👮‍♂️❗🔊 This way!",
-      "category": "Guardes",
-      "pos": 8,
-      "volume": 1
-    },
-    {
-      "file": "guard-eat-this_r8zo9ce.mp3",
-      "label": "👮‍♂️❗ Eat this!",
-      "category": "Guardes",
-      "pos": 9,
-      "volume": 1
-    },
-    {
-      "file": "guard-whered-he-go_zHLpH97.mp3",
-      "label": "👮‍♂️❗ Where'd he go?",
-      "category": "Guardes",
-      "pos": 10,
-      "volume": 1
-    },
-    {
-      "file": "guard-return-to-your-positions_9aocsFp.mp3",
-      "label": "👮‍♂️🔊 Return to positions",
-      "category": "Guardes",
-      "pos": 11,
-      "volume": 1
-    },
-    {
-      "file": "mgs-damage-snake.mp3",
-      "label": "🐍💥 Snake takes damage",
-      "category": "Degats",
+      "file": "freesound_community-spas-12-89800.mp3",
+      "label": "🔫 PAN !",
+      "category": "Roles",
       "pos": 1,
       "volume": 1
     },
     {
-      "file": "mgs-damage-gray-fox.mp3",
-      "label": "🤖💥 Gray Fox takes damage",
-      "category": "Degats",
+      "file": "VOXScrm_Cri wilhelm (ID 0477)_LaSonotheque.fr.mp3",
+      "label": "🪂Cri Wilhelm",
+      "category": "Roles",
       "pos": 2,
       "volume": 1
     },
     {
-      "file": "mgs-damage-meryl.mp3",
-      "label": "👩‍🦰💥 Meryl takes damage",
-      "category": "Degats",
-      "pos": 3,
+      "file": "Witch Laughing.mp3",
+      "label": "😏Hihihi",
+      "category": "🏳️09 Sorciere (1 Vie et Mort)",
+      "pos": 2,
       "volume": 1
     },
     {
-      "file": "mgs-damage-otacon.mp3",
-      "label": "👓💥 Otacon takes damage",
-      "category": "Degats",
-      "pos": 4,
-      "volume": 1
-    },
-    {
-      "file": "metal-gear-solid-impressive-snake.mp3",
-      "label": "✅ Impressive, Snake!",
-      "category": "Jingles",
+      "file": "Cupidon Firing Arrow.mp3",
+      "label": "🏹",
+      "category": "🪛1 Cupidon (Rend Amoureux)",
       "pos": 1,
       "volume": 1
     },
     {
-      "file": "snake-dies-with-game-over.mp3",
-      "label": "💀 Game Over",
-      "category": "Jingles",
+      "file": "freesound_community-wolf-howl-6310.mp3",
+      "label": "🐺Doux",
+      "category": "🐺05 Alpha (A sa mort - 1 Chacun)",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "kiss-pop.mp3",
+      "label": "😘",
+      "category": "🪛2 Amoureux (Finir Ensemble)",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "sims-2-falling-in-love.mp3",
+      "label": "🥰",
+      "category": "🪛1 Cupidon (Rend Amoureux)",
       "pos": 2,
+      "volume": 1
+    },
+    {
+      "file": "universfield-mysterious-places-30s-159313.mp3",
+      "label": "🔮",
+      "category": "🏳️01 Voyante (Vois les Rôles)",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "universfield-wolf-howling-140235.mp3",
+      "label": "🐺",
+      "category": "🐺06 Grand Méchant (+1 mort par Nuit tant que Aucun Loup Mort)",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "dragon-studio-holy-spell-cast-450460.mp3",
+      "label": "😇",
+      "category": "🏳️03 Salvateur (Anticipe Infection)",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "freesound_community-short-choir-6116.mp3",
+      "label": "👼",
+      "category": "🏳️03 Salvateur (Anticipe Infection)",
+      "pos": 2,
+      "volume": 1
+    },
+    {
+      "file": "alesiadavina-werewolf-sound-pain-wail-457328.mp3",
+      "label": "🐺",
+      "category": "🐺08 Blanc (Solo)",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "creatorshome-draw-a-sword-327726.mp3",
+      "label": "⚔️",
+      "category": "🪛6 Chevalier Tetanos (à sa gauche)",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "dragon-studio-crow-caw-with-echoing-reverb-472375.mp3",
+      "label": "🐦‍⬛",
+      "category": "🏳️10 Corbeau (+2 Votes)",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "stu9-dog-howl-2-352681.mp3",
+      "label": "🐶",
+      "category": "🪛4 Chien Loup (Choisi Loup ou Village)",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "universfield-bear-191995.mp3",
+      "label": "🐻",
+      "category": "🪛5 Montreur d'Ours (Montreur d'Ours (Grr Autour de Lui)",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "virtualzero-boy-giggling-playful-laugh-hd-379353.mp3",
+      "label": "🚸",
+      "category": "🪛3 Enfant Sauvage (Choisi son Idole)",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "universfield-bear-191995 - Copie.mp3",
+      "label": "🐻",
+      "category": "🏳️11 Montreur d'Ours (Grr Autour de Lui)",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "BANK_01_INSTR_0000_SND_006D.mp3",
+      "label": "🦊",
+      "category": "🏳️02 Renard (Renifle 3 et Perds Sinon)",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "Voicy_Werewolves Sound Effects - Copie.mp3",
+      "label": "Voicy_Werewolves Sound Effects - Copie",
+      "category": "🐺07 Noir (Convert)",
+      "pos": 1,
       "volume": 1
     }
   ]

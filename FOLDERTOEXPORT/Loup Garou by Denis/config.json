@@ -25,36 +25,80 @@
   ],
   "sfxCategories": [
     {
-      "name": "Tour01 - 1 Cupidon",
+      "name": "🪛1 Cupidon (Rend Amoureux)",
       "pos": 1
     },
     {
-      "name": "Tour01 - 2 Amoureux",
+      "name": "🪛2 Amoureux (Finir Ensemble)",
       "pos": 2
     },
     {
-      "name": "Tour__ - 1 Voyante",
+      "name": "🪛3 Enfant Sauvage (Choisi son Idole)",
       "pos": 3
     },
     {
-      "name": "Tour__ - 2 Salvateur",
+      "name": "🪛4 Chien Loup (Choisi Loup ou Village)",
       "pos": 4
     },
     {
-      "name": "Tour__ - 3 Lycans",
+      "name": "🪛5 Montreur d'Ours (Montreur d'Ours (Grr Autour de Lui)",
       "pos": 5
     },
     {
-      "name": "Tour__ - 4 Sorciere",
+      "name": "🪛6 Chevalier Tetanos (à sa gauche)",
       "pos": 6
     },
     {
-      "name": "Roles",
+      "name": "🏳️01 Voyante (Vois les Rôles)",
       "pos": 7
     },
     {
-      "name": "Autres",
+      "name": "🏳️02 Renard (Renifle 3 et Perds Sinon)",
       "pos": 8
+    },
+    {
+      "name": "🏳️03 Salvateur (Anticipe Infection)",
+      "pos": 9
+    },
+    {
+      "name": "🐺04 Lycans (Tuent)",
+      "pos": 10
+    },
+    {
+      "name": "🐺05 Alpha (A sa mort - 1 Chacun)",
+      "pos": 11
+    },
+    {
+      "name": "🐺06 Grand Méchant (+1 mort par Nuit tant que Aucun Loup Mort)",
+      "pos": 12
+    },
+    {
+      "name": "🐺07 Noir (Convert)",
+      "pos": 13
+    },
+    {
+      "name": "🐺08 Blanc (Solo)",
+      "pos": 14
+    },
+    {
+      "name": "🏳️09 Sorciere (1 Vie et Mort)",
+      "pos": 15
+    },
+    {
+      "name": "🏳️10 Corbeau (+2 Votes)",
+      "pos": 16
+    },
+    {
+      "name": "🏳️11 Montreur d'Ours (Grr Autour de Lui)",
+      "pos": 17
+    },
+    {
+      "name": "Roles",
+      "pos": 18
+    },
+    {
+      "name": "Autres",
+      "pos": 19
     }
   ],
   "music": [
@@ -164,7 +208,7 @@
       "disc": 0,
       "track": 0,
       "category": "Nuit",
-      "pos": 1,
+      "pos": 5,
       "volume": 0.7,
       "cover": "covers/Wolfsbane_Square__1_.mp3.jpg"
     },
@@ -174,7 +218,7 @@
       "disc": 0,
       "track": 0,
       "category": "Nuit",
-      "pos": 2,
+      "pos": 6,
       "volume": 0.7,
       "cover": "covers/Wolfsbane_Square.mp3.jpg"
     },
@@ -209,8 +253,8 @@
     },
     {
       "file": "Voicy_Howling werewolf sound effect.mp3",
-      "label": "🐺",
-      "category": "Tour__ - 3 Lycans",
+      "label": "🐺Classique",
+      "category": "🐺04 Lycans (Tuent)",
       "pos": 1,
       "volume": 1
     },
@@ -238,14 +282,14 @@
     {
       "file": "Voicy_Werewolves Sound Effects.mp3",
       "label": "💀🐾",
-      "category": "Tour__ - 3 Lycans",
+      "category": "🐺04 Lycans (Tuent)",
       "pos": 2,
       "volume": 1
     },
     {
-      "file": "Voicy_Witch Sound Effect.mp3",
-      "label": "😏Hihihihhiiiiiiiiiiii",
-      "category": "Tour__ - 4 Sorciere",
+      "file": "freesound_community-bubbles-003-6397.mp3",
+      "label": "🧋",
+      "category": "🏳️09 Sorciere (1 Vie et Mort)",
       "pos": 1,
       "volume": 1
     },
@@ -258,7 +302,7 @@
     },
     {
       "file": "VOXScrm_Cri wilhelm (ID 0477)_LaSonotheque.fr.mp3",
-      "label": "🪂 Wilhelm.fr",
+      "label": "🪂Cri Wilhelm",
       "category": "Roles",
       "pos": 2,
       "volume": 1
@@ -266,71 +310,127 @@
     {
       "file": "Witch Laughing.mp3",
       "label": "😏Hihihi",
-      "category": "Tour__ - 4 Sorciere",
+      "category": "🏳️09 Sorciere (1 Vie et Mort)",
       "pos": 2,
       "volume": 1
     },
     {
       "file": "Cupidon Firing Arrow.mp3",
       "label": "🏹",
-      "category": "Tour01 - 1 Cupidon",
+      "category": "🪛1 Cupidon (Rend Amoureux)",
       "pos": 1,
       "volume": 1
     },
     {
-      "file": "freesound_community-bubbles-003-6397.mp3",
-      "label": "🧋",
-      "category": "Tour__ - 4 Sorciere",
-      "pos": 3,
-      "volume": 1
-    },
-    {
       "file": "freesound_community-wolf-howl-6310.mp3",
-      "label": "🐺",
-      "category": "Tour__ - 3 Lycans",
-      "pos": 3,
+      "label": "🐺Doux",
+      "category": "🐺05 Alpha (A sa mort - 1 Chacun)",
+      "pos": 1,
       "volume": 1
     },
     {
       "file": "kiss-pop.mp3",
       "label": "😘",
-      "category": "Tour01 - 2 Amoureux",
+      "category": "🪛2 Amoureux (Finir Ensemble)",
       "pos": 1,
       "volume": 1
     },
     {
       "file": "sims-2-falling-in-love.mp3",
       "label": "🥰",
-      "category": "Tour01 - 1 Cupidon",
+      "category": "🪛1 Cupidon (Rend Amoureux)",
       "pos": 2,
       "volume": 1
     },
     {
       "file": "universfield-mysterious-places-30s-159313.mp3",
-      "label": "Musique Mystique",
-      "category": "Tour__ - 1 Voyante",
+      "label": "🔮",
+      "category": "🏳️01 Voyante (Vois les Rôles)",
       "pos": 1,
       "volume": 1
     },
     {
       "file": "universfield-wolf-howling-140235.mp3",
       "label": "🐺",
-      "category": "Tour__ - 3 Lycans",
-      "pos": 4,
+      "category": "🐺06 Grand Méchant (+1 mort par Nuit tant que Aucun Loup Mort)",
+      "pos": 1,
       "volume": 1
     },
     {
       "file": "dragon-studio-holy-spell-cast-450460.mp3",
       "label": "😇",
-      "category": "Tour__ - 2 Salvateur",
+      "category": "🏳️03 Salvateur (Anticipe Infection)",
       "pos": 1,
       "volume": 1
     },
     {
       "file": "freesound_community-short-choir-6116.mp3",
       "label": "👼",
-      "category": "Tour__ - 2 Salvateur",
+      "category": "🏳️03 Salvateur (Anticipe Infection)",
       "pos": 2,
+      "volume": 1
+    },
+    {
+      "file": "alesiadavina-werewolf-sound-pain-wail-457328.mp3",
+      "label": "🐺",
+      "category": "🐺08 Blanc (Solo)",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "creatorshome-draw-a-sword-327726.mp3",
+      "label": "⚔️",
+      "category": "🪛6 Chevalier Tetanos (à sa gauche)",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "dragon-studio-crow-caw-with-echoing-reverb-472375.mp3",
+      "label": "🐦‍⬛",
+      "category": "🏳️10 Corbeau (+2 Votes)",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "stu9-dog-howl-2-352681.mp3",
+      "label": "🐶",
+      "category": "🪛4 Chien Loup (Choisi Loup ou Village)",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "universfield-bear-191995.mp3",
+      "label": "🐻",
+      "category": "🪛5 Montreur d'Ours (Montreur d'Ours (Grr Autour de Lui)",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "virtualzero-boy-giggling-playful-laugh-hd-379353.mp3",
+      "label": "🚸",
+      "category": "🪛3 Enfant Sauvage (Choisi son Idole)",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "universfield-bear-191995 - Copie.mp3",
+      "label": "🐻",
+      "category": "🏳️11 Montreur d'Ours (Grr Autour de Lui)",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "BANK_01_INSTR_0000_SND_006D.mp3",
+      "label": "🦊",
+      "category": "🏳️02 Renard (Renifle 3 et Perds Sinon)",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "Voicy_Werewolves Sound Effects - Copie.mp3",
+      "label": "Voicy_Werewolves Sound Effects - Copie",
+      "category": "🐺07 Noir (Convert)",
+      "pos": 1,
       "volume": 1
     }
   ]
