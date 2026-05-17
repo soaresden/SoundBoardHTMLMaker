@@ -25,31 +25,31 @@
   ],
   "sfxCategories": [
     {
-      "name": "🪛1 Cupidon (Rend Amoureux)",
+      "name": "🪛01 Cupidon (Rend Amoureux)",
       "pos": 1
     },
     {
-      "name": "🪛2 Amoureux (Finir Ensemble)",
+      "name": "🪛02 Amoureux (Finir Ensemble)",
       "pos": 2
     },
     {
-      "name": "🪛3 Enfant Sauvage (Choisi son Idole)",
+      "name": "🪛03 Enfant Sauvage (Choisi son Idole)",
       "pos": 3
     },
     {
-      "name": "🪛4 Chien Loup (Choisi Loup ou Village)",
+      "name": "🪛04 Chien Loup (Choisi Loup ou Village)",
       "pos": 4
     },
     {
-      "name": "🪛5 Montreur d'Ours (Montreur d'Ours (Grr Autour de Lui)",
+      "name": "🪛05 Montreur d'Ours (Montreur d'Ours (Grr Autour de Lui)",
       "pos": 5
     },
     {
-      "name": "🪛6 Chevalier Tetanos (à sa gauche)",
+      "name": "🪛06 Chevalier Tetanos (à sa gauche)",
       "pos": 6
     },
     {
-      "name": "Pendant la Nuit",
+      "name": "###Pendant la Nuit###",
       "pos": 7
     },
     {
@@ -89,11 +89,11 @@
       "pos": 16
     },
     {
-      "name": "Au Matin",
+      "name": "🏳️10 Corbeau (+2 Votes)",
       "pos": 17
     },
     {
-      "name": "🏳️10 Corbeau (+2 Votes)",
+      "name": "###Au Matin###",
       "pos": 18
     },
     {
@@ -251,7 +251,7 @@
     {
       "file": "Voicy_Heartbeat.mp3",
       "label": "💓",
-      "category": "Pendant la Nuit",
+      "category": "###Pendant la Nuit###",
       "pos": 1,
       "volume": 1
     },
@@ -265,21 +265,21 @@
     {
       "file": "Voicy_Owl hooting.mp3",
       "label": "🦉",
-      "category": "Pendant la Nuit",
+      "category": "###Pendant la Nuit###",
       "pos": 2,
       "volume": 1
     },
     {
       "file": "Voicy_Suspense.mp3",
       "label": "👀",
-      "category": "Pendant la Nuit",
+      "category": "###Pendant la Nuit###",
       "pos": 3,
       "volume": 1
     },
     {
       "file": "Voicy_Violent Thunder Sound With Rain.mp3",
       "label": "⚡",
-      "category": "Pendant la Nuit",
+      "category": "###Pendant la Nuit###",
       "pos": 4,
       "volume": 1
     },
@@ -321,7 +321,7 @@
     {
       "file": "Cupidon Firing Arrow.mp3",
       "label": "🏹",
-      "category": "🪛1 Cupidon (Rend Amoureux)",
+      "category": "🪛01 Cupidon (Rend Amoureux)",
       "pos": 1,
       "volume": 1
     },
@@ -335,14 +335,14 @@
     {
       "file": "kiss-pop.mp3",
       "label": "😘",
-      "category": "🪛2 Amoureux (Finir Ensemble)",
+      "category": "🪛02 Amoureux (Finir Ensemble)",
       "pos": 1,
       "volume": 1
     },
     {
       "file": "sims-2-falling-in-love.mp3",
       "label": "🥰",
-      "category": "🪛1 Cupidon (Rend Amoureux)",
+      "category": "🪛01 Cupidon (Rend Amoureux)",
       "pos": 2,
       "volume": 1
     },
@@ -384,7 +384,7 @@
     {
       "file": "creatorshome-draw-a-sword-327726.mp3",
       "label": "⚔️",
-      "category": "🪛6 Chevalier Tetanos (à sa gauche)",
+      "category": "🪛06 Chevalier Tetanos (à sa gauche)",
       "pos": 1,
       "volume": 1
     },
@@ -398,21 +398,21 @@
     {
       "file": "stu9-dog-howl-2-352681.mp3",
       "label": "🐶",
-      "category": "🪛4 Chien Loup (Choisi Loup ou Village)",
+      "category": "🪛04 Chien Loup (Choisi Loup ou Village)",
       "pos": 1,
       "volume": 1
     },
     {
       "file": "universfield-bear-191995.mp3",
       "label": "🐻",
-      "category": "🪛5 Montreur d'Ours (Montreur d'Ours (Grr Autour de Lui)",
+      "category": "🪛05 Montreur d'Ours (Montreur d'Ours (Grr Autour de Lui)",
       "pos": 1,
       "volume": 1
     },
     {
       "file": "virtualzero-boy-giggling-playful-laugh-hd-379353.mp3",
       "label": "🚸",
-      "category": "🪛3 Enfant Sauvage (Choisi son Idole)",
+      "category": "🪛03 Enfant Sauvage (Choisi son Idole)",
       "pos": 1,
       "volume": 1
     },
@@ -440,7 +440,7 @@
     {
       "file": "freesound_community-brahma-rooster-89888.mp3",
       "label": "⏰",
-      "category": "Au Matin",
+      "category": "###Au Matin###",
       "pos": 1,
       "volume": 1
     }
