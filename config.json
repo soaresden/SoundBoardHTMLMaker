@@ -49,56 +49,60 @@
       "pos": 6
     },
     {
-      "name": "🏳️01 Voyante (Vois les Rôles)",
+      "name": "Pendant la Nuit",
       "pos": 7
     },
     {
-      "name": "🏳️02 Renard (Renifle 3 et Perds Sinon)",
+      "name": "🏳️01 Voyante (Vois les Rôles)",
       "pos": 8
     },
     {
-      "name": "🏳️03 Salvateur (Anticipe Infection)",
+      "name": "🏳️02 Renard (Renifle 3 et Perds Sinon)",
       "pos": 9
     },
     {
-      "name": "🐺04 Lycans (Tuent)",
+      "name": "🏳️03 Salvateur (Anticipe Infection)",
       "pos": 10
     },
     {
-      "name": "🐺05 Alpha (A sa mort - 1 Chacun)",
+      "name": "🐺04 Lycans (Tuent)",
       "pos": 11
     },
     {
-      "name": "🐺06 Grand Méchant (+1 mort par Nuit tant que Aucun Loup Mort)",
+      "name": "🐺05 Alpha (A sa mort - 1 Chacun)",
       "pos": 12
     },
     {
-      "name": "🐺07 Noir (Convert)",
+      "name": "🐺06 Grand Méchant (+1 mort par Nuit tant que Aucun Loup Mort)",
       "pos": 13
     },
     {
-      "name": "🐺08 Blanc (Solo)",
+      "name": "🐺07 Noir (Convert)",
       "pos": 14
     },
     {
-      "name": "🏳️09 Sorciere (1 Vie et Mort)",
+      "name": "🐺08 Blanc (Solo)",
       "pos": 15
     },
     {
-      "name": "🏳️10 Corbeau (+2 Votes)",
+      "name": "🏳️09 Sorciere (1 Vie et Mort)",
       "pos": 16
     },
     {
-      "name": "🏳️11 Montreur d'Ours (Grr Autour de Lui)",
+      "name": "Au Matin",
       "pos": 17
     },
     {
-      "name": "Roles",
+      "name": "🏳️10 Corbeau (+2 Votes)",
       "pos": 18
     },
     {
-      "name": "Autres",
+      "name": "🏳️11 Montreur d'Ours (Grr Autour de Lui)",
       "pos": 19
+    },
+    {
+      "name": "Roles",
+      "pos": 20
     }
   ],
   "music": [
@@ -247,7 +251,7 @@
     {
       "file": "Voicy_Heartbeat.mp3",
       "label": "💓",
-      "category": "Autres",
+      "category": "Pendant la Nuit",
       "pos": 1,
       "volume": 1
     },
@@ -261,21 +265,21 @@
     {
       "file": "Voicy_Owl hooting.mp3",
       "label": "🦉",
-      "category": "Autres",
+      "category": "Pendant la Nuit",
       "pos": 2,
       "volume": 1
     },
     {
       "file": "Voicy_Suspense.mp3",
       "label": "👀",
-      "category": "Autres",
+      "category": "Pendant la Nuit",
       "pos": 3,
       "volume": 1
     },
     {
       "file": "Voicy_Violent Thunder Sound With Rain.mp3",
       "label": "⚡",
-      "category": "Autres",
+      "category": "Pendant la Nuit",
       "pos": 4,
       "volume": 1
     },
@@ -428,8 +432,15 @@
     },
     {
       "file": "Voicy_Werewolves Sound Effects - Copie.mp3",
-      "label": "Voicy_Werewolves Sound Effects - Copie",
+      "label": "🐺",
       "category": "🐺07 Noir (Convert)",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "freesound_community-brahma-rooster-89888.mp3",
+      "label": "⏰-brahma-rooster-89888",
+      "category": "Au Matin",
       "pos": 1,
       "volume": 1
     }
