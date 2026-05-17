@@ -249,10 +249,17 @@
   ],
   "sfx": [
     {
-      "file": "Voicy_Heartbeat.mp3",
-      "label": "💓",
+      "file": "Voicy_Owl hooting.mp3",
+      "label": "🦉",
       "category": "###Pendant la Nuit###",
       "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "Voicy_Violent Thunder Sound With Rain.mp3",
+      "label": "⚡",
+      "category": "###Pendant la Nuit###",
+      "pos": 2,
       "volume": 1
     },
     {
@@ -263,24 +270,17 @@
       "volume": 1
     },
     {
-      "file": "Voicy_Owl hooting.mp3",
-      "label": "🦉",
-      "category": "###Pendant la Nuit###",
-      "pos": 2,
+      "file": "freesound_community-brahma-rooster-89888.mp3",
+      "label": "⏰",
+      "category": "###Au Matin###",
+      "pos": 1,
       "volume": 1
     },
     {
       "file": "Voicy_Suspense.mp3",
       "label": "👀",
-      "category": "###Pendant la Nuit###",
-      "pos": 3,
-      "volume": 1
-    },
-    {
-      "file": "Voicy_Violent Thunder Sound With Rain.mp3",
-      "label": "⚡",
-      "category": "###Pendant la Nuit###",
-      "pos": 4,
+      "category": "###Au Matin###",
+      "pos": 2,
       "volume": 1
     },
     {
@@ -434,13 +434,6 @@
       "file": "Voicy_Werewolves Sound Effects - Copie.mp3",
       "label": "🐺",
       "category": "🐺07 Noir (Convert)",
-      "pos": 1,
-      "volume": 1
-    },
-    {
-      "file": "freesound_community-brahma-rooster-89888.mp3",
-      "label": "⏰",
-      "category": "###Au Matin###",
       "pos": 1,
       "volume": 1
     }
