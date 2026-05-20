@@ -172,6 +172,8 @@ class GameMasterUI {
         html = renderTableAndRename(this);
       } else if (mode === 'assignRoles') {
         html = renderFirstNight(this);
+      } else if (mode === 'mayorElection') {
+        html = renderMayorElection(this);
       } else if (mode === 'gameRunning') {
         html = '<div style="padding:20px; color:#e8e8f0; text-align:center;">Jeu en cours...</div>';
       }
@@ -255,6 +257,8 @@ class GameMasterUI {
       attachTableAndRenameEvents(this);
     } else if (mode === 'assignRoles') {
       attachFirstNightEvents(this);
+    } else if (mode === 'mayorElection') {
+      attachMayorElectionEvents(this);
     }
   }
 

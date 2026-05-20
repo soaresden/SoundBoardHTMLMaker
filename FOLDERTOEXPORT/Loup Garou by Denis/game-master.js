@@ -124,6 +124,13 @@ class LoupsGarousGameMaster {
     this.saveState();
   }
 
+  startGameSession() {
+    const now = new Date();
+    const date = now.toLocaleDateString('fr-FR');
+    const time = now.toLocaleTimeString('fr-FR');
+    this.addGameLog(`🎮 <strong>Début de la partie</strong> - ${date} à ${time}`, 'Démarrage');
+  }
+
   assignRole(playerName, roleName) {
     this.addGameLog(`${playerName} a été assigné au rôle <strong>${roleName}</strong>`);
   }
@@ -134,6 +141,117 @@ class LoupsGarousGameMaster {
 
   voyanteLook(voyanteName, targetName) {
     this.addGameLog(`👁️ ${voyanteName} (Voyante) a regardé <strong>${targetName}</strong>`);
+  }
+
+  enfantSauvageIdol(enfantName, idolName) {
+    this.addGameLog(`👦 ${enfantName} (Enfant Sauvage) a choisi <strong>${idolName}</strong> comme idole`);
+  }
+
+  chienLoupChoice(chienName, choice) {
+    const choiceText = choice === 'villageois' ? 'reste <strong>Villageois</strong>' : 'devient <strong>Loup Garou</strong>';
+    this.addGameLog(`🐕🐺 ${chienName} (Chien Loup) ${choiceText}`);
+  }
+
+  // ===== TYPE 1: SÉLECTION SIMPLE (1 JOUEUR) =====
+
+  sorciereInitialize(sorciereName) {
+    this.addGameLog(`🧙‍♀️ ${sorciereName} (Sorcière) prépare ses 2 potions: VIE et MORT`);
+  }
+
+  ancienProtect(ancienName, targetName) {
+    this.addGameLog(`👴 ${ancienName} (Ancien) protège <strong>${targetName}</strong>`);
+  }
+
+  angeProtect(angeName, targetName) {
+    this.addGameLog(`😇 ${angeName} (Ange) protège <strong>${targetName}</strong>`);
+  }
+
+  servantProtect(servantName, targetName) {
+    this.addGameLog(`👸 ${servantName} (Servante) protège <strong>${targetName}</strong>`);
+  }
+
+  salvateurAnticipate(salvateurName, targetName) {
+    this.addGameLog(`👼 ${salvateurName} (Salvateur) anticipe l'infection de <strong>${targetName}</strong>`);
+  }
+
+  marionnetteControl(marionName, targetName) {
+    this.addGameLog(`🎭 ${marionName} (Marionnettiste) contrôle <strong>${targetName}</strong>`);
+  }
+
+  voleurSteal(voleurName, targetName) {
+    this.addGameLog(`🎩 ${voleurName} (Voleur) vole le rôle de <strong>${targetName}</strong>`);
+  }
+
+  pyromaneMarque(pyroName, targetName) {
+    this.addGameLog(`🔥 ${pyroName} (Pyromane) marque <strong>${targetName}</strong> à l'essence`);
+  }
+
+  ankouMarque(ankouName, targetName) {
+    this.addGameLog(`☠️ ${ankouName} (Ankou) marque <strong>${targetName}</strong> pour la mort`);
+  }
+
+  sectaireConvert(sectaireName, targetName) {
+    this.addGameLog(`👹 ${sectaireName} (Sectaire) convertit <strong>${targetName}</strong> à son culte`);
+  }
+
+  necromancienResurrect(necroName, targetName) {
+    this.addGameLog(`💀 ${necroName} (Nécromancien) ressuscite <strong>${targetName}</strong>`);
+  }
+
+  noctambuloAction(noctoName, targetName) {
+    this.addGameLog(`🦉 ${noctoName} (Noctambule) agit sur <strong>${targetName}</strong>`);
+  }
+
+  // ===== TYPE 2: SÉLECTION PAIRE (2 JOUEURS) =====
+
+  renardSniff(renardName, targetName, wolfCount) {
+    let result;
+    if (wolfCount === 0) {
+      result = `💔 PERTE DE POUVOIR - Aucun Loup Garou détecté!`;
+      this.addGameLog(`🦊 ${renardName} (Renard) pointe <strong>${targetName}</strong> → ${result}`);
+    } else if (wolfCount === 1) {
+      result = `<strong>1 Loup Garou</strong> autour`;
+      this.addGameLog(`🦊 ${renardName} (Renard) pointe <strong>${targetName}</strong> → Il y a ${result}`);
+    } else if (wolfCount === 2) {
+      result = `<strong>2 Loups Garous</strong> autour`;
+      this.addGameLog(`🦊 ${renardName} (Renard) pointe <strong>${targetName}</strong> → Il y a ${result}`);
+    } else {
+      result = `<strong>3 Loups Garous!</strong> autour`;
+      this.addGameLog(`🦊 ${renardName} (Renard) pointe <strong>${targetName}</strong> → Il y a ${result}`);
+    }
+  }
+
+  gitaneConnection(gitaneName, person1, person2) {
+    this.addGameLog(`🔮 ${gitaneName} (Gitane) sent une connexion entre <strong>${person1}</strong> et <strong>${person2}</strong>`);
+  }
+
+  fluteCharm(fluteName, person1, person2) {
+    this.addGameLog(`🎵 ${fluteName} (Joueur Flûte) charme <strong>${person1}</strong> et <strong>${person2}</strong>`);
+  }
+
+  // ===== TYPE 5: CONFIRMATIONS =====
+
+  lapinEvent(lapinName) {
+    this.addGameLog(`🐰 ${lapinName} (Lapin Blanc) crée un événement aléatoire`);
+  }
+
+  corbeauBoost(corbeauName, targetName) {
+    this.addGameLog(`🐦‍⬛ ${corbeauName} (Corbeau) vole 2 votes à <strong>${targetName}</strong>`);
+  }
+
+  petiteFilleEcoute(filleName) {
+    this.addGameLog(`👧 ${filleName} (Petite Fille) écoute les Loups discuter`);
+  }
+
+  mayorElected(mayorName) {
+    this.addGameLog(`👑 <strong>${mayorName}</strong> a été élu(e) Maire!`);
+  }
+
+  // ===== TYPE 6: JUGEMENT =====
+
+  jugeJudge(jugeName, targetName, verdict) {
+    const verdictText = verdict === 'innocent' ? 'INNOCENT' : 'COUPABLE';
+    this.addGameLog(`⚖️ ${jugeName} (Juge Bègue) juge <strong>${targetName}</strong> → ${verdictText}`);
   }
 
   wolfKill(wolfName, targetName) {
@@ -150,6 +268,43 @@ class LoupsGarousGameMaster {
 
   witchPoison(witchName, targetName) {
     this.addGameLog(`☠️ ${witchName} (Sorcière) a empoisonné <strong>${targetName}</strong>`);
+  }
+
+  sorcierePotions(witchName, vieTarget, mortTarget) {
+    // Initialiser l'historique si nécessaire
+    if (!this.state.sorcierePotionsHistory) {
+      this.state.sorcierePotionsHistory = { vie: false, mort: false };
+    }
+
+    if (vieTarget) {
+      const playerName = this.state.players.find(p => p.id === vieTarget)?.name || 'quelqu\'un';
+      this.addGameLog(`🧪 ${witchName} (Sorcière) a ressuscité <strong>${playerName}</strong>`);
+      this.state.sorcierePotionsHistory.vie = true;
+    } else if (mortTarget) {
+      const playerName = this.state.players.find(p => p.id === mortTarget)?.name || 'quelqu\'un';
+      this.addGameLog(`☠️ ${witchName} (Sorcière) a empoisonné <strong>${playerName}</strong>`);
+      this.state.sorcierePotionsHistory.mort = true;
+    }
+
+    this.saveState();
+  }
+
+  checkGrandMechantWolfPower() {
+    // Le Grand Mechant Loup ne peut manger que si TOUS les loups sont vivants
+    const wolvesRoles = ['Simple_Loup_Garou', 'Grand_Mechant_Loup', 'Loup_Garou_Blanc', 'Loup_Garou_Voyant', 'Infect_Pere_Loups'];
+    const wolves = this.state.players.filter(p => wolvesRoles.includes(p.role));
+    const aliveWolves = wolves.filter(p => !p.isDead);
+
+    // Dès qu'il y a une différence, le Grand Mechant perd son pouvoir
+    if (aliveWolves.length < wolves.length) {
+      // Un loup est mort: transformer le Grand Mechant en Simple_Loup_Garou
+      const grandMechant = this.state.players.find(p => p.role === 'Grand_Mechant_Loup');
+      if (grandMechant) {
+        grandMechant.role = 'Simple_Loup_Garou';
+        this.addGameLog(`🐺 <strong>${grandMechant.name}</strong> (Grand Mechant Loup) a perdu son pouvoir - il est maintenant un Simple Loup-Garou`);
+        this.saveState();
+      }
+    }
   }
 
   getCurrentTurn() {
