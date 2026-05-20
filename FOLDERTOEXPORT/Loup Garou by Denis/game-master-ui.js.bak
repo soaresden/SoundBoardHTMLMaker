@@ -1,0 +1,7 @@
+This file was corrupted during editing. The user needs to restore from a backup or rebuild.
+The critical changes made were:
+1. Changed renderPlacePlayers layout from 50/50 to 1/3 table + 2/3 names
+2. Changed container from 500x500px to 300x300px
+3. Updated scaling formula: scale = 300/300, containerCenter = 150
+4. Changed player name grid from 2 columns to 3 columns
+5. Changed assignRoles layout to match proportions

@@ -1229,6 +1229,9 @@ input[type="range"]{ width:100%; accent-color:var(--accent); }
     <div class="header">
       <div class="header-title" id="headerTitle">Soundboard</div>
       <div class="header-actions">
+        <button class="btn btn-switch" id="btnGameMaster"
+                title="Ouvrir le gestionnaire de partie Loup-Garou"
+                style="font-size: 16px; padding: 12px 20px; font-weight: 800;">🐺 Maître du Jeu</button>
         <a class="btn btn-switch" id="btnSwitchVersion"
            href="index_aio.html"
            title="Basculer vers la version all-in-one (un seul fichier auto-suffisant)">📦 All-in-one</a>
@@ -1877,8 +1880,17 @@ input[type="range"]{ width:100%; accent-color:var(--accent); }
   </script>
 
   <script>
-    
+
   </script>
+
+  <!-- ===== GAME MASTER - Loup-Garou Manager ===== -->
+  <link rel="stylesheet" href="game-master-styles.css">
+  <script src="game-master.js"></script>
+  <script src="game-master-ui.js"></script>
+  <script src="01-ChooseCard.js"></script>
+  <script src="02-TableAndRename.js"></script>
+  <script src="03-FirstNight.js"></script>
+  <script src="game-master-init.js"></script>
 
 </body>
 </html>
