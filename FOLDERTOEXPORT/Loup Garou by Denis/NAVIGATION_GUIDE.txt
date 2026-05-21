@@ -1,0 +1,161 @@
+╔════════════════════════════════════════════════════════════════╗
+║        🧭 SYSTÈME DE NAVIGATION - Précédent/Suivant            ║
+╚════════════════════════════════════════════════════════════════╝
+
+🎯 OBJECTIF:
+   Naviguer facilement entre les étapes du jeu sans réinitialiser
+
+═══════════════════════════════════════════════════════════════
+
+📍 ÉTAPES DU JEU:
+
+  ① Sélection des Rôles (01-ChooseCard.js)
+  ② Agencement de la Table (02-TableAndRename.js)
+  ③ Première Nuit (03-FirstNight.js)
+  ④ Élection du Maire (04-MayorElection.js)
+
+═══════════════════════════════════════════════════════════════
+
+🖱️ UTILISATION:
+
+Methode 1 - Boutons Précédent/Suivant:
+  • Cliquez sur le bouton "← Précédent" pour revenir
+  • Cliquez sur le bouton "Suivant →" pour avancer
+
+Methode 2 - Shortcuts Clavier (plus rapide):
+  • Alt + Flèche Gauche  (Alt+←)  = Précédent
+  • Alt + Flèche Droite  (Alt+→)  = Suivant
+
+═══════════════════════════════════════════════════════════════
+
+💻 COMMANDES CONSOLE:
+
+// Voir l'état de la navigation
+window.gameNavigation.printStatus();
+
+// Aller à une étape spécifique
+window.gameNavigation.goToScreen(0);  // ① Rôles
+window.gameNavigation.goToScreen(1);  // ② Table
+window.gameNavigation.goToScreen(2);  // ③ Première Nuit
+window.gameNavigation.goToScreen(3);  // ④ Maire
+
+// Avancer
+window.gameNavigation.goNext();
+
+// Revenir
+window.gameNavigation.goBack();
+
+// Vérifier si on peut avancer/revenir
+window.gameNavigation.canGoNext();   // true ou false
+window.gameNavigation.canGoBack();   // true ou false
+
+// Voir l'écran actuel
+window.gameNavigation.getCurrentScreen();
+
+═══════════════════════════════════════════════════════════════
+
+✨ ÉVÉNEMENT PERSONNALISÉ:
+
+Quand on change d'écran, un événement est déclenché:
+
+window.addEventListener('screenChange', (e) => {
+  console.log('Nouvel écran:', e.detail.screen.name);
+  console.log('Index:', e.detail.index);
+  console.log('Peut revenir:', e.detail.canGoBack);
+  console.log('Peut avancer:', e.detail.canGoNext);
+});
+
+═══════════════════════════════════════════════════════════════
+
+🎨 AFFICHAGE:
+
+Les boutons Précédent/Suivant s'affichent automatiquement
+avec des codes couleur:
+
+  🟠 Bouton Précédent
+     • Actif (clickable) si on n'est pas à l'étape 1
+     • Grisé sinon
+
+  🟢 Bouton Suivant
+     • Actif si on n'est pas à la dernière étape
+     • Grisé sinon
+
+  🔵 Indicateur au centre
+     • Montre le numéro d'étape et le nom
+     • Exemple: "2 / 4: Agencement de la Table"
+
+═══════════════════════════════════════════════════════════════
+
+⌨️ SHORTCUTS:
+
+Raccourcis clavier disponibles:
+  • Alt + Flèche Gauche  = Revenir à l'étape précédente
+  • Alt + Flèche Droite  = Aller à l'étape suivante
+
+Logs dans la console quand on utilise un shortcut:
+  "⌨️ Shortcut: Alt+← (Précédent)"
+  "⌨️ Shortcut: Alt+→ (Suivant)"
+
+═══════════════════════════════════════════════════════════════
+
+📋 LOG AUTOMATIQUE:
+
+Chaque fois qu'on navigue, un log est créé:
+
+  Type: "phase"
+  Message: "Navigation vers: [Nom de l'étape]"
+  Données:
+    - screenId: ID interne
+    - screenName: Nom lisible
+    - canGoBack: true/false
+    - canGoNext: true/false
+    - historyLength: nombre d'étapes visitées
+
+Accédez aux logs:
+  window.gameLogger.logs
+
+═══════════════════════════════════════════════════════════════
+
+🔧 INTÉGRATION DANS LE CODE:
+
+Si tu veux déclencher une navigation programmatiquement:
+
+// Dans 02-TableAndRename.js par exemple:
+document.getElementById('btnSuivant').addEventListener('click', () => {
+  window.gameNavigation.goNext();
+  // Ou: window.gameNavigation.goToScreen(2);
+});
+
+═══════════════════════════════════════════════════════════════
+
+⚡ POINTS IMPORTANTS:
+
+1. La navigation s'initialise AUTOMATIQUEMENT
+   → Pas besoin de faire quoi que ce soit de spécial
+
+2. Les boutons s'activent/désactivent AUTOMATIQUEMENT
+   → Ils sont grisés quand on ne peut pas aller dans cette direction
+
+3. Les logs sont AUTOMATIQUES
+   → Chaque navigation est tracée dans window.gameLogger
+
+4. Les shortcuts CLAVIER marchent partout
+   → Alt+← et Alt+→ fonctionnent n'importe où
+
+═══════════════════════════════════════════════════════════════
+
+❓ DÉPANNAGE:
+
+Si les boutons n'apparaissent pas:
+  1. Vérify que navigation-system.js est chargé
+  2. Vérify que game-master-init.js l'initialise
+  3. Regardez la console pour les erreurs
+
+Si les shortcuts ne marchent pas:
+  1. Vérify que Alt+← et Alt+→ ne sont pas override par le navigateur
+  2. Regardez la console: "⌨️ Shortcuts:" devrait s'afficher
+
+═══════════════════════════════════════════════════════════════
+
+Créé: 2026-05-21
+Statut: ✅ Prêt à l'emploi

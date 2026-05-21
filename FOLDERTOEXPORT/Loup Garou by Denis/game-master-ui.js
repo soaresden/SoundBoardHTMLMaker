@@ -79,9 +79,10 @@ class GameMasterUI {
     overlay.id = 'gameMasterOverlay';
     overlay.className = 'game-master-overlay';
     overlay.innerHTML = `
-      <div class="gm-header" id="gmHeader" style="cursor:move;">
-        <div class="gm-title">🐺 Maître du Jeu</div>
-        <div style="display: flex; gap: 6px; align-items: center;">
+      <div class="gm-header" id="gmHeader" style="cursor:move; display:flex; gap:8px; align-items:center;">
+        <div style="padding:4px 8px; color:#81dff7; font-size:14px; flex-shrink:0; touch-action:none;">⋮⋮</div>
+        <div class="gm-title" style="flex:1;">🐺 Maître du Jeu</div>
+        <div style="display: flex; gap: 6px; align-items: center; flex-shrink:0;">
           <button id="gmBtnReset" title="Réinitialiser la partie" style="width:24px; height:24px; padding:0; border:1px solid rgba(199,125,255,0.4); background:rgba(220,100,100,0.3); border-radius:3px; color:#ff6b6b; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;">↻</button>
           <button id="gmBtnCollapse" title="Réduire/Maximiser" style="width:24px; height:24px; padding:0; border:1px solid rgba(199,125,255,0.4); background:rgba(100,150,255,0.3); border-radius:3px; color:#6699ff; font-size:14px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;">−</button>
           <button id="gmBtnClose" title="Fermer" style="width:24px; height:24px; padding:0; border:1px solid rgba(199,125,255,0.4); background:rgba(200,100,200,0.3); border-radius:3px; color:#dd77ff; font-size:14px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;">✕</button>
@@ -180,6 +181,17 @@ class GameMasterUI {
     }
 
     content.innerHTML = html;
+
+    // Auto-scroll du log vers le dernier message
+    if (this.activeTab === 'journal') {
+      setTimeout(() => {
+        const logScroll = document.getElementById('gmLogScroll');
+        if (logScroll) {
+          logScroll.scrollTop = logScroll.scrollHeight;
+        }
+      }, 50);
+    }
+
     this.attachEventListenersAfterRender();
   }
 
@@ -196,51 +208,44 @@ class GameMasterUI {
       }
     });
 
-    // Construire le contenu du journal
+    // Construire le contenu du journal avec 2 colonnes
     const journalHtml = `
       <div style="display:flex; flex-direction:column; height:100%; gap:0; padding:0;">
         <div style="padding:16px; border-bottom:2px solid rgba(199,125,255,0.3); background:linear-gradient(135deg, rgba(25,25,45,0.95), rgba(35,30,55,0.95)); flex:0 0 auto;">
           <h2 style="margin:0; color:#e8e8f0; font-size:16px;">📖 Journal de Partie</h2>
         </div>
-        <div style="flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:16px;">
-          <!-- SECTION: JOUEURS ET RÔLES -->
-          <div style="background:rgba(100,150,255,0.1); border:1px solid rgba(100,150,255,0.3); border-radius:6px; padding:12px;">
-            <h3 style="margin:0 0 12px 0; color:#81dff7; font-size:12px; font-weight:600;">👥 JOUEURS</h3>
-            <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:8px;">
+        <div style="flex:1; display:flex; gap:8px; padding:8px; overflow:hidden;">
+          <!-- GAUCHE: JOUEURS (compact) -->
+          <div style="flex:0 0 220px; background:rgba(100,150,255,0.1); border:1px solid rgba(100,150,255,0.3); border-radius:6px; padding:12px; overflow-y:auto; display:flex; flex-direction:column;">
+            <h3 style="margin:0 0 12px 0; color:#81dff7; font-size:11px; font-weight:600; flex:0 0 auto;">👥 JOUEURS</h3>
+            <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:6px;">
               ${players.map((p, idx) => {
-                const role = playerRoles[p.id] ? `<span style="color:#66d999;">${playerRoles[p.id]}</span>` : '<span style="color:#aaa;">?</span>';
+                const role = playerRoles[p.id] ? `<span style="color:#66d999; font-size:8px;">${playerRoles[p.id]}</span>` : '<span style="color:#aaa; font-size:8px;">?</span>';
                 return `
-                  <div style="font-size:10px; color:#e8e8f0; padding:6px; background:rgba(0,0,0,0.3); border-radius:3px;">
-                    <strong>${p.name}</strong> → ${role}
+                  <div style="font-size:9px; color:#e8e8f0; padding:6px; background:rgba(0,0,0,0.3); border-radius:3px; display:flex; justify-content:space-between; align-items:center;">
+                    <strong style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis;">${p.name}</strong>
+                    <span style="flex:0 0 auto; margin-left:4px;">${role}</span>
                   </div>
                 `;
               }).join('')}
             </div>
           </div>
 
-          <!-- SECTION: ÉVÉNEMENTS -->
-          <div style="background:rgba(150,100,255,0.1); border:1px solid rgba(150,100,255,0.3); border-radius:6px; padding:12px;">
-            <h3 style="margin:0 0 12px 0; color:#c77dff; font-size:12px; font-weight:600;">⚔️ ÉVÉNEMENTS</h3>
-            ${gameLog.length > 0 ? `
-              <div style="display:flex; flex-direction:column; gap:6px;">
-                ${gameLog.map((event, idx) => `
-                  <div style="font-size:10px; color:#ddd; padding:6px; background:rgba(0,0,0,0.3); border-left:2px solid #c77dff; border-radius:2px;">
-                    <strong style="color:#e8e8f0;">${event.turn || 'Nuit 1'}</strong> - ${event.text}
-                  </div>
-                `).join('')}
-              </div>
-            ` : `
-              <div style="font-size:11px; color:#aaa; text-align:center; padding:16px;">
-                📝 Aucun événement enregistré pour le moment
-              </div>
-            `}
-          </div>
-
-          <!-- SECTION: NOTES -->
-          <div style="background:rgba(255,150,100,0.1); border:1px solid rgba(255,150,100,0.3); border-radius:6px; padding:12px;">
-            <h3 style="margin:0 0 12px 0; color:#ff9966; font-size:12px; font-weight:600;">📝 NOTES</h3>
-            <textarea id="gmJournalNotes" placeholder="Ajoutez vos notes ici..." style="width:100%; height:120px; padding:8px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,150,100,0.2); border-radius:4px; color:#e8e8f0; font-size:10px; font-family:monospace; resize:none;">
-            </textarea>
+          <!-- DROITE: LOG (scrollable) -->
+          <div style="flex:1; background:rgba(150,100,255,0.1); border:1px solid rgba(150,100,255,0.3); border-radius:6px; padding:12px; display:flex; flex-direction:column; min-width:0;">
+            <h3 style="margin:0 0 12px 0; color:#c77dff; font-size:11px; font-weight:600; flex:0 0 auto;">⚔️ ÉVÉNEMENTS</h3>
+            <div id="gmLogScroll" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:6px; user-select:text;">
+              ${gameLog.length > 0 ? gameLog.map((event, idx) => `
+                <div style="font-size:9px; color:#ddd; padding:8px; background:rgba(0,0,0,0.3); border-left:2px solid #c77dff; border-radius:2px; flex:0 0 auto; user-select:text;">
+                  <div style="color:#aaa; font-size:8px; margin-bottom:2px; user-select:text;">${event.timestamp}</div>
+                  <strong style="color:#e8e8f0; user-select:text;">${event.turn || 'Nuit 1'}</strong> - <span style="user-select:text;">${event.text}</span>
+                </div>
+              `).join('') : `
+                <div style="font-size:11px; color:#aaa; text-align:center; padding:16px;">
+                  📝 Aucun événement enregistré pour le moment
+                </div>
+              `}
+            </div>
           </div>
         </div>
       </div>
@@ -396,22 +401,53 @@ class GameMasterUI {
     let offsetX = 0;
     let offsetY = 0;
 
-    header.addEventListener('mousedown', (e) => {
+    // Fonction helper pour démarrer le drag
+    const startDrag = (clientX, clientY) => {
       isDragging = true;
-      offsetX = e.clientX - overlay.offsetLeft;
-      offsetY = e.clientY - overlay.offsetTop;
+      offsetX = clientX - overlay.offsetLeft;
+      offsetY = clientY - overlay.offsetTop;
+    };
+
+    // Fonction helper pour faire le drag
+    const moveDrag = (clientX, clientY) => {
+      if (isDragging && !this.minimized) {
+        overlay.style.left = (clientX - offsetX) + 'px';
+        overlay.style.top = (clientY - offsetY) + 'px';
+      }
+    };
+
+    // Fonction helper pour terminer le drag
+    const endDrag = () => {
+      isDragging = false;
+    };
+
+    // Support SOURIS
+    header.addEventListener('mousedown', (e) => {
+      startDrag(e.clientX, e.clientY);
     });
 
     document.addEventListener('mousemove', (e) => {
-      if (isDragging && !this.minimized) {
-        overlay.style.left = (e.clientX - offsetX) + 'px';
-        overlay.style.top = (e.clientY - offsetY) + 'px';
-      }
+      moveDrag(e.clientX, e.clientY);
     });
 
     document.addEventListener('mouseup', () => {
-      isDragging = false;
+      endDrag();
     });
+
+    // Support TACTILE (téléphone)
+    header.addEventListener('touchstart', (e) => {
+      const touch = e.touches[0];
+      startDrag(touch.clientX, touch.clientY);
+    }, { passive: true });
+
+    document.addEventListener('touchmove', (e) => {
+      const touch = e.touches[0];
+      moveDrag(touch.clientX, touch.clientY);
+    }, { passive: true });
+
+    document.addEventListener('touchend', () => {
+      endDrag();
+    }, { passive: true });
   }
 
   toggleMinimized() {

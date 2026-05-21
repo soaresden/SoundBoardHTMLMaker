@@ -9,6 +9,9 @@
   let gameMasterUI = null;
   let isInitialized = false;
 
+  // Roles data est chargé par roles-data.js via <script> dans index.html
+  // Pas besoin de loadRolesData() - window.ROLES_DATA est déjà défini
+
   // Fonction d'initialisation principale
   function initGameMaster() {
     if (isInitialized) return;
@@ -25,6 +28,11 @@
       // Créer les instances
       gameMaster = new LoupsGarousGameMaster();
       gameMasterUI = new GameMasterUI(gameMaster);
+
+      // Initialiser le système de logging
+      if (typeof initializeGameLogger !== 'undefined') {
+        initializeGameLogger(gameMaster);
+      }
 
       console.log('[GameMaster] ✓ Initialized successfully');
       isInitialized = true;
@@ -83,7 +91,9 @@
 
   // Essayer d'initialiser au chargement du DOM
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initGameMaster);
+    document.addEventListener('DOMContentLoaded', function() {
+      initGameMaster();
+    });
   } else {
     // DOM déjà chargé
     initGameMaster();
@@ -123,6 +133,13 @@
     getRoles: function() {
       return gameMaster ? gameMaster.roles : null;
     },
+    showDebug: function() {
+      if (gameMaster) {
+        gameMaster.showDebug();
+      } else {
+        console.log('❌ Game Master not initialized yet');
+      }
+    },
     reload: function() {
       if (gameMasterUI) {
         gameMasterUI.render();
@@ -138,5 +155,10 @@
     },
   };
 
-  console.log('[GameMaster] ✓ Script loaded. Use window.gameMasterDebug for debugging.');
+  // Fonction globale pour appeler showDebug() facilement depuis la console
+  window.showDebug = function() {
+    window.gameMasterDebug.showDebug();
+  };
+
+  console.log('[GameMaster] ✓ Script loaded. Use window.gameMasterDebug for debugging or showDebug() to see game state.');
 })();

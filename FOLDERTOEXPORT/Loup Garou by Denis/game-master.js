@@ -2,6 +2,36 @@
 // GAME MASTER - Loup-Garou Manager
 // ========================================
 
+// ===== COULEURS DES RÔLES =====
+const ROLE_COLORS = {
+  // Loups
+  'Simple_Loup_Garou': { bg: '#8b3a3a', border: '#d46666' },      // Rouge foncé
+  'Grand_Mechant_Loup': { bg: '#d46666', border: '#8b3a3a' },      // Rouge + rouge foncé
+  'Loup_Garou_Blanc': { bg: '#fff', border: '#d46666' },           // Blanc + rouge
+  'Loup_Garou_Voyant': { bg: '#8b3a3a', border: '#ff6b9d' },       // Rouge foncé + rose
+  'Infect_Pere_Loups': { bg: '#d46666', border: '#8b3a3a' },       // Rouge + rouge foncé
+
+  // Critiques
+  'Cupidon': { bg: '#5174db', border: '#7ba3f5' },                 // Bleu clair
+  'Enfant_Sauvage': { bg: '#8b6f47', border: '#b8956a' },          // Marron
+  'Chien_Loup': { bg: '#4a9d6f', border: '#d46666' },              // Vert/Rouge bicolor
+
+  // Spéciaux/Protecteurs
+  'Voyante': { bg: '#7b68ee', border: '#ffd700' },                 // Violet + jaune
+  'Renard': { bg: '#ff8c00', border: '#ffa500' },                  // Orange
+  'Sorcière': { bg: '#4caf50', border: '#d46666' },                // Vert + rouge
+  'Salvateur': { bg: '#ffd700', border: '#5174db' },               // Jaune + bleu
+
+  // Autres
+  'Montreur_Ours': { bg: '#8b6f47', border: '#000' },              // Marron + trait noir
+  'Chevalier_Epee_Rouille': { bg: '#808080', border: '#cc0000' },  // Gris + trait rouge
+  'Chasseur': { bg: '#4caf50', border: '#8b6f47' },                // Vert + marron
+  'Corbeau': { bg: '#000', border: '#444' },                       // Noir
+
+  // Default
+  'default': { bg: '#6b4c9a', border: '#9966ff' }                  // Violet par défaut
+};
+
 class LoupsGarousGameMaster {
   constructor() {
     this.state = {
@@ -30,8 +60,27 @@ class LoupsGarousGameMaster {
     this.loadState();
   }
 
-  // ===== ROLES DEFINITION - 39 rôles avec cartes réelles =====
+  // ===== ROLES DEFINITION - Tous les rôles de window.ROLES_DATA =====
   loadRoles() {
+    // Charger TOUS les rôles de window.ROLES_DATA
+    if (window.ROLES_DATA && window.ROLES_DATA.roles) {
+      const roles = {};
+      for (const roleId in window.ROLES_DATA.roles) {
+        const roleData = window.ROLES_DATA.roles[roleId];
+        roles[roleId] = {
+          category: roleData.camp || 'Spécial',
+          power: roleData.camp === 'Loups' ? 'kill' : 'none',
+          nightInstruction: roleData.nightAction || 'Dors.',
+          dayInstruction: 'Vote.',
+          icon: roleData.emoji || '❓',
+          description: roleData.description || 'Rôle sans description',
+          origin: roleData.origin || 'base'
+        };
+      }
+      return roles;
+    }
+
+    // Fallback: les 39 rôles d'origine si window.ROLES_DATA n'existe pas
     return {
       // VILLAGEOIS
       'Villageois_Villageois': { category: 'Villageois', power: 'none', nightInstruction: 'Dors.', dayInstruction: 'Vote.', icon: '👨', description: 'Villageois ordinaire. Pas de pouvoir spécial, doit voter pour éliminer les Loups.' },
@@ -116,10 +165,12 @@ class LoupsGarousGameMaster {
     if (!this.state.gameLog) {
       this.state.gameLog = [];
     }
+    const now = new Date();
+    const timestamp = `${now.toLocaleDateString('fr-FR')} ${now.toLocaleTimeString('fr-FR')}`;
     this.state.gameLog.push({
       turn: turn || `Nuit ${this.getCurrentTurn()}`,
       text: text,
-      timestamp: new Date().toLocaleTimeString('fr-FR')
+      timestamp: timestamp
     });
     this.saveState();
   }
@@ -150,6 +201,14 @@ class LoupsGarousGameMaster {
   chienLoupChoice(chienName, choice) {
     const choiceText = choice === 'villageois' ? 'reste <strong>Villageois</strong>' : 'devient <strong>Loup Garou</strong>';
     this.addGameLog(`🐕🐺 ${chienName} (Chien Loup) ${choiceText}`);
+
+    // Si le Chien Loup devient Loup Garou, mettre à jour son rôle
+    if (choice === 'loup') {
+      const chienPlayer = this.state.players?.find(p => p.roleId === 'Chien_Loup');
+      if (chienPlayer) {
+        chienPlayer.roleId = 'Simple_Loup_Garou';
+      }
+    }
   }
 
   // ===== TYPE 1: SÉLECTION SIMPLE (1 JOUEUR) =====
@@ -398,6 +457,321 @@ class LoupsGarousGameMaster {
 
   getGameHistory() {
     return this.state.gameHistory;
+  }
+
+  // ===== COULEURS ET AFFICHAGE =====
+  getRoleColor(roleId) {
+    return ROLE_COLORS[roleId] || ROLE_COLORS['default'];
+  }
+
+  // Récupère les infos d'un rôle depuis roles.json
+  getRoleInfo(roleId) {
+    if (!window.ROLES_DATA) return null;
+    return window.ROLES_DATA.roles?.[roleId] || null;
+  }
+
+  // Ajouter une entrée à l'historique du jeu
+  addLog(message, type = 'info') {
+    const now = new Date();
+    const timestamp = now.toLocaleString('fr-FR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+
+    this.state.gameHistory.push({
+      timestamp,
+      message,
+      type,
+      time: now.getTime()
+    });
+  }
+
+  // === DEBUG FUNCTION - Affiche tout l'état du jeu ===
+  showDebug() {
+    console.clear();
+    console.log('%c╔════════════════════════════════════════════╗', 'color: #FFD700; font-weight: bold; font-size: 12px;');
+    console.log('%c║      LOUP-GAROU DEBUG - ÉTAT COMPLET      ║', 'color: #FFD700; font-weight: bold; font-size: 12px;');
+    console.log('%c╚════════════════════════════════════════════╝', 'color: #FFD700; font-weight: bold; font-size: 12px;');
+
+    // 1. MODE ET PHASE
+    console.group('%c📋 MODE & PHASE', 'color: #4CAF50; font-weight: bold;');
+    console.log('Mode:', this.state.mode);
+    console.log('Table Type:', this.state.tableType);
+    console.log('Night Step:', this.state.nightStep);
+    console.log('Current Role Idx:', this.state.currentRoleIdx);
+    console.log('Current Turn:', this.state.currentTurn);
+    console.log('Night Phase:', this.state.nightPhase);
+    console.groupEnd();
+
+    // 2. JOUEURS
+    console.group('%c👥 JOUEURS', 'color: #2196F3; font-weight: bold;');
+    if (this.state.players && this.state.players.length > 0) {
+      this.state.players.forEach((p, idx) => {
+        const assigned = p.roleId ? `✓ ${p.roleId}` : '✗ Non assigné';
+        console.log(`${idx+1}. ${p.name} (${p.id}) - ${assigned}`);
+      });
+    } else {
+      console.log('Aucun joueur');
+    }
+    console.groupEnd();
+
+    // 3. RÔLES SÉLECTIONNÉS
+    console.group('%c🎭 RÔLES SÉLECTIONNÉS', 'color: #FF9800; font-weight: bold;');
+    if (this.state.selectedRoles && Object.keys(this.state.selectedRoles).length > 0) {
+      Object.entries(this.state.selectedRoles).forEach(([roleId, assigned]) => {
+        console.log(`${roleId}: ${assigned ? '✓ Assigné' : '✗ Non assigné'}`);
+      });
+    } else {
+      console.log('Aucun rôle sélectionné');
+    }
+    console.groupEnd();
+
+    // 4. ACTIONS DE NUIT ASSIGNÉES
+    console.group('%c🌙 ASSIGNATIONS ACTIONS NUIT', 'color: #9C27B0; font-weight: bold;');
+    const nightActions = [
+      'cupidoSelection',
+      'enfantSauvageIdol',
+      'chienLoupChoice',
+      'voyanteLook',
+      'sorcierePotions',
+      'renardSniff',
+      'wolvesKill'
+    ];
+    nightActions.forEach(action => {
+      if (this.state[action] !== undefined) {
+        console.log(`${action}:`, this.state[action]);
+      }
+    });
+    console.groupEnd();
+
+    // 5. HISTORIQUE DU JEU
+    console.group('%c📝 HISTORIQUE (derniers 10)', 'color: #F44336; font-weight: bold;');
+    if (this.state.gameHistory && this.state.gameHistory.length > 0) {
+      const recent = this.state.gameHistory.slice(-10);
+      recent.forEach(log => {
+        console.log(`[${log.timestamp}] ${log.message}`);
+      });
+    } else {
+      console.log('Aucune entrée');
+    }
+    console.groupEnd();
+
+    // 6. INFOS CUPIDON
+    console.group('%c💘 CUPIDON', 'color: #E91E63; font-weight: bold;');
+    console.log('Sélection:', this.state.cupidoSelection);
+    console.log('Amoureux:', this.state.amoureux);
+    console.groupEnd();
+
+    // 7. INFOS ENFANT SAUVAGE
+    console.group('%c👦 ENFANT SAUVAGE', 'color: #8B6F47; font-weight: bold;');
+    console.log('Idole sélectionnée:', this.state.enfantSauvageIdol);
+    console.groupEnd();
+
+    // 8. INFOS VOYANTE
+    console.group('%c👁️ VOYANTE', 'color: #7B68EE; font-weight: bold;');
+    console.log('Lookups:', this.state.voyanteLook);
+    console.groupEnd();
+
+    // 9. ÉTAT COMPLET (si besoin)
+    console.group('%c⚙️ ÉTAT COMPLET (JSON)', 'color: #607D8B; font-weight: bold;');
+    console.log(JSON.stringify(this.state, null, 2));
+    console.groupEnd();
+
+    console.log('%c═══════════════════════════════════════════', 'color: #FFD700; font-weight: bold;');
+  }
+
+  // Vérifie si 2 joueurs sont amoureux (Cupidon)
+  areLovers(playerId1, playerId2) {
+    const lovers = this.state.cupidoSelection || [];
+    return lovers.includes(playerId1) && lovers.includes(playerId2);
+  }
+
+  // ========== SYSTÈME DE STATUTS ==========
+  // Structure joueur enrichie avec statuts:
+  // player = { id, name, roleId, statuses: [], statusData: {...}, isDead, ... }
+
+  initializePlayerStatuses() {
+    if (!this.state.playerStatuses) {
+      this.state.playerStatuses = {}; // { playerId: { statusId: {...}, ... }, ... }
+    }
+  }
+
+  addStatusToPlayer(playerId, statusId, statusData = {}) {
+    this.initializePlayerStatuses();
+    if (!this.state.playerStatuses[playerId]) {
+      this.state.playerStatuses[playerId] = {};
+    }
+    this.state.playerStatuses[playerId][statusId] = statusData;
+    this.saveState();
+
+    const player = this.state.players.find(p => p.id === playerId);
+    const statusInfo = window.STATUSES_DATA?.statuses?.[statusId];
+    if (player && statusInfo) {
+      this.addGameLog(`✨ ${player.name} reçoit le statut <strong>${statusInfo.name}</strong>`);
+    }
+  }
+
+  removeStatusFromPlayer(playerId, statusId) {
+    this.initializePlayerStatuses();
+    if (this.state.playerStatuses[playerId]) {
+      delete this.state.playerStatuses[playerId][statusId];
+      this.saveState();
+
+      const player = this.state.players.find(p => p.id === playerId);
+      const statusInfo = window.STATUSES_DATA?.statuses?.[statusId];
+      if (player && statusInfo) {
+        this.addGameLog(`❌ ${player.name} perd le statut <strong>${statusInfo.name}</strong>`);
+      }
+    }
+  }
+
+  getPlayerStatuses(playerId) {
+    this.initializePlayerStatuses();
+    return this.state.playerStatuses[playerId] || {};
+  }
+
+  hasStatus(playerId, statusId) {
+    const statuses = this.getPlayerStatuses(playerId);
+    return statusId in statuses;
+  }
+
+  // ========== STATUTS SPÉCIFIQUES ==========
+
+  // CUPIDON → Amoureux
+  createLovers(player1Id, player2Id) {
+    this.addStatusToPlayer(player1Id, 'Amoureux', { partner: player2Id });
+    this.addStatusToPlayer(player2Id, 'Amoureux', { partner: player1Id });
+
+    const p1 = this.state.players.find(p => p.id === player1Id);
+    const p2 = this.state.players.find(p => p.id === player2Id);
+
+    this.addGameLog(`💕 <strong>${p1?.name}</strong> et <strong>${p2?.name}</strong> sont maintenant Amoureux!`);
+  }
+
+  // JOUEUR DE FLÛTE → Charmé
+  charmPlayers(flutePlayerId, charmedPlayerIds) {
+    const flutePlayer = this.state.players.find(p => p.id === flutePlayerId);
+
+    charmedPlayerIds.forEach(charmedId => {
+      this.addStatusToPlayer(charmedId, 'Charmé', { source: flutePlayerId });
+    });
+
+    const charmedNames = charmedPlayerIds
+      .map(id => this.state.players.find(p => p.id === id)?.name)
+      .filter(Boolean)
+      .join(' et ');
+
+    this.addGameLog(`🎶 ${flutePlayer?.name} (Joueur de Flûte) charme <strong>${charmedNames}</strong>`);
+  }
+
+  // ENFANT SAUVAGE → Modèle
+  setChildModel(enfantId, modelId) {
+    this.addStatusToPlayer(modelId, 'Modèle', { child: enfantId });
+
+    const enfant = this.state.players.find(p => p.id === enfantId);
+    const model = this.state.players.find(p => p.id === modelId);
+
+    this.addGameLog(`⭐ ${enfant?.name} (Enfant Sauvage) a choisi <strong>${model?.name}</strong> comme idole`);
+  }
+
+  // PÈRE DES LOUPS → Infecté
+  infectPlayer(virusPlayerId, targetId) {
+    this.addStatusToPlayer(targetId, 'Infecté', { source: virusPlayerId });
+
+    const virus = this.state.players.find(p => p.id === virusPlayerId);
+    const target = this.state.players.find(p => p.id === targetId);
+
+    this.addGameLog(`🐺 ${virus?.name} (Père des Loups) infecte <strong>${target?.name}</strong> - devient Loup!`);
+  }
+
+  // VOTE → Maire (statut après élection)
+  electMayor(playerId) {
+    this.addStatusToPlayer(playerId, 'Maire', {});
+    this.state.gameState.mayor = playerId;
+
+    const mayor = this.state.players.find(p => p.id === playerId);
+    this.addGameLog(`👑 <strong>${mayor?.name}</strong> est élu(e) Maire! (2 voix au vote)`);
+  }
+
+  // ========== HOOKS DE COMPORTEMENT ==========
+
+  // Quand un joueur meurt, vérifier les statuts liés
+  handlePlayerDeath(playerId) {
+    const player = this.state.players.find(p => p.id === playerId);
+    if (!player) return;
+
+    const statuses = this.getPlayerStatuses(playerId);
+
+    // AMOUREUX → L'autre meurt aussi
+    if (statuses['Amoureux']) {
+      const partnerId = statuses['Amoureux'].partner;
+      const partner = this.state.players.find(p => p.id === partnerId);
+      if (partner && !partner.isDead) {
+        this.killPlayer(partnerId, 'Linked death (Amoureux)');
+        this.addGameLog(`💔 <strong>${partner.name}</strong> meurt aussi car amoureux de <strong>${player.name}</strong>`);
+      }
+    }
+
+    // MODÈLE → L'Enfant devient Loup
+    if (statuses['Modèle']) {
+      const childId = statuses['Modèle'].child;
+      const child = this.state.players.find(p => p.id === childId);
+      if (child && !child.isDead) {
+        const oldRole = child.roleId;
+        child.roleId = 'Simple_Loup_Garou';
+        this.addGameLog(`🐺 <strong>${child.name}</strong> devient Loup car son idole <strong>${player.name}</strong> est mort(e)`);
+        this.removeStatusFromPlayer(childId, 'Modèle'); // Le statut disparaît
+      }
+    }
+
+    // Supprimer le joueur des statuts d'autres
+    Object.keys(this.state.playerStatuses || {}).forEach(otherPlayerId => {
+      const otherStatuses = this.state.playerStatuses[otherPlayerId];
+
+      // Si c'est un Amoureux de celui qui meurt
+      if (otherStatuses['Amoureux']?.partner === playerId) {
+        // Géré par le code ci-dessus (mort liée)
+      }
+    });
+  }
+
+  // Vérifier les conditions de victoire spéciales
+  checkStatusVictoryConditions() {
+    // Joueur de Flûte gagne si tous sont charmés
+    const charmedPlayers = [];
+    Object.keys(this.state.playerStatuses || {}).forEach(playerId => {
+      if (this.hasStatus(playerId, 'Charmé')) {
+        charmedPlayers.push(playerId);
+      }
+    });
+
+    const alivePlayers = this.state.players.filter(p => !p.isDead);
+    if (charmedPlayers.length === alivePlayers.length) {
+      const flutePlayer = this.state.players.find(p => p.roleId === 'Joueur_Flute');
+      if (flutePlayer) {
+        this.addGameLog(`🎵 <strong>${flutePlayer.name}</strong> (Joueur de Flûte) GAGNE! Tous les joueurs sont charmés!`);
+        return { winner: 'Joueur de Flûte', playerId: flutePlayer.id };
+      }
+    }
+
+    return null;
+  }
+
+  // Appliquer les modificateurs de vote (Maire = 2 voix, etc.)
+  getPlayerVoteWeight(playerId) {
+    let weight = 1;
+
+    if (this.hasStatus(playerId, 'Maire')) {
+      weight = 2; // Le Maire a 2 voix
+    }
+
+    // À ajouter: autres modificateurs selon les besoins
+
+    return weight;
   }
 }
 

@@ -1146,6 +1146,44 @@
   margin-right: 8px !important;
 }
 
+/* ===== DECK CARDS STYLING ===== */
+.gm-deck-visual {
+  position: relative;
+  cursor: pointer;
+  width: 28px;
+  height: 40px;
+  margin: 2px;
+  border-radius: 2px;
+  overflow: hidden;
+  border: 1px solid rgba(199, 125, 255, 0.6);
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.gm-deck-visual:hover {
+  transform: scale(1.2);
+  border-color: #c77dff;
+  box-shadow: 0 0 8px rgba(199, 125, 255, 0.8);
+  z-index: 10;
+}
+
+.gm-deck-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 2px;
+}
+
+.gm-deck-emoji {
+  font-size: 14px;
+  line-height: 1;
+  text-align: center;
+}
+
 /* RESPONSIVE */
 @media (max-width: 768px) {
   .game-master-overlay {

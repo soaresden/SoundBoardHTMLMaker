@@ -1,0 +1,521 @@
+{
+  "metadata": {
+    "version": "2.1",
+    "lastUpdated": "2026-05-21",
+    "totalRoles": 53,
+    "favorites": [
+      "loup_garou",
+      "sorciere",
+      "salvateur",
+      "petite_fille",
+      "chasseur",
+      "cupidon",
+      "enfant_sauvage",
+      "chevalier_epee_rouille",
+      "monstre_ours",
+      "renard"
+    ]
+  },
+  "roles": {
+    "base": {
+      "pack": "base",
+      "packName": "🎮 Jeu de Base (2001)",
+      "order": 1,
+      "roleCount": 7,
+      "roles": [
+        {
+          "id": "villageois",
+          "name": "Villageois",
+          "emoji": "👨",
+          "camp": "village",
+          "pack": "base",
+          "favorite": false,
+          "description": "Villageois sans pouvoir",
+          "color": "#90EE90"
+        },
+        {
+          "id": "loup_garou",
+          "name": "Loup-Garou",
+          "emoji": "🐺",
+          "camp": "loups",
+          "pack": "base",
+          "favorite": true,
+          "description": "Tue la nuit avec les autres loups",
+          "color": "#FF6B6B"
+        },
+        {
+          "id": "sorciere",
+          "name": "Sorcière",
+          "emoji": "🧙‍♀️",
+          "camp": "village",
+          "pack": "base",
+          "favorite": true,
+          "description": "Guérison ou poison (1x chacun)",
+          "color": "#9B59B6"
+        },
+        {
+          "id": "voyante",
+          "name": "Voyante",
+          "emoji": "🔮",
+          "camp": "village",
+          "pack": "base",
+          "favorite": false,
+          "description": "Voit l'identité chaque nuit",
+          "color": "#3498DB"
+        },
+        {
+          "id": "cupidon",
+          "name": "Cupidon",
+          "emoji": "💘",
+          "camp": "village",
+          "pack": "base",
+          "favorite": true,
+          "description": "Crée deux amoureux",
+          "color": "#E74C3C"
+        },
+        {
+          "id": "ancien",
+          "name": "Ancien",
+          "emoji": "👴",
+          "camp": "village",
+          "pack": "base",
+          "favorite": false,
+          "description": "Vote double poids",
+          "color": "#8B7355"
+        },
+        {
+          "id": "petite_fille",
+          "name": "Petite Fille",
+          "emoji": "👧",
+          "camp": "village",
+          "pack": "base",
+          "favorite": true,
+          "description": "Entend les loups la nuit",
+          "color": "#FFB6C1"
+        }
+      ]
+    },
+    "nouvelle_lune": {
+      "pack": "nouvelle_lune",
+      "packName": "🌙 Extension Nouvelle Lune (2006)",
+      "order": 2,
+      "roleCount": 5,
+      "roles": [
+        {
+          "id": "idiot_village",
+          "name": "Idiot du Village",
+          "emoji": "🤡",
+          "camp": "village",
+          "pack": "nouvelle_lune",
+          "favorite": false,
+          "description": "Immunisé à l'élection",
+          "color": "#F39C12"
+        },
+        {
+          "id": "bouc_emissaire",
+          "name": "Bouc Émissaire",
+          "emoji": "🐐",
+          "camp": "village",
+          "pack": "nouvelle_lune",
+          "favorite": false,
+          "description": "Meurt si pas de consensus",
+          "color": "#C0392B"
+        },
+        {
+          "id": "salvateur",
+          "name": "Salvateur",
+          "emoji": "💪",
+          "camp": "village",
+          "pack": "nouvelle_lune",
+          "favorite": true,
+          "description": "Protège un joueur chaque nuit",
+          "color": "#16A085"
+        },
+        {
+          "id": "joueur_flute",
+          "name": "Joueur de Flûte",
+          "emoji": "🪕",
+          "camp": "seul",
+          "pack": "nouvelle_lune",
+          "favorite": false,
+          "description": "Charme les joueurs",
+          "color": "#8E44AD"
+        },
+        {
+          "id": "corbeau",
+          "name": "Corbeau",
+          "emoji": "🐦",
+          "camp": "village",
+          "pack": "nouvelle_lune",
+          "favorite": false,
+          "description": "Lance des malédictions",
+          "color": "#2C3E50"
+        }
+      ]
+    },
+    "le_village": {
+      "pack": "le_village",
+      "packName": "🏘️ Extension Le Village (2009)",
+      "order": 3,
+      "roleCount": 14,
+      "roles": [
+        {
+          "id": "renard",
+          "name": "Renard",
+          "emoji": "🦊",
+          "camp": "village",
+          "pack": "le_village",
+          "favorite": true,
+          "description": "Sent 3 joueurs pour détecter un loup",
+          "color": "#E67E22"
+        },
+        {
+          "id": "enfant_sauvage",
+          "name": "Enfant Sauvage",
+          "emoji": "🧒",
+          "camp": "village",
+          "pack": "le_village",
+          "favorite": true,
+          "description": "Choisit un modèle, devient loup s'il meurt",
+          "color": "#F1C40F"
+        },
+        {
+          "id": "deux_soeurs",
+          "name": "Deux Sœurs",
+          "emoji": "👭",
+          "camp": "village",
+          "pack": "le_village",
+          "favorite": false,
+          "description": "Lien fraternel protecteur",
+          "color": "#EC407A"
+        },
+        {
+          "id": "trois_freres",
+          "name": "Trois Frères",
+          "emoji": "👬",
+          "camp": "village",
+          "pack": "le_village",
+          "favorite": false,
+          "description": "Meurent ensemble",
+          "color": "#3F51B5"
+        },
+        {
+          "id": "pyromanien",
+          "name": "Pyromane",
+          "emoji": "🔥",
+          "camp": "village",
+          "pack": "le_village",
+          "favorite": false,
+          "description": "Brûle un joueur chaque nuit",
+          "color": "#D32F2F"
+        },
+        {
+          "id": "capitaine",
+          "name": "Capitaine",
+          "emoji": "⚓",
+          "camp": "village",
+          "pack": "le_village",
+          "favorite": false,
+          "description": "Vote double poids révélé",
+          "color": "#01579B"
+        },
+        {
+          "id": "loup_blanc",
+          "name": "Loup Blanc",
+          "emoji": "🐺⚪",
+          "camp": "loups",
+          "pack": "le_village",
+          "favorite": false,
+          "description": "Tue un autre loup chaque nuit",
+          "color": "#EEEEEE"
+        },
+        {
+          "id": "chien_loup",
+          "name": "Chien-Loup",
+          "emoji": "🐕‍🦺",
+          "camp": "village",
+          "pack": "le_village",
+          "favorite": false,
+          "description": "Choisit un camp la première nuit",
+          "color": "#795548"
+        },
+        {
+          "id": "monstre_ours",
+          "name": "Montreur d'Ours",
+          "emoji": "🐻",
+          "camp": "village",
+          "pack": "le_village",
+          "favorite": true,
+          "description": "Ours qui protège et tue",
+          "color": "#A1887F"
+        },
+        {
+          "id": "noctambule",
+          "name": "Noctambule",
+          "emoji": "🌙",
+          "camp": "village",
+          "pack": "le_village",
+          "favorite": false,
+          "description": "Observe tout la nuit",
+          "color": "#37474F"
+        },
+        {
+          "id": "servante_devoue",
+          "name": "Servante Dévouée",
+          "emoji": "👩‍🍳",
+          "camp": "village",
+          "pack": "le_village",
+          "favorite": false,
+          "description": "Sacrifie pour protéger",
+          "color": "#D7CCC8"
+        },
+        {
+          "id": "grand_mechant_loup",
+          "name": "Grand-Méchant-Loup",
+          "emoji": "🐺👑",
+          "camp": "loups",
+          "pack": "le_village",
+          "favorite": false,
+          "description": "Tue deux personnes par nuit",
+          "color": "#B71C1C"
+        },
+        {
+          "id": "ankou",
+          "name": "Ankou",
+          "emoji": "💀",
+          "camp": "seul",
+          "pack": "le_village",
+          "favorite": false,
+          "description": "Entité mystérieuse",
+          "color": "#212121"
+        },
+        {
+          "id": "chasseur",
+          "name": "Chasseur",
+          "emoji": "🏹",
+          "camp": "village",
+          "pack": "le_village",
+          "favorite": true,
+          "description": "Peut éliminer quelqu'un avant de mourir",
+          "color": "#558B2F"
+        }
+      ]
+    },
+    "personnages": {
+      "pack": "personnages",
+      "packName": "🎭 Extension Personnages (2012)",
+      "order": 4,
+      "roleCount": 17,
+      "roles": [
+        {
+          "id": "gitane",
+          "name": "Gitane",
+          "emoji": "🔮",
+          "camp": "village",
+          "pack": "personnages",
+          "favorite": false,
+          "description": "Lit deux cartes, en choisit une",
+          "color": "#6A1B9A"
+        },
+        {
+          "id": "comedien",
+          "name": "Comédien",
+          "emoji": "🎭",
+          "camp": "village",
+          "pack": "personnages",
+          "favorite": false,
+          "description": "Prétend être un autre rôle",
+          "color": "#4527A0"
+        },
+        {
+          "id": "infect_pere_loups",
+          "name": "Père des Loups",
+          "emoji": "🐺💉",
+          "camp": "loups",
+          "pack": "personnages",
+          "favorite": false,
+          "description": "Infecte les villageois",
+          "color": "#880E4F"
+        },
+        {
+          "id": "judge_begue",
+          "name": "Juge Bègue",
+          "emoji": "⚖️",
+          "camp": "village",
+          "pack": "personnages",
+          "favorite": false,
+          "description": "Un veto par partie",
+          "color": "#1A237E"
+        },
+        {
+          "id": "chevalier_epee_rouille",
+          "name": "Chevalier à l'Épée Rouillée",
+          "emoji": "⚔️",
+          "camp": "village",
+          "pack": "personnages",
+          "favorite": true,
+          "description": "Duel nocturne avec un joueur",
+          "color": "#B8860B"
+        },
+        {
+          "id": "abominable_sectaire",
+          "name": "Abominable Sectaire",
+          "emoji": "👿",
+          "camp": "loups",
+          "pack": "personnages",
+          "favorite": false,
+          "description": "Convertit les villageois",
+          "color": "#7F0000"
+        },
+        {
+          "id": "ange",
+          "name": "Ange",
+          "emoji": "👼",
+          "camp": "village",
+          "pack": "personnages",
+          "favorite": false,
+          "description": "Ne doit pas voter",
+          "color": "#FFE0B2"
+        },
+        {
+          "id": "necromancien",
+          "name": "Nécromancien",
+          "emoji": "💀✨",
+          "camp": "village",
+          "pack": "personnages",
+          "favorite": false,
+          "description": "Parle aux morts",
+          "color": "#424242"
+        },
+        {
+          "id": "marionnettiste",
+          "name": "Marionnettiste",
+          "emoji": "🎪",
+          "camp": "village",
+          "pack": "personnages",
+          "favorite": false,
+          "description": "Contrôle un joueur",
+          "color": "#D81B60"
+        },
+        {
+          "id": "lapin_blanc",
+          "name": "Lapin Blanc",
+          "emoji": "🐰",
+          "camp": "village",
+          "pack": "personnages",
+          "favorite": false,
+          "description": "Survit une nuit, devient visible",
+          "color": "#FAFAFA"
+        },
+        {
+          "id": "loup_garou_voyant",
+          "name": "Loup-Garou Voyant",
+          "emoji": "🐺🔮",
+          "camp": "loups",
+          "pack": "personnages",
+          "favorite": false,
+          "description": "Lit les pensées",
+          "color": "#C62828"
+        },
+        {
+          "id": "voleur",
+          "name": "Voleur",
+          "emoji": "🏴‍☠️",
+          "camp": "village",
+          "pack": "personnages",
+          "favorite": false,
+          "description": "Vole les pouvoirs",
+          "color": "#000000"
+        },
+        {
+          "id": "visiteurs",
+          "name": "Les Visiteurs",
+          "emoji": "👽",
+          "camp": "seul",
+          "pack": "personnages",
+          "favorite": false,
+          "description": "Observent et gagnent seuls",
+          "color": "#1B5E20"
+        },
+        {
+          "id": "conteur",
+          "name": "Conteur",
+          "emoji": "📖",
+          "camp": "village",
+          "pack": "personnages",
+          "favorite": false,
+          "description": "Histoires influentes",
+          "color": "#D2691E"
+        },
+        {
+          "id": "maquignon",
+          "name": "Maquignon",
+          "emoji": "🐴",
+          "camp": "village",
+          "pack": "personnages",
+          "favorite": false,
+          "description": "Échange les pouvoirs",
+          "color": "#704214"
+        },
+        {
+          "id": "ermite",
+          "name": "Ermite",
+          "emoji": "🧔",
+          "camp": "village",
+          "pack": "personnages",
+          "favorite": false,
+          "description": "Vengeance posthume",
+          "color": "#455A64"
+        },
+        {
+          "id": "pecheur",
+          "name": "Pêcheur",
+          "emoji": "🎣",
+          "camp": "village",
+          "pack": "personnages",
+          "favorite": false,
+          "description": "Attrape les secrets",
+          "color": "#004B87"
+        }
+      ]
+    },
+    "le_pacte": {
+      "pack": "le_pacte",
+      "packName": "📜 Le Pacte (2014) - Édition Intégrale",
+      "order": 5,
+      "roleCount": 3,
+      "roles": [
+        {
+          "id": "pact_bearer",
+          "name": "Porteur du Pacte",
+          "emoji": "📜",
+          "camp": "seul",
+          "pack": "le_pacte",
+          "favorite": false,
+          "description": "Pacte universel = victoire",
+          "color": "#827717"
+        },
+        {
+          "id": "renegat",
+          "name": "Renégat",
+          "emoji": "⚔️",
+          "camp": "seul",
+          "pack": "le_pacte",
+          "favorite": false,
+          "description": "Traître caché du jeu",
+          "color": "#C62828"
+        },
+        {
+          "id": "diplomate",
+          "name": "Diplomate",
+          "emoji": "🕊️",
+          "camp": "village",
+          "pack": "le_pacte",
+          "favorite": false,
+          "description": "Négocie les alliances",
+          "color": "#0097A7"
+        }
+      ]
+    }
+  }
+}
