@@ -18,7 +18,7 @@ const ROLE_COLORS = {
 
   // Spéciaux/Protecteurs
   'Voyante': { bg: '#7b68ee', border: '#ffd700' },                 // Violet + jaune
-  'Renard': { bg: '#ff8c00', border: '#ffa500' },                  // Orange
+  'Renard': { bg: '#ff7700', border: '#ffaa00' },                  // Orange vif
   'Sorcière': { bg: '#4caf50', border: '#d46666' },                // Vert + rouge
   'Salvateur': { bg: '#ffd700', border: '#5174db' },               // Jaune + bleu
 
@@ -490,6 +490,102 @@ class LoupsGarousGameMaster {
     });
   }
 
+  // === FIND MISSING ROLES - Trouve rapidement les rôles non assignés ===
+  findMissingRoles() {
+    const rolesNeeded = this.state.selectedRoles || {};
+    const rolesAssigned = {};
+    const transformedRoles = {}; // Tracker les rôles transformés
+
+    // Compter les rôles assignés ET transformés
+    if (this.state.players) {
+      this.state.players.forEach(p => {
+        if (p.roleId) {
+          rolesAssigned[p.roleId] = (rolesAssigned[p.roleId] || 0) + 1;
+        }
+        // Tracker les transformations (Chien_Loup transformé, etc.)
+        if (p.transformedFromChienLoup === true) {
+          transformedRoles['Chien_Loup'] = (transformedRoles['Chien_Loup'] || 0) + 1;
+        }
+      });
+    }
+
+    // Calculer les totaux
+    const totalNeeded = Object.values(rolesNeeded).reduce((a, b) => a + b, 0);
+    const totalAssigned = Object.values(rolesAssigned).reduce((a, b) => a + b, 0);
+
+    console.log(`%c📊 RÉSUMÉ GLOBAL: ${totalAssigned}/${totalNeeded} joueurs assignés`, 'color: #FFD700; font-weight: bold; font-size: 13px;');
+    console.log(`%c   Manquent: ${totalNeeded - totalAssigned} joueur(s)`, 'color: #ff6b6b; font-weight: bold; font-size: 13px;');
+    console.log('');
+
+    // Afficher TOUS les rôles sélectionnés
+    console.log('%c📋 TOUS LES RÔLES SÉLECTIONNÉS:', 'color: #2196F3; font-weight: bold; font-size: 13px;');
+    Object.entries(rolesNeeded).forEach(([roleId, needed]) => {
+      const assigned = rolesAssigned[roleId] || 0;
+      const transformed = transformedRoles[roleId] || 0;
+      const total = assigned + transformed;
+      const status = total === needed ? '✓' : '✗';
+      const color = total === needed ? '#4caf50' : '#ff6b6b';
+      const missing = needed - total;
+      const missingText = missing > 0 ? ` (manquent ${missing})` : '';
+      const details = transformed > 0 ? ` [${assigned} assigné + ${transformed} transformé]` : '';
+      console.log(`%c   ${status} ${roleId}: ${total}/${needed}${missingText}${details}`, `color: ${color}; font-weight: bold;`);
+    });
+
+    // Trouver les manquants
+    const missing = Object.entries(rolesNeeded)
+      .filter(([roleId, needed]) => {
+        const assigned = rolesAssigned[roleId] || 0;
+        const transformed = transformedRoles[roleId] || 0;
+        const total = assigned + transformed;
+        return total < needed;
+      })
+      .map(([roleId, needed]) => {
+        const assigned = rolesAssigned[roleId] || 0;
+        const transformed = transformedRoles[roleId] || 0;
+        const total = assigned + transformed;
+        return {
+          roleId,
+          needed,
+          assigned,
+          transformed,
+          total,
+          missing: needed - total
+        };
+      });
+
+    if (missing.length === 0) {
+      console.log('');
+      console.log('%c✓ TOUS LES RÔLES SONT ASSIGNÉS!', 'color: #4caf50; font-weight: bold; font-size: 14px;');
+      return [];
+    }
+
+    console.log('');
+    console.log('%c❌ RÔLES INCOMPLETS:', 'color: #ff6b6b; font-weight: bold; font-size: 14px;');
+    missing.forEach(m => {
+      const details = m.transformed > 0
+        ? ` (${m.assigned} assigné + ${m.transformed} transformé = ${m.total})`
+        : '';
+      console.log(`%c   → ${m.roleId}: ${m.total}/${m.needed} (MANQUE ${m.missing})${details}`, 'color: #ff9999; font-weight: bold; font-size: 12px;');
+    });
+    return missing;
+  }
+
+  // === LIST UNASSIGNED PLAYERS - Liste les joueurs sans rôle ===
+  listUnassignedPlayers() {
+    const unassigned = (this.state.players || []).filter(p => !p.roleId);
+
+    if (unassigned.length === 0) {
+      console.log('%c✓ TOUS LES JOUEURS ONT UN RÔLE!', 'color: #4caf50; font-weight: bold; font-size: 14px;');
+      return [];
+    }
+
+    console.log(`%c⚠️ ${unassigned.length} JOUEUR(S) SANS RÔLE:`, 'color: #ff6b6b; font-weight: bold; font-size: 14px;');
+    unassigned.forEach(p => {
+      console.log(`%c   • ${p.name} (ID: ${p.id})`, 'color: #ff9999; font-size: 12px;');
+    });
+    return unassigned;
+  }
+
   // === DEBUG FUNCTION - Affiche tout l'état du jeu ===
   showDebug() {
     console.clear();
@@ -519,12 +615,40 @@ class LoupsGarousGameMaster {
     }
     console.groupEnd();
 
-    // 3. RÔLES SÉLECTIONNÉS
-    console.group('%c🎭 RÔLES SÉLECTIONNÉS', 'color: #FF9800; font-weight: bold;');
+    // 3. RÔLES SÉLECTIONNÉS vs ASSIGNÉS
+    console.group('%c🎭 RÔLES SÉLECTIONNÉS vs ASSIGNÉS', 'color: #FF9800; font-weight: bold;');
     if (this.state.selectedRoles && Object.keys(this.state.selectedRoles).length > 0) {
-      Object.entries(this.state.selectedRoles).forEach(([roleId, assigned]) => {
-        console.log(`${roleId}: ${assigned ? '✓ Assigné' : '✗ Non assigné'}`);
+      const rolesNeeded = this.state.selectedRoles;
+      const rolesAssigned = {};
+
+      // Compter les rôles assignés
+      if (this.state.players) {
+        this.state.players.forEach(p => {
+          if (p.roleId) {
+            rolesAssigned[p.roleId] = (rolesAssigned[p.roleId] || 0) + 1;
+          }
+        });
+      }
+
+      console.log('%c📋 Comparaison:', 'color: #FFD700; font-weight: bold;');
+      Object.entries(rolesNeeded).forEach(([roleId, needed]) => {
+        const assigned = rolesAssigned[roleId] || 0;
+        const status = assigned === needed ? '✓ COMPLET' : `✗ INCOMPLET (${assigned}/${needed})`;
+        const color = assigned === needed ? '#4caf50' : '#ff6b6b';
+        console.log(`%c${roleId}: ${status}`, `color: ${color}; font-weight: bold;`);
       });
+
+      // Identifier les rôles manquants
+      const missing = Object.entries(rolesNeeded).filter(([roleId, needed]) => (rolesAssigned[roleId] || 0) < needed);
+      if (missing.length > 0) {
+        console.log('%c⚠️ RÔLES INCOMPLETS:', 'color: #ff6b6b; font-weight: bold; font-size: 14px;');
+        missing.forEach(([roleId, needed]) => {
+          const assigned = rolesAssigned[roleId] || 0;
+          console.log(`%c   → ${roleId}: manquent ${needed - assigned} joueur(s)`, 'color: #ff9999; font-weight: bold; font-size: 12px;');
+        });
+      } else {
+        console.log('%c✓ TOUS LES RÔLES SONT COMPLETS!', 'color: #4caf50; font-weight: bold; font-size: 14px;');
+      }
     } else {
       console.log('Aucun rôle sélectionné');
     }
@@ -695,6 +819,56 @@ class LoupsGarousGameMaster {
 
     const mayor = this.state.players.find(p => p.id === playerId);
     this.addGameLog(`👑 <strong>${mayor?.name}</strong> est élu(e) Maire! (2 voix au vote)`);
+
+    // Générer un résumé complet de la nuit
+    this.generateNightSummary();
+  }
+
+  // ===== RÉSUMÉ COMPLET DE NUIT =====
+  generateNightSummary() {
+    const players = this.state.players || [];
+    const deadPlayers = players.filter(p => p.isDead);
+    const coupleLinks = [];
+
+    // Trouver les couples (Cupidon, Joueur de Flûte)
+    Object.keys(this.state.playerStatuses || {}).forEach(playerId => {
+      const statuses = this.state.playerStatuses[playerId];
+      if (statuses['Amoureux']?.partner) {
+        const player = players.find(p => p.id === playerId);
+        const partner = players.find(p => p.id === statuses['Amoureux'].partner);
+        if (player && partner) {
+          coupleLinks.push(`💕 ${player.name} ♡ ${partner.name}`);
+        }
+      }
+    });
+
+    // Si des morts, ajouter un résumé
+    if (deadPlayers.length > 0) {
+      let summary = `\n⚠️ BILAN DE NUIT:\n`;
+      deadPlayers.forEach(p => {
+        const role = p.roleId || 'Rôle inconnu';
+        summary += `   ☠️ <strong>${p.name}</strong> (${role}) est mort\n`;
+      });
+
+      // Implications importantes
+      if (coupleLinks.length > 0) {
+        summary += `\n🔗 LIENS:\n`;
+        coupleLinks.forEach(link => {
+          summary += `   ${link}\n`;
+        });
+        summary += `   ⚠️ Si l'un meurt, l'autre meurt aussi!\n`;
+      }
+
+      // Vérifier si Enfant Sauvage est devenu Loup
+      const enfants = players.filter(p => p.roleId === 'Enfant_Sauvage' || (p.statusData?.['Modèle'] && p.transformedFromModel));
+      enfants.forEach(e => {
+        if (e.roleId === 'Simple_Loup_Garou' || e.transformedFromModel) {
+          summary += `\n🚨 CHANGEMENT DE CAMP:\n   <strong>${e.name}</strong> devient LOUP GAROU! Le Village perd un allié!\n`;
+        }
+      });
+
+      this.addGameLog(summary, `Nuit ${this.getCurrentTurn()}`);
+    }
   }
 
   // ========== HOOKS DE COMPORTEMENT ==========

@@ -10,11 +10,12 @@ const ROLE_ORDER = [
   'Voyante', 'Ancien', 'Ange', 'Servante_Devouee', 'Salvateur',
   'Simple_Loup_Garou', 'Grand_Mechant_Loup', 'Loup_Garou_Blanc', 'Loup_Garou_Voyant', 'Infect_Pere_Loups',
   'Sorcière',
-  'Renard', 'Gitane',
+  'Gitane',
   'Joueur_Flute', 'Marionnettiste', 'Voleur', 'Pyromane', 'Ankou', 'Abominable_Sectaire',
   'Lapin_Blanc', 'Juge_Begue', 'Necromancien', 'Noctambule', 'Corbeau', 'Petite_Fille',
   'Idiot_Village', 'Bouc_Emissaire', 'Capitaine', 'Chasseur',
-  'Deux_Soeurs', 'Trois_Freres', 'Comedien', 'Villageois_Villageois'
+  'Deux_Soeurs', 'Trois_Freres', 'Comedien', 'Villageois_Villageois',
+  'Renard'
 ];
 
 // Rôles qui ont une action la première nuit
@@ -26,6 +27,9 @@ const ROLES_WITH_NIGHT_ACTION = new Set([
   'Necromancien', 'Noctambule', 'Corbeau', 'Petite_Fille',
   'Simple_Loup_Garou', 'Grand_Mechant_Loup', 'Loup_Garou_Blanc', 'Loup_Garou_Voyant', 'Infect_Pere_Loups'
 ]);
+
+// Rôles qui n'ont QUE une action (pas d'étape 1), l'action se fait après assignation complète
+const ROLES_ACTION_ONLY = new Set([]);
 
 const ROLE_ACTIONS = {
   'Cupidon': { instruction: '💘 Sélectionnez 2 joueurs pour les rendre amoureux', type: 'selectPair' },
@@ -100,11 +104,20 @@ const ROLE_TIPS = {
   'Villageois_Villageois': "💡 Tu n'as aucun pouvoir, tu votes. Mais ta survie protège le village!"
 };
 
-function getAvailableRolesInOrder(selectedRoles) {
+function getAvailableRolesInOrder(selectedRoles, gm) {
   const result = [];
   ROLE_ORDER.forEach(role => {
+    // Exclure le Renard s'il a perdu son pouvoir
+    // (seulement après la première nuit - le Renard doit au moins faire son action une fois)
+    if (role === 'Renard' && gm && gm.state.renardLostPower && gm.state.currentTurn > 0) {
+      console.log('[Renard] Exclu car il a perdu son pouvoir');
+      return; // Skip le Renard
+    }
+
+    // Ajouter le rôle UNE SEULE FOIS, peu importe combien de joueurs l'ont
+    // (l'assignation Step 1 permet d'assigner plusieurs joueurs au même rôle)
     const count = selectedRoles[role] || 0;
-    for (let i = 0; i < count; i++) {
+    if (count > 0) {
       result.push(role);
     }
   });
@@ -171,7 +184,8 @@ function renderFirstNight(gameUI) {
   const selectedRoles = gm.state.selectedRoles || {};
   const currentRoleIdx = gm.state.currentRoleIdx || 0;
   const step = gm.state.nightStep || 1;
-  const availableRoles = getAvailableRolesInOrder(selectedRoles);
+  console.log(`[FirstNight] Joueurs totaux: ${players.length}`, players.map(p => p.name));
+  const availableRoles = getAvailableRolesInOrder(selectedRoles, gm);
   const currentRole = availableRoles[currentRoleIdx];
   const role = gm.getRoleInfo(currentRole);
   const tableType = gm.state.tableType || 'circle';
@@ -192,26 +206,69 @@ function renderFirstNight(gameUI) {
   const roleAction = ROLE_ACTIONS[currentRole];
   const cardFile = gameUI.getCardFile(currentRole);
 
+  // Si c'est un rôle "ACTION_ONLY" (comme Renard), forcer l'étape 2
+  const isActionOnly = ROLES_ACTION_ONLY.has(currentRole);
+  let effectiveStep = step;
+  if (isActionOnly && step === 1) {
+    effectiveStep = 2;
+  }
+
+  // Afficher le décompte détaillé des rôles
+  const roleCount = {};
+  players.forEach(p => {
+    if (p.roleId) {
+      roleCount[p.roleId] = (roleCount[p.roleId] || 0) + 1;
+    }
+  });
+  console.log(`[RenderFirstNight] ${currentRole} - Step:${step} EffectiveStep:${effectiveStep} - Assignés:${playersAssignedToRole.length}/${requiredCount}`, roleCount);
+
   // Style de la table basé sur son type
   const tableStyle = tableType === 'circle'
     ? 'border-radius:50%;'
     : 'border-radius:4px;';
 
   // HTML POUR STEP 1: ASSIGNATION
-  // Filtrer les joueurs: montrer seulement ceux sans rôle, + le joueur déjà assigné à ce rôle
-  const availablePlayers = players.filter(p => !p.roleId || p.roleId === currentRole);
-
   // Fonction pour détecter les Loups
-  const isWolfRole = (roleId) => {
-    const wolfRoles = ['Simple_Loup_Garou', 'Grand_Mechant_Loup', 'Loup_Garou_Blanc', 'Loup_Garou_Voyant', 'Infect_Pere_Loups'];
-    return wolfRoles.includes(roleId);
-  };
+  const wolfRoles = ['Simple_Loup_Garou', 'Grand_Mechant_Loup', 'Loup_Garou_Blanc', 'Loup_Garou_Voyant', 'Infect_Pere_Loups'];
+  const isWolfRole = (roleId) => wolfRoles.includes(roleId);
+
+  // Filtrer les joueurs selon le type de rôle
+  const currentRoleIsWolf = isWolfRole(currentRole);
+  let availablePlayers;
+  if (currentRoleIsWolf) {
+    const existingWolves = players.filter(p => p.roleId && isWolfRole(p.roleId));
+
+    // Simple_Loup_Garou: montrer les loups existants + les joueurs sans rôle (pour assigner de nouveaux loups)
+    // Loup_Garou_Blanc: montrer SEULEMENT les Simple_Loup_Garou (transformation parmi les loups avérés)
+    // Autres loups: montrer SEULEMENT les loups existants (pour transformer l'un d'eux)
+    if (currentRole === 'Simple_Loup_Garou') {
+      const unassignedPlayers = players.filter(p => !p.roleId);
+      availablePlayers = [...existingWolves, ...unassignedPlayers];
+    } else if (currentRole === 'Loup_Garou_Blanc') {
+      // Loup Blanc: seulement les Simple_Loup_Garou (pas les autres types de loups)
+      availablePlayers = players.filter(p => p.roleId === 'Simple_Loup_Garou');
+    } else {
+      // Grand_Mechant_Loup, etc. : seulement les loups existants
+      availablePlayers = existingWolves;
+    }
+  } else {
+    // Pour les autres rôles: montrer seulement ceux sans rôle, + le joueur déjà assigné à ce rôle
+    availablePlayers = players.filter(p => !p.roleId || p.roleId === currentRole);
+  }
 
   const playerGridHtml = availablePlayers.map(p => {
     const isAssigned = p.roleId === currentRole;
+    // Déterminer si c'est un Chien_Loup qui a choisi de devenir loup (flag transformedFromChienLoup)
+    const isChienLoupWolf = p.transformedFromChienLoup === true;
+
     // Colorer les Loups en ROUGE
-    let bgColor, borderColor;
-    if (isAssigned && isWolfRole(currentRole)) {
+    let bgColor, borderColor, isDisabled = false;
+    if (isChienLoupWolf && isWolfRole(currentRole)) {
+      // Chien_Loup transformé en Loup = VERT (ne peut pas être retiré)
+      bgColor = '#2d7a3d';
+      borderColor = '#00ff64';
+      isDisabled = true;
+    } else if (isAssigned && isWolfRole(currentRole)) {
       // Rôle Loup assigné = ROUGE
       bgColor = '#8b3a3a';
       borderColor = '#d46666';
@@ -227,9 +284,9 @@ function renderFirstNight(gameUI) {
     return `
       <div class="gm-player-assign" data-player-id="${p.id}" style="
         padding:6px 4px; margin:2px; border:2px solid ${borderColor}; border-radius:3px;
-        background:${bgColor}; color:#e8e8f0; cursor:pointer; text-align:center;
-        font-size:10px; font-weight:600; user-select:none; transition:all 0.2s;
-      ">
+        background:${bgColor}; color:#e8e8f0; cursor:${isDisabled ? 'not-allowed' : 'pointer'}; text-align:center;
+        font-size:10px; font-weight:600; user-select:none; transition:all 0.2s; opacity:${isDisabled ? '0.8' : '1'};
+      " data-disabled="${isDisabled ? 'true' : 'false'}">
         ${p.name}
       </div>
     `;
@@ -267,7 +324,7 @@ function renderFirstNight(gameUI) {
               <button id="gmBtnPrevStep" style="background:#ffffff; border:none; padding:6px 12px; border-radius:4px; color:#1a1a2e; font-weight:700; cursor:pointer; font-size:11px; height:fit-content;">↶ Retour</button>
             </div>
           </div>
-          ${step === 1 ? `
+          ${effectiveStep === 1 ? `
             <div style="margin-top:6px; font-size:9px; color:#81dff7; font-weight:600;">Étape 1/2: Assigner le joueur</div>
           ` : `
             <div style="margin-top:6px; font-size:9px; color:#81dff7; font-weight:600;">Étape 2/2: Action du rôle</div>
@@ -276,7 +333,7 @@ function renderFirstNight(gameUI) {
 
         <!-- MILIEU: CONTENU (changeable par étape) -->
         <div style="flex:1; padding:10px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">
-          ${step === 1 ? `
+          ${effectiveStep === 1 ? `
             <!-- ÉTAPE 1: ASSIGNATION -->
             <div style="font-size:9px; color:#81dff7; font-weight:600;">🎯 Cliquez sur ${requiredCount === 1 ? 'un joueur' : `${requiredCount} joueurs`} (${playersAssignedToRole.length}/${requiredCount}):</div>
             <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:3px;">
@@ -298,13 +355,20 @@ function renderFirstNight(gameUI) {
 
         <!-- BAS: CONTRÔLES -->
         <div style="display:flex; gap:6px; padding:10px; border-top:1px solid rgba(199,125,255,0.3); background:rgba(0,0,0,0.3); flex:0 0 auto; align-items:center; justify-content:flex-start; flex-wrap:wrap;">
-          ${step === 1 ? `
-            ${playersAssignedToRole.length === requiredCount ? (ROLES_WITH_NIGHT_ACTION.has(currentRole) ? `
-              <button id="gmBtnNextStep" style="background:linear-gradient(135deg, #5174db, #c77dff); border:none; padding:6px 10px; border-radius:4px; color:white; font-weight:600; cursor:pointer; flex:1; min-width:80px; font-size:9px;">Suivant →</button>
-            ` : `
-              <button id="gmBtnNextRole" style="background:rgba(100,150,200,0.2); border:1px solid rgba(100,150,200,0.5); padding:6px 10px; border-radius:4px; color:#81dff7; font-weight:600; cursor:pointer; flex:1; min-width:80px; font-size:9px;">Rôle Suivant →</button>
-            `) : ''}
-          ` : step === 2 ? `
+          ${effectiveStep === 1 ? `
+            ${(() => {
+              const wolfRoles = ['Simple_Loup_Garou', 'Grand_Mechant_Loup', 'Loup_Garou_Blanc', 'Loup_Garou_Voyant', 'Infect_Pere_Loups'];
+              const isWolfRole = wolfRoles.includes(currentRole);
+              // Pour les loups: afficher si au moins 1 assigné. Pour les autres: afficher si exactement requiredCount
+              const canContinue = isWolfRole ? playersAssignedToRole.length > 0 : playersAssignedToRole.length === requiredCount;
+
+              return canContinue ? (ROLES_WITH_NIGHT_ACTION.has(currentRole) ? `
+                <button id="gmBtnNextStep" style="background:linear-gradient(135deg, #5174db, #c77dff); border:none; padding:6px 10px; border-radius:4px; color:white; font-weight:600; cursor:pointer; flex:1; min-width:80px; font-size:9px;">Suivant →</button>
+              ` : `
+                <button id="gmBtnNextRole" style="background:rgba(100,150,200,0.2); border:1px solid rgba(100,150,200,0.5); padding:6px 10px; border-radius:4px; color:#81dff7; font-weight:600; cursor:pointer; flex:1; min-width:80px; font-size:9px;">Rôle Suivant →</button>
+              `) : '';
+            })()}
+          ` : effectiveStep === 2 ? `
             <button id="gmBtnNextRole" style="background:linear-gradient(135deg, #5174db, #c77dff); border:none; padding:6px 10px; border-radius:4px; color:white; font-weight:600; cursor:pointer; flex:0; min-width:100px; font-size:9px;">Rôle Suivant →</button>
           ` : ''}
           ${currentRoleIdx >= availableRoles.length - 1 && playersAssignedToRole.length === requiredCount && (step === 2 || !ROLES_WITH_NIGHT_ACTION.has(currentRole)) ? `
@@ -319,8 +383,13 @@ function renderFirstNight(gameUI) {
 // Helper pour rendu des UI d'actions de rôles
 function renderRoleActionUI(gameUI, currentRole, roleAction, players, selectedRoles) {
   const gm = gameUI.gm;
-  // Filtrer les joueurs: montrer seulement ceux sans rôle assigné
-  const availablePlayers = players.filter(p => !p.roleId);
+  // Filtrer les joueurs selon le rôle:
+  // - Corbeau: peut viser TOUS les joueurs vivants
+  // - Salvateur: peut viser TOUS les joueurs vivants (pour les protéger d'une infection future)
+  // - Autres rôles selectOne: montrer seulement ceux sans rôle assigné
+  const availablePlayers = (currentRole === 'Corbeau' || currentRole === 'Salvateur')
+    ? gameUI.gm.state.players || []
+    : players.filter(p => !p.roleId);
 
   if (roleAction.type === 'selectPair') {
     const stateKey = currentRole === 'Cupidon' ? 'cupidoSelection' : `${currentRole}Selection`;
@@ -372,9 +441,15 @@ function renderRoleActionUI(gameUI, currentRole, roleAction, players, selectedRo
       </div>
     `;
   } else if (roleAction.type === 'selectOne') {
+    let label = 'Sélectionne un joueur:';
+    if (currentRole === 'Corbeau') {
+      label = `À qui voles-tu 2 votes? (${availablePlayers.length} joueurs)`;
+    } else if (currentRole === 'Salvateur') {
+      label = `Qui anticipes-tu pour l'infection? (${availablePlayers.length} joueurs vivants)`;
+    }
     return `
       <div style="display:flex; flex-direction:column; gap:6px;">
-        <div style="font-size:9px; color:#81dff7; font-weight:600;">Sélectionne un joueur:</div>
+        <div style="font-size:9px; color:#81dff7; font-weight:600;">${label}</div>
         <select id="gmSelectOneTarget" style="padding:6px; background:#000000; border:2px solid rgba(199,125,255,0.5); color:#e8e8f0; border-radius:3px; font-size:9px; font-weight:600;">
           <option value="" style="background:#000000; color:#e8e8f0;">-- Sélectionner --</option>
           ${availablePlayers.map(p => `<option value="${p.id}" style="background:#000000; color:#e8e8f0;">${p.name}</option>`).join('')}
@@ -408,15 +483,21 @@ function renderRoleActionUI(gameUI, currentRole, roleAction, players, selectedRo
     // Afficher les détails de la victime des Loups ordinaires
     const wolvesVictimId = gm.state.wolvesVictim;
     const wolvesVictim = wolvesVictimId ? players.find(p => p.id === wolvesVictimId) : null;
+    const isSaved = wolvesVictim && gm.state.salvateurSavedThisNight === wolvesVictim.id;
+
+    // Pour la Sorcière: tous les joueurs vivants sauf elle-même
+    // (elle ne peut pas s'empoisonner elle-même)
+    const sorciere = players.find(p => p.roleId === 'Sorcière');
+    const availablePoisonTargets = players.filter(p => p.id !== sorciere?.id);
 
     return `
       <div style="display:flex; flex-direction:column; gap:12px;">
         <!-- VICTIME DES LOUPS -->
         ${wolvesVictim ? `
-          <div style="padding:12px; background:rgba(212, 102, 102, 0.3); border:2px solid #d46666; border-radius:6px; text-align:center;">
-            <div style="font-size:14px; color:#ff9999; font-weight:700; margin-bottom:4px;">💀 LES LOUPS ONT MANGÉ</div>
+          <div style="padding:12px; background:${isSaved ? 'rgba(255, 193, 7, 0.3)' : 'rgba(212, 102, 102, 0.3)'}; border:2px solid ${isSaved ? '#ffc107' : '#d46666'}; border-radius:6px; text-align:center;">
+            <div style="font-size:14px; color:${isSaved ? '#ffb300' : '#ff9999'}; font-weight:700; margin-bottom:4px;">${isSaved ? '💛 DÉJÀ SAUVÉ PAR LE SALVATEUR' : '💀 LES LOUPS ONT MANGÉ'}</div>
             <div style="font-size:20px; color:#ffffff; font-weight:800; margin-bottom:4px;">${wolvesVictim.name}</div>
-            <div style="font-size:12px; color:#ffcccc; font-weight:600;">🎭 ${wolvesVictim.roleId || '?'}</div>
+            <div style="font-size:12px; color:${isSaved ? '#ffcc99' : '#ffcccc'}; font-weight:600;">🎭 ${wolvesVictim.roleId || '?'}</div>
           </div>
         ` : ''}
 
@@ -435,36 +516,95 @@ function renderRoleActionUI(gameUI, currentRole, roleAction, players, selectedRo
 
         <!-- BOUTONS (3 OPTIONS) -->
         <div style="display:flex; gap:6px; justify-content:center;">
-          <button id="gmSorciereSave" style="flex:1; padding:12px; background:rgba(100,200,100,0.3); border:2px solid #66d999; color:#66d999; font-weight:700; cursor:pointer; font-size:16px; border-radius:4px;">👍 SAUVER</button>
-          <button id="gmSorcierNothing" style="flex:1; padding:12px; background:rgba(100,100,100,0.3); border:2px solid #999; color:#ccc; font-weight:700; cursor:pointer; font-size:16px; border-radius:4px;">😴 RIEN</button>
-          <button id="gmSorcierKill" style="flex:1; padding:12px; background:rgba(200,100,100,0.3); border:2px solid #d46666; color:#ff9999; font-weight:700; cursor:pointer; font-size:16px; border-radius:4px;">☠️ POISON</button>
+          <button id="gmSorciereSave" style="flex:1; padding:12px; background:${gm.state.sorcierePotions?.choice === 'save' ? 'rgba(100,200,100,0.6)' : 'rgba(100,200,100,0.2)'}; border:2px solid #66d999; color:#66d999; font-weight:700; cursor:pointer; font-size:16px; border-radius:4px; transition: all 0.2s;">👍 SAUVER</button>
+          <button id="gmSorcierNothing" style="flex:1; padding:12px; background:${gm.state.sorcierePotions?.choice === 'nothing' ? 'rgba(150,150,150,0.6)' : 'rgba(100,100,100,0.2)'}; border:2px solid #999; color:#ccc; font-weight:700; cursor:pointer; font-size:16px; border-radius:4px; transition: all 0.2s;">🛌 DORMIR</button>
+          <button id="gmSorcierKill" style="flex:1; padding:12px; background:${gm.state.sorcierePotions?.choice === 'kill' ? 'rgba(212,102,102,0.6)' : 'rgba(200,100,100,0.2)'}; border:2px solid #d46666; color:#ff9999; font-weight:700; cursor:pointer; font-size:16px; border-radius:4px; transition: all 0.2s;">☠️ POISON</button>
         </div>
 
         <!-- SÉLECTION DU POISON (s'affiche quand poison choisi) -->
-        <div id="gmSorcierKillSelect" style="display:none; flex-direction:column; gap:6px;">
-          <div style="font-size:10px; color:#d46666; font-weight:600;">Qui empoisonner?</div>
-          <select id="gmSorciereMortTarget" style="padding:6px; background:#000000; border:2px solid rgba(199,125,255,0.5); color:#e8e8f0; border-radius:3px; font-size:9px; font-weight:600; width:100%;">
-            <option value="" style="background:#000000; color:#e8e8f0;">-- Sélectionner --</option>
-            ${availablePlayers.map(p => `<option value="${p.id}" style="background:#000000; color:#e8e8f0;">${p.name}</option>`).join('')}
+        ${gm.state.sorcierePotions?.choice === 'kill' ? `
+        <div id="gmSorcierKillSelect" style="display:flex; flex-direction:column; gap:6px; animation:slideDown 0.3s ease-out;">
+          <div style="font-size:10px; color:#d46666; font-weight:600;">💀 Qui empoisonner? (${availablePoisonTargets.length} joueurs disponibles)</div>
+          <select id="gmSorciereMortTarget" style="padding:8px; background:#1a1a1a; border:2px solid #d46666; color:#e8e8f0; border-radius:4px; font-size:10px; font-weight:600; width:100%; cursor:pointer;">
+            <option value="" style="background:#1a1a1a; color:#e8e8f0;">-- Sélectionner une victime --</option>
+            ${availablePoisonTargets.map(p => `<option value="${p.id}" style="background:#1a1a1a; color:#e8e8f0;">${p.name}</option>`).join('')}
           </select>
+          ${gm.state.sorcierePotions?.mortTarget ? `
+          <div style="padding:8px; background:rgba(212,102,102,0.2); border:1px solid #d46666; border-radius:4px; text-align:center; font-size:10px; color:#ff9999; font-weight:600;">
+            ✓ ${players.find(p => p.id === gm.state.sorcierePotions.mortTarget)?.name || ''} sera empoisonné
+          </div>
+          ` : ''}
         </div>
+        ` : ''}
       </div>
     `;
   } else if (roleAction.type === 'renardSniff') {
+    // Renard: peut sentir TOUS les joueurs vivants (pas juste ceux sans rôle!)
+    // On doit utiliser gm.state.players pour avoir TOUS les joueurs
+    const allAlivePlayers = gameUI.gm.state.players || [];
+
     return `
-      <div style="display:flex; flex-direction:column; gap:8px;">
-        <div style="font-size:9px; color:#81dff7; font-weight:600;">Tu pointes qui?</div>
-        <select id="gmRenardTarget" style="padding:6px; background:#000000; border:2px solid rgba(199,125,255,0.5); color:#e8e8f0; border-radius:3px; font-size:9px; font-weight:600;">
-          <option value="" style="background:#000000; color:#e8e8f0;">-- Sélectionner --</option>
-          ${availablePlayers.map(p => `<option value="${p.id}" style="background:#000000; color:#e8e8f0;">${p.name}</option>`).join('')}
-        </select>
-        <div id="gmRenardGroupDisplay" style="font-size:9px; color:#81dff7; font-weight:600; padding:6px; background:rgba(100,80,150,0.2); border-radius:3px; min-height:20px;">
-          Sélectionne d'abord
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <div style="padding:10px; background:rgba(129, 223, 247, 0.15); border:1px solid rgba(129, 223, 247, 0.3); border-radius:4px; font-size:9px; color:#81dff7; line-height:1.4; font-weight:600;">
+          <strong>Renard,</strong> tu pointes quelqu'un assis à table. Tu vas sentir s'il y a des loups parmi ces 3 personnes:
+          <div style="margin-top:4px; font-size:8px; color:#81dff7; opacity:0.8;">→ Celui que tu pointes (milieu) + celui à sa gauche + celui à sa droite</div>
         </div>
-        <div id="gmRenardWolfChecks" style="display:flex; flex-direction:column; gap:4px;"></div>
-        <div id="gmRenardResult" style="font-size:9px; color:#66d999; font-weight:600; padding:6px; background:rgba(0,0,0,0.3); border-radius:3px; min-height:20px;">
-          Aucune sélection
+
+        <!-- SÉLECTEUR (boutons) -->
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <div style="font-size:9px; color:#81dff7; font-weight:600;">🎯 Qui pointes-tu? (${allAlivePlayers.length} joueurs vivants)</div>
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap:4px; max-height:200px; overflow-y:auto;">
+            ${allAlivePlayers.map(p => `
+              <button class="gmRenardSelectBtn" data-player-id="${p.id}" style="
+                padding:8px 6px;
+                background:rgba(100,80,150,0.2);
+                border:2px solid rgba(100,150,255,0.3);
+                color:#e8e8f0;
+                font-weight:600;
+                cursor:pointer;
+                font-size:9px;
+                border-radius:4px;
+                transition: all 0.2s;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                overflow: hidden;
+              ">${p.name}</button>
+            `).join('')}
+          </div>
+          <input type="hidden" id="gmRenardTarget" value="">
         </div>
+
+        <!-- AFFICHAGE DES 3 PERSONNES -->
+        <div id="gmRenardGroupDisplay" style="display:none; flex-direction:column; gap:8px; padding:12px; background:rgba(100,80,150,0.2); border:2px solid rgba(100,80,150,0.4); border-radius:6px;">
+          <div style="text-align:center; font-size:10px; color:#81dff7; font-weight:600; margin-bottom:4px;">Les 3 personnes à la table:</div>
+          <div style="display:flex; gap:8px; justify-content:space-around; align-items:flex-end;">
+            <!-- GAUCHE -->
+            <div id="gmRenardLeftDisplay" style="flex:1; text-align:center; padding:8px; background:rgba(100,150,255,0.1); border:2px solid rgba(100,150,255,0.3); border-radius:4px;">
+              <div style="font-size:8px; color:#81dff7; margin-bottom:4px; opacity:0.7;">👈 GAUCHE</div>
+              <div style="font-size:11px; color:#e8e8f0; font-weight:700; margin-bottom:6px;">-</div>
+            </div>
+            <!-- MILIEU (TOI) -->
+            <div id="gmRenardCenterDisplay" style="flex:1; text-align:center; padding:8px; background:rgba(255,152,0,0.1); border:3px solid rgba(255,152,0,0.5); border-radius:4px;">
+              <div style="font-size:8px; color:#ff9800; margin-bottom:4px; opacity:0.9; font-weight:700;">🎯 TOI</div>
+              <div style="font-size:12px; color:#ffb84d; font-weight:800; margin-bottom:6px;">-</div>
+            </div>
+            <!-- DROITE -->
+            <div id="gmRenardRightDisplay" style="flex:1; text-align:center; padding:8px; background:rgba(100,150,255,0.1); border:2px solid rgba(100,150,255,0.3); border-radius:4px;">
+              <div style="font-size:8px; color:#81dff7; margin-bottom:4px; opacity:0.7;">DROITE 👉</div>
+              <div style="font-size:11px; color:#e8e8f0; font-weight:700; margin-bottom:6px;">-</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RÉSULTAT (détection automatique) -->
+        <div id="gmRenardResult" style="display:none; font-size:11px; color:#81dff7; font-weight:600; padding:12px; background:rgba(100,80,150,0.2); border-radius:4px; min-height:40px; text-align:center;">
+          En attente...
+        </div>
+
+        <!-- BOUTON SUIVANT -->
+        <button id="gmRenardNext" style="display:none; padding:12px; background:rgba(100,150,255,0.3); border:2px solid rgba(100,150,255,0.6); color:#81dff7; font-weight:700; cursor:pointer; font-size:11px; border-radius:4px; transition: all 0.2s;">
+          ✓ SUIVANT
+        </button>
       </div>
     `;
   } else if (roleAction.type === 'wolvesKill') {
@@ -479,13 +619,12 @@ function renderRoleActionUI(gameUI, currentRole, roleAction, players, selectedRo
       // Grand Méchant Loup exclut: les Loups ET la victime que les Loups viennent de choisir
       const victimJustChosen = gm.state.wolvesVictim;
       possibleVictims = players.filter(p =>
-        p.roleId &&
         !wolfRoles.includes(p.roleId) &&
         p.id !== victimJustChosen
       );
     } else {
-      // Les autres Loups ne peuvent tuer que des non-Loups (villageois)
-      possibleVictims = players.filter(p => p.roleId && !wolfRoles.includes(p.roleId));
+      // Les autres Loups peuvent tuer TOUS les non-Loups (avec ou sans rôle)
+      possibleVictims = players.filter(p => !wolfRoles.includes(p.roleId));
     }
 
     return `
@@ -510,7 +649,7 @@ function attachFirstNightEvents(gameUI) {
   const selectedRoles = gm.state.selectedRoles || {};
   const currentRoleIdx = gm.state.currentRoleIdx || 0;
   const step = gm.state.nightStep || 1;
-  const availableRoles = getAvailableRolesInOrder(selectedRoles);
+  const availableRoles = getAvailableRolesInOrder(selectedRoles, gm);
   const currentRole = availableRoles[currentRoleIdx];
 
   // ===== INITIALISER TOUS LES ÉTATS =====
@@ -634,7 +773,7 @@ function attachFirstNightEvents(gameUI) {
         const selectedRoles = gm.state.selectedRoles || {};
         const step = gm.state.nightStep;
         const currentRoleIdx = gm.state.currentRoleIdx;
-        const availableRoles = getAvailableRolesInOrder(selectedRoles);
+        const availableRoles = getAvailableRolesInOrder(selectedRoles, gm);
         const currentRole = availableRoles[currentRoleIdx];
 
         if (step === 1) {

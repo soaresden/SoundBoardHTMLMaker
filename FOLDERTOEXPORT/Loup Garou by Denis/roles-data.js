@@ -608,14 +608,14 @@ window.ROLES_DATA = {
 // Mappage des rôles aux emojis pour affichage
 window.ROLE_EMOJIS = {
   'Cupidon': '💘',
-  'Enfant_Sauvage': '👦',
+  'Enfant_Sauvage': '🐵',
   'Chien_Loup': '🐕',
   'Voyante': '👁️',
   'Sorcière': '🧙‍♀️',
   'Ancien': '👴',
   'Ange': '😇',
   'Servante_Devouee': '👸',
-  'Salvateur': '👼',
+  'Salvateur': '🖖',
   'Renard': '🦊',
   'Gitane': '🔮',
   'Joueur_Flute': '🎵',

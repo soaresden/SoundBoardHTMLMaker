@@ -36,12 +36,19 @@ function renderTableAndRename(gameUI) {
     }
   });
 
-  const playerPoints = players.map((p) => `
-    <div class="gm-player-point" data-player-id="${p.id}" style="left: ${p.tableX}px; top: ${p.tableY}px; position:absolute; cursor:grab;" draggable="true" title="${p.name}">
-      <div class="gm-point-dot"></div>
-      <div class="gm-point-name">${p.name}</div>
-    </div>
-  `).join('');
+  const playerPoints = players.map((p) => {
+    // Vérifier si le joueur est mort
+    const isDead = p.statusData && p.statusData.Mort;
+    const deadStyle = isDead ? 'opacity: 0.4; filter: grayscale(100%);' : '';
+    const deadIcon = isDead ? '☠️ ' : '';
+
+    return `
+      <div class="gm-player-point" data-player-id="${p.id}" style="left: ${p.tableX}px; top: ${p.tableY}px; position:absolute; cursor:grab; ${deadStyle}" draggable="true" title="${p.name}${isDead ? ' (MORT)' : ''}">
+        <div class="gm-point-dot" style="${isDead ? 'background:#000000; border-color:#555555;' : ''}"></div>
+        <div class="gm-point-name">${deadIcon}${p.name}</div>
+      </div>
+    `;
+  }).join('');
 
   const playerNamesHtml = players.map((p, idx) => `
     <div style="display:flex; flex-direction:column; align-items:center; gap:1px; padding:1px; background:rgba(0,0,0,0.2); border-radius:1px;">

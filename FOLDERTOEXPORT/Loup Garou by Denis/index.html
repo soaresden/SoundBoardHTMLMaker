@@ -1180,6 +1180,20 @@ input[type="range"]{ width:100%; accent-color:var(--accent); }
     grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
   }
 }
+
+/* ===== ANIMATION POUR LA SORCIÈRE ===== */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 200px;
+  }
+}
   </style>
 </head>
 

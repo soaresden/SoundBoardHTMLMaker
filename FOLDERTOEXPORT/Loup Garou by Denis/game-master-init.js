@@ -29,6 +29,10 @@
       gameMaster = new LoupsGarousGameMaster();
       gameMasterUI = new GameMasterUI(gameMaster);
 
+      // Exposer globalement pour la console (debug)
+      window.gm = gameMaster;
+      window.gameUI = gameMasterUI;
+
       // Initialiser le système de logging
       if (typeof initializeGameLogger !== 'undefined') {
         initializeGameLogger(gameMaster);
@@ -160,5 +164,70 @@
     window.gameMasterDebug.showDebug();
   };
 
-  console.log('[GameMaster] ✓ Script loaded. Use window.gameMasterDebug for debugging or showDebug() to see game state.');
+  // Fonction debug pour afficher TOUS les paramètres de la partie
+  window.debugGame = function() {
+    const gm = window.gameMasterDebug?.gameMaster;
+    if (!gm) {
+      console.log('❌ GameMaster non disponible');
+      return;
+    }
+
+    const state = gm.state || {};
+
+    console.group('🎮 DEBUG PARTIE COMPLÈTE');
+
+    console.group('📊 Paramètres Généraux');
+    console.log('Mode:', state.mode);
+    console.log('Nuit Phase:', state.nightPhase);
+    console.log('Tour actuel:', state.currentTurn);
+    console.log('Table type:', state.tableType);
+    console.log('Rôle courant index:', state.currentRoleIdx);
+    console.log('Étape nuit:', state.nightStep);
+    console.groupEnd();
+
+    console.group('👥 Joueurs');
+    if (state.players) {
+      state.players.forEach((p, i) => {
+        const roleInfo = p.roleId ? ` → ${p.roleId}` : ' (sans rôle)';
+        const status = p.statusData ? ` | Statuts: ${Object.keys(p.statusData).join(', ')}` : '';
+        console.log(`  ${i + 1}. ${p.name}${roleInfo}${status}`);
+      });
+    }
+    console.groupEnd();
+
+    console.group('🎭 Rôles Sélectionnés');
+    if (state.selectedRoles) {
+      Object.entries(state.selectedRoles).forEach(([role, count]) => {
+        if (count > 0) console.log(`  ${role}: ${count}`);
+      });
+    }
+    console.groupEnd();
+
+    console.group('🔮 Actions Spéciales');
+    console.log('Cupidon selection:', state.cupidoSelection);
+    console.log('Enfant Sauvage idol:', state.enfantSauvageIdol?.playerId);
+    console.log('Chien Loup choice:', state.chienLoupChoice);
+    console.log('Salvateur target:', state.SalvateurTarget);
+    console.log('Salvateur saved this night:', state.salvateurSavedThisNight);
+    console.log('Salvateur history:', state.salvateurHistory);
+    console.log('Voyante look:', state.voyanteLook);
+    console.log('Renard sniff:', state.renardSniff);
+    console.log('Sorcière potions:', state.sorcierePotions);
+    console.log('Wolves victim:', state.wolvesVictim);
+    console.groupEnd();
+
+    console.group('📜 Logs Récents');
+    if (gm.logs && gm.logs.length > 0) {
+      const recent = gm.logs.slice(-10);
+      recent.forEach((log, i) => {
+        console.log(`  ${i + 1}. [${log.type}] ${log.text}`);
+      });
+    }
+    console.groupEnd();
+
+    console.log('Full state:', state);
+    console.groupEnd();
+  };
+
+  console.log('[GameMaster] ✓ Script loaded. Use showDebug() for quick debug or debugGame() for full game state.');
 })();

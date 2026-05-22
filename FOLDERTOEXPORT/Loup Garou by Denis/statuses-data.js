@@ -140,6 +140,28 @@ window.STATUSES_DATA = {
 
       "displayOnTable": true,
       "displayColor": "#daa520"
+    },
+
+    // ========== STATUT MORT ==========
+    "Mort": {
+      "id": "Mort",
+      "name": "Mort",
+      "camp": "mort",
+      "source": "Jeu",
+      "description": "Le joueur est mort et ne peut plus participer.",
+      "icon": "☠️",
+      "color": "#333333",
+
+      "specialBehavior": "elimination",
+      "eliminatesPlayer": true,
+
+      "onStatusApplied": {
+        "type": "playerEliminated",
+        "description": "Le joueur est éliminé du jeu"
+      },
+
+      "displayOnTable": true,
+      "displayColor": "#333333"
     }
   }
 };

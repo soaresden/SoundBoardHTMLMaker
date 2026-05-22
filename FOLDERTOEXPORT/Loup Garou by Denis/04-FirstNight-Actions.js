@@ -14,6 +14,8 @@ function attachSelectOneHandlers(gameUI, currentRole, players) {
   const targetSelect = document.getElementById('gmSelectOneTarget');
   const resultDisplay = document.getElementById('gmSelectOneResult');
 
+  console.log(`[AttachSelectOne] ${currentRole} - StateKey: ${stateKey} - Select trouvé: ${!!targetSelect} - Result trouvé: ${!!resultDisplay}`);
+
   const updateResult = () => {
     const targetId = gm.state[stateKey];
     if (targetId) {
@@ -39,11 +41,34 @@ function attachSelectOneHandlers(gameUI, currentRole, players) {
   };
 
   targetSelect?.addEventListener('change', (e) => {
-    gm.state[stateKey] = e.target.value;
+    const selectedPlayerId = e.target.value;
+    const selectedPlayer = players.find(p => p.id === selectedPlayerId);
+    gm.state[stateKey] = selectedPlayerId;
+    gm.addLog(`  ➜ ${currentRole} choisit: ${selectedPlayer?.name || '?'}`, 'action');
+
+    // Pour Salvateur: afficher JAUNE dès la sélection
+    if (currentRole === 'Salvateur' && selectedPlayerId) {
+      gm.state.salvateurSavedThisNight = selectedPlayerId;
+    }
+
     gm.saveState();
     updateResult();
     gameUI.render();
+
+    // Restaurer la valeur sélectionnée après le render
+    setTimeout(() => {
+      const newSelect = document.getElementById('gmSelectOneTarget');
+      if (newSelect && selectedPlayerId) {
+        newSelect.value = selectedPlayerId;
+      }
+    }, 0);
   });
+
+  // Restaurer la valeur sélectionnée au chargement
+  if (targetSelect && gm.state[stateKey]) {
+    targetSelect.value = gm.state[stateKey];
+  }
+
   updateResult();
 }
 
@@ -93,17 +118,25 @@ function attachRenardHandlers(gameUI, players) {
     gm.state.renardSniff = { targetId: null, leftWolf: false, centerWolf: false, rightWolf: false };
   }
 
-  const targetSelect = document.getElementById('gmRenardTarget');
+  const targetInput = document.getElementById('gmRenardTarget');
   const groupDisplay = document.getElementById('gmRenardGroupDisplay');
-  const checksDiv = document.getElementById('gmRenardWolfChecks');
+  const leftDisplay = document.getElementById('gmRenardLeftDisplay');
+  const centerDisplay = document.getElementById('gmRenardCenterDisplay');
+  const rightDisplay = document.getElementById('gmRenardRightDisplay');
   const resultDisplay = document.getElementById('gmRenardResult');
+  const nextBtn = document.getElementById('gmRenardNext');
+
+  // Guard: si les éléments du Renard n'existent pas, sortir (on n'est pas au Renard)
+  if (!groupDisplay || !leftDisplay || !centerDisplay || !rightDisplay || !resultDisplay) {
+    return;
+  }
 
   const updateRenardDisplay = () => {
     const targetId = gm.state.renardSniff.targetId;
     if (!targetId) {
-      groupDisplay.textContent = 'Sélectionne d\'abord un joueur';
-      checksDiv.innerHTML = '';
-      resultDisplay.textContent = 'Aucune sélection';
+      groupDisplay.style.display = 'none';
+      resultDisplay.style.display = 'none';
+      nextBtn.style.display = 'none';
       return;
     }
 
@@ -118,70 +151,143 @@ function attachRenardHandlers(gameUI, players) {
     const left = players[leftIdx];
     const right = players[rightIdx];
 
-    // Afficher les 3 joueurs
-    groupDisplay.innerHTML = `<strong>${left.name}</strong> (gauche) — <strong>${center.name}</strong> (toi) — <strong>${right.name}</strong> (droite)`;
-
-    // Créer les checkboxes
-    const checkboxes = `
-      <label style="display:flex; align-items:center; gap:6px; font-size:9px; color:#e8e8f0;">
-        <input type="checkbox" id="gmRenardLeftWolf" ${gm.state.renardSniff.leftWolf ? 'checked' : ''} style="cursor:pointer;">
-        <strong>${left.name}</strong> → Loup Garou?
-      </label>
-      <label style="display:flex; align-items:center; gap:6px; font-size:9px; color:#e8e8f0;">
-        <input type="checkbox" id="gmRenardCenterWolf" ${gm.state.renardSniff.centerWolf ? 'checked' : ''} style="cursor:pointer;">
-        <strong>${center.name}</strong> → Loup Garou?
-      </label>
-      <label style="display:flex; align-items:center; gap:6px; font-size:9px; color:#e8e8f0;">
-        <input type="checkbox" id="gmRenardRightWolf" ${gm.state.renardSniff.rightWolf ? 'checked' : ''} style="cursor:pointer;">
-        <strong>${right.name}</strong> → Loup Garou?
-      </label>
+    // Afficher les 3 joueurs dans les boîtes avec leurs rôles
+    groupDisplay.style.display = 'flex';
+    leftDisplay.innerHTML = `
+      <div style="font-size:11px; color:#e8e8f0; font-weight:700;">${left.name}</div>
+      <div style="font-size:9px; color:#81dff7; margin-top:4px; font-weight:600;">${left.roleId || '?'}</div>
     `;
-    checksDiv.innerHTML = checkboxes;
+    centerDisplay.innerHTML = `
+      <div style="font-size:12px; color:#ffb84d; font-weight:800;">${center.name}</div>
+      <div style="font-size:10px; color:#ffcc99; margin-top:4px; font-weight:700;">${center.roleId || '?'}</div>
+    `;
+    rightDisplay.innerHTML = `
+      <div style="font-size:11px; color:#e8e8f0; font-weight:700;">${right.name}</div>
+      <div style="font-size:9px; color:#81dff7; margin-top:4px; font-weight:600;">${right.roleId || '?'}</div>
+    `;
 
-    // Attacher les événements des checkboxes
-    document.getElementById('gmRenardLeftWolf')?.addEventListener('change', (e) => {
-      gm.state.renardSniff.leftWolf = e.target.checked;
-      gm.saveState();
-      updateResult();
-      gameUI.render();
-    });
-    document.getElementById('gmRenardCenterWolf')?.addEventListener('change', (e) => {
-      gm.state.renardSniff.centerWolf = e.target.checked;
-      gm.saveState();
-      updateResult();
-      gameUI.render();
-    });
-    document.getElementById('gmRenardRightWolf')?.addEventListener('change', (e) => {
-      gm.state.renardSniff.rightWolf = e.target.checked;
-      gm.saveState();
-      updateResult();
-      gameUI.render();
-    });
+    // Afficher le bouton Suivant
+    resultDisplay.style.display = 'block';
+    nextBtn.style.display = 'block';
 
+    // Détection automatique des loups
     updateResult();
   };
 
   const updateResult = () => {
-    const wolfCount = [gm.state.renardSniff.leftWolf, gm.state.renardSniff.centerWolf, gm.state.renardSniff.rightWolf].filter(Boolean).length;
+    const targetId = gm.state.renardSniff.targetId;
+    if (!targetId) return;
+
+    const targetIdx = players.findIndex(p => p.id === targetId);
+    if (targetIdx === -1) return;
+
+    const n = players.length;
+    const leftIdx = (targetIdx - 1 + n) % n;
+    const rightIdx = (targetIdx + 1) % n;
+
+    const center = players[targetIdx];
+    const left = players[leftIdx];
+    const right = players[rightIdx];
+
+    // Vérifier qui est loup (Loup_Garou, Grand_Mechant_Loup, Loup_Garou_Blanc, Loup_Garou_Voyant, Infect_Pere_Loups, ou enfant transformé)
+    const wolfRoles = ['Simple_Loup_Garou', 'Grand_Mechant_Loup', 'Loup_Garou_Blanc', 'Loup_Garou_Voyant', 'Infect_Pere_Loups'];
+    const isWolf = (player) => {
+      // Vérifier si c'est un loup direct
+      if (player.roleId && wolfRoles.includes(player.roleId)) return true;
+      // Vérifier si c'est un enfant sauvage transformé (status Infecté)
+      if (player.statusData && player.statusData.Infecté) return true;
+      // Vérifier si c'est un Chien Loup devenu loup
+      if (player.roleId === 'Chien_Loup' && player.statusData && player.statusData['Chien_Loup_Loup']) return true;
+      return false;
+    };
+
+    const wolves = [left, center, right].filter(isWolf);
+    const wolfCount = wolves.length;
+
     if (wolfCount === 0) {
       resultDisplay.innerHTML = `
-        <div style="padding:8px; border:2px solid #ff6b6b; border-radius:4px; background:rgba(255,107,107,0.2);">
-          Pas de Loup autour de ${players[players.findIndex(p => p.id === gm.state.renardSniff.targetId)]?.name || '?'}
+        <div style="padding:12px; border:2px solid #ff6b6b; border-radius:4px; background:rgba(255,107,107,0.2); text-align:center;">
+          <div style="color:#ff9999; font-weight:700; font-size:12px; margin-bottom:4px;">❌ Pas de Loup autour!</div>
+          <div style="color:#ffb3b3; font-size:10px;">Tu vas perdre ton pouvoir la nuit prochaine...</div>
         </div>
       `;
+      resultDisplay.style.borderColor = '#ff6b6b';
     } else {
       resultDisplay.innerHTML = `
-        <div style="padding:8px; border:2px solid #ff9800; border-radius:4px; background:rgba(255,152,0,0.2);">
-          Il y a <strong>${wolfCount}</strong> Loup(s) autour!
+        <div style="padding:12px; border:2px solid #ff9800; border-radius:4px; background:rgba(255,152,0,0.2); text-align:center;">
+          <div style="color:#ffb84d; font-weight:700; font-size:12px; margin-bottom:4px;">🐺 Il y a <strong>${wolfCount}</strong> Loup(s) autour!</div>
+          <div style="color:#ffd699; font-size:10px;">Tu conserves ton pouvoir.</div>
         </div>
       `;
+      resultDisplay.style.borderColor = '#ff9800';
     }
+
   };
 
-  targetSelect?.addEventListener('change', (e) => {
-    gm.state.renardSniff.targetId = e.target.value;
+  // Attacher les événements des boutons de sélection
+  const attachSelectButtons = () => {
+    const buttons = document.querySelectorAll('.gmRenardSelectBtn');
+
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const playerId = btn.dataset.playerId;
+
+        gm.state.renardSniff.targetId = playerId;
+        if (targetInput) targetInput.value = playerId;
+        gm.saveState();
+        updateRenardDisplay();
+
+        // Mettre en évidence le bouton sélectionné
+        document.querySelectorAll('.gmRenardSelectBtn').forEach(b => {
+          if (b.dataset.playerId === playerId) {
+            b.style.background = 'rgba(100,200,100,0.3)';
+            b.style.borderColor = 'rgba(100,200,100,0.6)';
+            b.style.color = '#66d999';
+          } else {
+            b.style.background = 'rgba(100,80,150,0.2)';
+            b.style.borderColor = 'rgba(100,150,255,0.3)';
+            b.style.color = '#e8e8f0';
+          }
+        });
+      });
+    });
+  };
+
+  attachSelectButtons();
+
+  nextBtn?.addEventListener('click', () => {
+    const targetId = gm.state.renardSniff.targetId;
+    if (!targetId) return;
+
+    const targetIdx = players.findIndex(p => p.id === targetId);
+    if (targetIdx === -1) return;
+
+    const n = players.length;
+    const leftIdx = (targetIdx - 1 + n) % n;
+    const rightIdx = (targetIdx + 1) % n;
+
+    const center = players[targetIdx];
+    const left = players[leftIdx];
+    const right = players[rightIdx];
+
+    // Vérifier qui est loup
+    const wolfRoles = ['Simple_Loup_Garou', 'Grand_Mechant_Loup', 'Loup_Garou_Blanc', 'Loup_Garou_Voyant', 'Infect_Pere_Loups'];
+    const isWolf = (player) => {
+      if (player.roleId && wolfRoles.includes(player.roleId)) return true;
+      if (player.statusData && player.statusData.Infecté) return true;
+      if (player.roleId === 'Chien_Loup' && player.statusData && player.statusData['Chien_Loup_Loup']) return true;
+      return false;
+    };
+
+    const wolves = [left, center, right].filter(isWolf);
+    const wolfCount = wolves.length;
+
+    // Si aucun loup trouvé → le Renard perd son pouvoir
+    if (wolfCount === 0) {
+      gm.state.renardLostPower = true;
+    }
+
     gm.saveState();
-    updateRenardDisplay();
     gameUI.render();
   });
 
@@ -438,30 +544,54 @@ function attachSorcierePotionsHandlers(gameUI, players) {
   const saveBtn = document.getElementById('gmSorciereSave');
   const killBtn = document.getElementById('gmSorcierKill');
   const nothingBtn = document.getElementById('gmSorcierNothing');
-  const killSelect = document.getElementById('gmSorcierKillSelect');
   const mortTargetSelect = document.getElementById('gmSorciereMortTarget');
+
+  // Fonction pour mettre à jour l'état des boutons visuellement
+  const updateButtonStyles = (choice) => {
+    // Reset all buttons
+    if (saveBtn) {
+      saveBtn.style.background = choice === 'save'
+        ? 'rgba(100,200,100,0.6)'
+        : 'rgba(100,200,100,0.2)';
+    }
+    if (nothingBtn) {
+      nothingBtn.style.background = choice === 'nothing'
+        ? 'rgba(150,150,150,0.6)'
+        : 'rgba(100,100,100,0.2)';
+    }
+    if (killBtn) {
+      killBtn.style.background = choice === 'kill'
+        ? 'rgba(212,102,102,0.6)'
+        : 'rgba(200,100,100,0.2)';
+    }
+  };
 
   saveBtn?.addEventListener('click', () => {
     gm.state.sorcierePotions.choice = 'save';
     gm.state.sorcierePotions.mortTarget = null;
+    updateButtonStyles('save');
     gm.saveState();
     gameUI.render();
   });
 
   killBtn?.addEventListener('click', () => {
     gm.state.sorcierePotions.choice = 'kill';
+    updateButtonStyles('kill');
     gm.saveState();
     gameUI.render();
-    // Montrer la combobox du poison après le render
+    // Focus sur la combobox du poison après le render
     setTimeout(() => {
-      const killSelect = document.getElementById('gmSorcierKillSelect');
-      if (killSelect) killSelect.style.display = 'flex';
-    }, 0);
+      const mortSelect = document.getElementById('gmSorciereMortTarget');
+      if (mortSelect) {
+        mortSelect.focus();
+      }
+    }, 50);
   });
 
   nothingBtn?.addEventListener('click', () => {
     gm.state.sorcierePotions.choice = 'nothing';
     gm.state.sorcierePotions.mortTarget = null;
+    updateButtonStyles('nothing');
     gm.saveState();
     gameUI.render();
   });
@@ -470,18 +600,47 @@ function attachSorcierePotionsHandlers(gameUI, players) {
     gm.state.sorcierePotions.mortTarget = e.target.value;
     gm.saveState();
     gameUI.render();
+
+    // Restaurer la valeur sélectionnée après le render
+    setTimeout(() => {
+      const newMortSelect = document.getElementById('gmSorciereMortTarget');
+      if (newMortSelect) {
+        newMortSelect.value = gm.state.sorcierePotions.mortTarget;
+      }
+    }, 0);
   });
+
+  // Restaurer la valeur sélectionnée si elle existe
+  if (mortTargetSelect && gm.state.sorcierePotions.mortTarget) {
+    mortTargetSelect.value = gm.state.sorcierePotions.mortTarget;
+  }
+
+  // Initialiser les styles des boutons au chargement
+  updateButtonStyles(gm.state.sorcierePotions.choice);
 }
 
 function attachWolvesKillHandlers(gameUI, players, currentRole) {
   const gm = gameUI.gm;
+
+  // Chaque type de loup a sa propre variable de victime
   if (!gm.state.wolvesVictim) gm.state.wolvesVictim = null;
+  if (!gm.state.LoupBlancVictim) gm.state.LoupBlancVictim = null;
+  if (!gm.state.MechanLoupVictim) gm.state.MechanLoupVictim = null;
 
   const victimSelect = document.getElementById('gmWolvesVictim');
   const resultDisplay = document.getElementById('gmWolvesResult');
 
+  // Déterminer quelle variable utiliser selon le rôle courant
+  const getStateKey = () => {
+    if (currentRole === 'Loup_Garou_Blanc') return 'LoupBlancVictim';
+    if (currentRole === 'Grand_Mechant_Loup') return 'MechanLoupVictim';
+    return 'wolvesVictim'; // Simple_Loup_Garou
+  };
+
+  const stateKey = getStateKey();
+
   const updateWolvesResult = () => {
-    const victimId = gm.state.wolvesVictim;
+    const victimId = gm.state[stateKey];
     if (victimId) {
       const victim = players.find(p => p.id === victimId);
       // Afficher la carte de la victime
@@ -507,20 +666,20 @@ function attachWolvesKillHandlers(gameUI, players, currentRole) {
   };
 
   victimSelect?.addEventListener('change', (e) => {
-    gm.state.wolvesVictim = e.target.value;
+    gm.state[stateKey] = e.target.value;
     gm.saveState();
     updateWolvesResult();
     gameUI.render();
     // Restaurer la valeur du select après le render
     const newVictimSelect = document.getElementById('gmWolvesVictim');
-    if (newVictimSelect && gm.state.wolvesVictim) {
-      newVictimSelect.value = gm.state.wolvesVictim;
+    if (newVictimSelect && gm.state[stateKey]) {
+      newVictimSelect.value = gm.state[stateKey];
     }
   });
 
   // Restaurer la valeur du select au cas où elle existerait déjà
-  if (victimSelect && gm.state.wolvesVictim) {
-    victimSelect.value = gm.state.wolvesVictim;
+  if (victimSelect && gm.state[stateKey]) {
+    victimSelect.value = gm.state[stateKey];
   }
 
   updateWolvesResult();
@@ -601,10 +760,15 @@ function attachConfirmHandlers(gameUI, currentRole) {
 
 function attachRoleActionHandlers(gameUI, currentRole, players, selectedRoles, playerAssignedToRole) {
   const roleAction = ROLE_ACTIONS[currentRole];
-  if (!roleAction) return;
+  console.log(`[AttachRoleActions] ${currentRole} - PlayerAssigned: ${playerAssignedToRole?.name || 'NONE'} - ActionType: ${roleAction?.type || 'NONE'}`);
+  if (!roleAction) {
+    console.log(`[AttachRoleActions] ❌ Pas d'action définie pour ${currentRole}`);
+    return;
+  }
 
   switch (roleAction.type) {
     case 'selectOne':
+      console.log(`[ActionSwitch] ${currentRole} - Cas selectOne`);
       attachSelectOneHandlers(gameUI, currentRole, players);
       break;
     case 'selectPair':
@@ -698,14 +862,33 @@ function attachFirstNightEvents(gameUI) {
       const isAssigned = p.roleId === currentRole;
       const isLover = (gm.state.cupidoSelection || []).includes(p.id);
       const isIdol = gm.state.enfantSauvageIdol?.playerId === p.id;
+      // Seule la personne sauvée CETTE NUIT affiche en jaune
+      const isSaved = gm.state.salvateurSavedThisNight === p.id;
 
       // Déterminer si c'est un Loup (y compris Chien_Loup devenu Loup)
       const wolfRoles = ['Simple_Loup_Garou', 'Grand_Mechant_Loup', 'Loup_Garou_Blanc', 'Loup_Garou_Voyant', 'Infect_Pere_Loups'];
       const isWolf = p.roleId && wolfRoles.includes(p.roleId);
+      const isTransformedChienLoup = p.transformedFromChienLoup === true;
 
       let bgColor, borderColor;
-      if (isWolf) {
-        // Les Loups sont ROUGES
+      if (isSaved) {
+        // Joueur sauvé par le Salvateur = JAUNE
+        bgColor = 'rgba(255, 193, 7, 0.8)'; // Jaune
+        borderColor = '#ffc107'; // Jaune vif
+      } else if (isTransformedChienLoup) {
+        // Chien Loup transformé en Loup Garou = VERT FLUO
+        bgColor = 'rgba(0, 255, 100, 0.8)'; // Vert fluo
+        borderColor = '#00ff64'; // Vert fluo vif
+      } else if (p.roleId === 'Grand_Mechant_Loup') {
+        // Grand_Mechant_Loup = ROUGE TRÈS FONCÉ
+        bgColor = 'rgba(75, 26, 26, 0.95)'; // Rouge très foncé
+        borderColor = '#8b0000'; // Marron très foncé
+      } else if (p.roleId === 'Loup_Garou_Blanc') {
+        // Loup_Garou_Blanc = BLANC avec emoji ROUGE
+        bgColor = 'rgba(245, 245, 245, 0.9)'; // Blanc
+        borderColor = '#e0e0e0'; // Gris très clair
+      } else if (isWolf) {
+        // Les autres Loups sont ROUGES
         bgColor = 'rgba(212, 102, 102, 0.9)'; // Rouge
         borderColor = '#d46666'; // Rouge vif
       } else if (isLover) {
@@ -724,16 +907,23 @@ function attachFirstNightEvents(gameUI) {
 
       // Afficher l'emoji du rôle ou la première lettre du nom
       let displayContent = p.name.charAt(0).toUpperCase();
+      let emojiStyle = '';
+      let emojiColor = 'white';
       if (p.roleId && window.ROLE_EMOJIS) {
         const emoji = window.ROLE_EMOJIS[p.roleId];
         if (emoji) {
           displayContent = emoji;
+          // Style spécial pour Loup_Garou_Blanc: emoji rouge sang
+          if (p.roleId === 'Loup_Garou_Blanc') {
+            emojiColor = '#ff3333';
+            emojiStyle = 'text-shadow: 0 0 4px rgba(255,0,0,0.8);';
+          }
         }
       }
 
       return `
         <div style="position:absolute; left:${scaledX}px; top:${scaledY}px; transform:translate(-50%, -50%); text-align:center; pointer-events:none;">
-          <div style="width:36px; height:36px; background:${bgColor}; border:2px solid ${borderColor}; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:600; color:white; line-height:1;">${displayContent}</div>
+          <div style="width:36px; height:36px; background:${bgColor}; border:2px solid ${borderColor}; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:600; color:${emojiColor}; line-height:1; ${emojiStyle}">${displayContent}</div>
           <div style="font-size:7px; color:#d0d0d0; margin-top:2px; font-weight:500; white-space:nowrap; max-width:45px;">${p.name}</div>
         </div>
       `;
@@ -742,41 +932,134 @@ function attachFirstNightEvents(gameUI) {
 
   // Attacher les événements d'assignation (étape 1)
   if (step === 1) {
+    console.log(`[AttachFirstNightEvents] Step 1 - Assignation de ${currentRole} - Boutons trouvés: ${document.querySelectorAll('.gm-player-assign').length}`);
     document.querySelectorAll('.gm-player-assign').forEach(elem => {
       elem.addEventListener('click', () => {
         const playerId = elem.dataset.playerId;
         const player = players.find(p => p.id === playerId);
+        const isDisabled = elem.dataset.disabled === 'true';
+        console.log(`[AssignClick] ${currentRole} - Clic sur ${player?.name} (${playerId}) - Disabled: ${isDisabled}`);
 
-        if (!player) return;
+        if (!player || isDisabled) return; // Bloque si le bouton est désactivé (Chien_Loup transformé)
+
+        // Déterminer si c'est un rôle de Loup
+        const wolfRoles = ['Simple_Loup_Garou', 'Grand_Mechant_Loup', 'Loup_Garou_Blanc', 'Loup_Garou_Voyant', 'Infect_Pere_Loups'];
+        const isWolfRole = wolfRoles.includes(currentRole);
+        const playerIsAlreadyWolf = player.roleId && wolfRoles.includes(player.roleId);
 
         // Si le joueur a déjà ce rôle, le désassigner (toggle)
         if (player.roleId === currentRole) {
           player.roleId = null;
+          console.log(`[AssignRole] ✓ ${player.name} désassigné de ${currentRole}`);
         } else {
           // Compter combien de joueurs sont déjà assignés à ce rôle
           const currentlyAssigned = players.filter(p => p.roleId === currentRole).length;
 
-          // Si on a atteint le nombre requis, empêcher une nouvelle assignation
-          if (currentlyAssigned >= requiredCount) {
+          // Pour les loups: PAS DE LIMITE (le maître du jeu assigne tous les loups)
+          // Pour les autres: respecter la limite
+          if (!isWolfRole && currentlyAssigned >= requiredCount) {
             return; // Bloque l'assignation
           }
 
-          // Si requiredCount === 1, désassigner tous les autres d'abord
-          if (requiredCount === 1) {
+          // Si requiredCount === 1 (et pas un loup), désassigner les autres d'abord
+          if (requiredCount === 1 && !isWolfRole) {
             players.forEach(p => {
               if (p.roleId === currentRole) {
                 p.roleId = null;
               }
             });
           }
-          // Assigner le joueur au rôle
-          player.roleId = currentRole;
+
+          // Pour les loups spécialisés: transformer un loup existant au lieu d'assigner un nouveau
+          if (isWolfRole && playerIsAlreadyWolf) {
+            const oldRole = player.roleId;
+            player.roleId = currentRole;
+            console.log(`[AssignRole] 🐺 ${player.name} transformé: ${oldRole} → ${currentRole}`);
+            gm.addLog(`🐺 ${player.name} devient ${currentRole} (était ${oldRole})`, 'roleTransform');
+          } else {
+            // Assigner le joueur au rôle (nouveau loup ou autre rôle)
+            player.roleId = currentRole;
+            console.log(`[AssignRole] ✓ ${player.name} assigné à ${currentRole}`);
+            gm.addLog(`🎭 ${player.name} → ${currentRole}`, 'roleAssign');
+          }
         }
 
+        console.log(`[SaveAndRender] Sauvegarde et rendu après assignation de ${currentRole}`);
         gm.saveState();
         gameUI.render();
       });
     });
+
+    // AUTO-ASSIGNATION POUR RENARD (dernier rôle)
+    // Si on est au Renard, assigner automatiquement tous les joueurs non assignés au Renard
+    if (currentRole === 'Renard' && currentRoleIdx === availableRoles.length - 1) {
+      const unassignedPlayers = players.filter(p => !p.roleId);
+      const renardNeeded = selectedRoles['Renard'] || 1;
+
+      if (unassignedPlayers.length > 0) {
+        // ===== VALIDATION AVANT AUTO-ASSIGNATION =====
+        const rolesAssigned = {};
+        const transformedRoles = {}; // Tracker les rôles transformés
+
+        players.forEach(p => {
+          if (p.roleId) {
+            rolesAssigned[p.roleId] = (rolesAssigned[p.roleId] || 0) + 1;
+          }
+          // Tracker les transformations (Chien_Loup transformé en Simple_Loup_Garou, etc.)
+          if (p.transformedFromChienLoup === true) {
+            transformedRoles['Chien_Loup'] = (transformedRoles['Chien_Loup'] || 0) + 1;
+          }
+        });
+
+        // Vérifier la cohérence
+        let isValid = true;
+        const issues = [];
+
+        // 1. Vérifier que les autres rôles (sauf Renard) sont complets
+        // IMPORTANT: Ne pas compter Chien_Loup s'il a été transformé
+        Object.entries(selectedRoles).forEach(([roleId, needed]) => {
+          if (roleId === 'Renard') return; // Sauter le Renard (assigné après)
+
+          const assigned = rolesAssigned[roleId] || 0;
+          const transformed = transformedRoles[roleId] || 0;
+          const total = assigned + transformed; // Compter les assignations + transformations
+
+          if (total !== needed) {
+            isValid = false;
+            const details = assigned === 0 && transformed > 0
+              ? `(0 assigné + ${transformed} transformé = ${total})`
+              : assigned === needed ? ' ✓'
+              : `(${assigned} assigné + ${transformed} transformé = ${total})`;
+            issues.push(`${roleId}: ${total}/${needed} ${details}`);
+          }
+        });
+
+        // 2. Vérifier Renard: déjà assignés + non-assignés = total attendu
+        const renardAlreadyAssigned = rolesAssigned['Renard'] || 0;
+        const renardTotal = renardAlreadyAssigned + unassignedPlayers.length;
+
+        if (renardTotal !== renardNeeded) {
+          isValid = false;
+          issues.push(`Renard: ${renardAlreadyAssigned} déjà assigné(s) + ${unassignedPlayers.length} non-assigné(s) = ${renardTotal}/${renardNeeded}`);
+        }
+
+        // 3. Auto-assignation DÉSACTIVÉE - L'utilisateur assign manuellement
+        // (La validation reste active pour vérifier la cohérence)
+        if (!isValid) {
+          // Afficher les problèmes détectés
+          console.log('%c❌ [AutoAssign Renard] ERREUR DE COHÉRENCE - Auto-assignation BLOQUÉE!', 'color: #ff6b6b; font-weight: bold; font-size: 14px;');
+          console.log('%c⚠️ Problèmes détectés:', 'color: #ff9999; font-weight: bold;');
+          issues.forEach(issue => {
+            console.log(`%c   • ${issue}`, 'color: #ff9999; font-size: 12px;');
+          });
+          console.log('%c💡 Solution: Vérifiez les assignations précédentes avec gm.findMissingRoles()', 'color: #ffb84d; font-weight: bold; font-size: 11px;');
+
+          // Afficher aussi une alerte visuelle à l'utilisateur
+          const alertMsg = `❌ ERREUR: Impossible d'assigner Renard!\n\nProblèmes:\n${issues.join('\n')}\n\nVérifiez avec: gm.findMissingRoles()`;
+          alert(alertMsg);
+        }
+      }
+    }
   }
 
   // Attacher les événements du rôle (étape 2)
@@ -788,23 +1071,33 @@ function attachFirstNightEvents(gameUI) {
   const btnNextStep = document.getElementById('gmBtnNextStep');
   if (btnNextStep && step === 1) {
     btnNextStep.addEventListener('click', () => {
-      if (playersAssignedToRole.length === requiredCount) {
+      // IMPORTANT: Recalculer le nombre assigné à chaque clic (ne pas utiliser la variable capturée)
+      const currentAssigned = players.filter(p => p.roleId === currentRole).length;
+      const currentRequired = selectedRoles[currentRole] || 1;
+
+      // Pour les loups: au moins 1 assigné. Pour les autres: exactement requiredCount
+      const wolfRoles = ['Simple_Loup_Garou', 'Grand_Mechant_Loup', 'Loup_Garou_Blanc', 'Loup_Garou_Voyant', 'Infect_Pere_Loups'];
+      const isWolfRole = wolfRoles.includes(currentRole);
+      const canContinue = isWolfRole ? currentAssigned > 0 : currentAssigned === currentRequired;
+
+      console.log(`[NextStepBtn] ${currentRole} - Assignés actuels: ${currentAssigned}/${currentRequired}`);
+
+      if (canContinue) {
         // Vérifier s'il y a une action pour ce rôle
         if (ROLES_WITH_NIGHT_ACTION.has(currentRole)) {
           // Aller à l'étape 2 (action du rôle)
           gm.state.nightStep = 2;
+          console.log(`[NextStepBtn] ✓ Passage à Step 2 pour ${currentRole}`);
         } else {
           // Pas d'action, aller directement au rôle suivant
           gm.state.nightStep = 1;
-          gm.state.currentRoleIdx = (currentRoleIdx + 1) % availableRoles.length;
-          if (currentRoleIdx >= availableRoles.length - 1) {
-            gm.state.currentRoleIdx = 0; // Boucle de retour
-          } else {
-            gm.state.currentRoleIdx = currentRoleIdx + 1;
-          }
+          gm.state.currentRoleIdx = currentRoleIdx + 1;
+          console.log(`[NextStepBtn] Pas d'action pour ${currentRole}, passage au rôle suivant`);
         }
         gm.saveState();
         gameUI.render();
+      } else {
+        console.log(`[NextStepBtn] ❌ Assignation incomplète: ${currentAssigned}/${currentRequired}`);
       }
     });
   }
@@ -814,20 +1107,45 @@ function attachFirstNightEvents(gameUI) {
   if (btnNextRole && (step === 2 || (step === 1 && !ROLES_WITH_NIGHT_ACTION.has(currentRole)))) {
     btnNextRole.addEventListener('click', () => {
       if (isActionComplete(gm, currentRole)) {
+        // Recalculer le joueur assigné au rôle courant (ne pas utiliser la variable capturée)
+        const assignedPlayer = players.find(p => p.roleId === currentRole);
+
+        // Gérer les actions spécifiques du rôle
+        if (currentRole === 'Salvateur' && gm.state.SalvateurTarget) {
+          const savedPlayer = players.find(p => p.id === gm.state.SalvateurTarget);
+          if (savedPlayer) {
+            // Tracker qui a été sauvé CETTE nuit (pour l'affichage jaune)
+            gm.state.salvateurSavedThisNight = gm.state.SalvateurTarget;
+
+            // Garder l'historique pour empêcher les sauvetages répétés consécutifs
+            if (!gm.state.salvateurHistory) gm.state.salvateurHistory = [];
+            gm.state.salvateurHistory.push(gm.state.SalvateurTarget);
+
+            gm.addLog(`👼 ${assignedPlayer.name} a sauvé ${savedPlayer.name} de l'infection!`, 'action');
+            console.log(`[Salvateur] ${savedPlayer.name} sauvé de l'infection cette nuit`);
+          }
+        }
+
         // Transformer le Chien Loup en Loup Garou si besoin
-        if (currentRole === 'Chien_Loup' && gm.state.chienLoupChoice === 'loup' && playerAssignedToRole) {
-          playerAssignedToRole.roleId = 'Simple_Loup_Garou';
+        if (currentRole === 'Chien_Loup' && gm.state.chienLoupChoice === 'loup' && assignedPlayer) {
+          assignedPlayer.roleId = 'Simple_Loup_Garou';
+          assignedPlayer.transformedFromChienLoup = true; // Flag pour l'affichage en vert fluo
+          gm.addLog(`🐺 ${assignedPlayer.name} (Chien_Loup) se transforme en Simple_Loup_Garou!`, 'transform');
+          console.log(`[Transformation] ${assignedPlayer.name}: Chien_Loup → Simple_Loup_Garou`);
         }
 
         // Aller au rôle suivant
         gm.state.nightStep = 1;
         gm.state.currentRoleIdx = currentRoleIdx + 1;
+
         if (currentRoleIdx >= availableRoles.length - 1) {
           // Dernier rôle, commencer la partie
           gm.state.mode = 'mayorElection';
           gm.state.currentTurn = 1;
           gm.state.nightPhase = false;
+          console.log(`[NextRoleBtn] Dernière action! Passage à mayorElection`);
         }
+
         gm.saveState();
         gameUI.render();
       }
@@ -838,9 +1156,13 @@ function attachFirstNightEvents(gameUI) {
   const btnPrevStep = document.getElementById('gmBtnPrevStep');
   if (btnPrevStep) {
     btnPrevStep.addEventListener('click', () => {
+      // Recalculer le joueur assigné au rôle courant (ne pas utiliser la variable capturée)
+      const assignedPlayer = players.find(p => p.roleId === currentRole);
+
       // Désassigner le joueur du rôle courant
-      if (playerAssignedToRole) {
-        playerAssignedToRole.roleId = null;
+      if (assignedPlayer) {
+        assignedPlayer.roleId = null;
+        console.log(`[RetourBtn] Désassignation de ${assignedPlayer.name} du rôle ${currentRole}`);
       }
 
       // Réinitialiser le choix du Chien Loup si on revient
