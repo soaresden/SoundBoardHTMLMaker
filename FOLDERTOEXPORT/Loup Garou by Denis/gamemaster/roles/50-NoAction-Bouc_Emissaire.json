@@ -1,0 +1,21 @@
+{
+  "id": "Bouc_Emissaire",
+  "order": 50,
+  "name": "Bouc Emissaire",
+  "emoji": "🐐",
+  "camp": "Village",
+  "hasNightAction": false,
+  "hasDayAction": false,
+  "actions": {
+    "NoAction": {
+      "enabled": true,
+      "type": "dieOnTie",
+      "phase": "dayVote",
+      "instruction": "🐐 Si égalité au vote: c'est toi qui meurs",
+      "stateKey": "boucEmissaire"
+    }
+  },
+  "specialBehaviors": [],
+  "tips": "💡 Joue stratégiquement avec le rôle Bouc_Emissaire!",
+  "winCondition": "Village"
+}

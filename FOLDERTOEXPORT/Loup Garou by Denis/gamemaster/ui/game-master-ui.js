@@ -172,9 +172,15 @@ class GameMasterUI {
       } else if (mode === 'tableSetup') {
         html = renderTableAndRename(this);
       } else if (mode === 'assignRoles') {
+        // Nuit 1 (avec assignation des rôles)
         html = renderFirstNight(this);
+      } else if (mode === 'night') {
+        // Nuits 2+ (sans assignation, juste actions)
+        html = renderNight(this);
       } else if (mode === 'mayorElection') {
         html = renderMayorElection(this);
+      } else if (mode === 'day1' || mode === 'day') {
+        html = renderDay(this);
       } else if (mode === 'gameRunning') {
         html = '<div style="padding:20px; color:#e8e8f0; text-align:center;">Jeu en cours...</div>';
       }
@@ -262,8 +268,12 @@ class GameMasterUI {
       attachTableAndRenameEvents(this);
     } else if (mode === 'assignRoles') {
       attachFirstNightEvents(this);
+    } else if (mode === 'night') {
+      attachNightEvents(this);
     } else if (mode === 'mayorElection') {
       attachMayorElectionEvents(this);
+    } else if (mode === 'day1' || mode === 'day') {
+      attachDayEvents(this);
     }
   }
 

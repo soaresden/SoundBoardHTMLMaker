@@ -1,0 +1,24 @@
+{
+  "id": "Simple_Loup_Garou",
+  "order": 34,
+  "name": "Simple Loup Garou",
+  "emoji": "🐺",
+  "camp": "Loups",
+  "hasNightAction": true,
+  "hasDayAction": false,
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "hunt",
+      "phase": "everyNight",
+      "instruction": "🐺 Tue avec les autres Loups",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "loupKill"
+    }
+  },
+  "specialBehaviors": [],
+  "tips": "💡 Joue stratégiquement avec le rôle Simple_Loup_Garou!",
+  "winCondition": "Loups"
+}

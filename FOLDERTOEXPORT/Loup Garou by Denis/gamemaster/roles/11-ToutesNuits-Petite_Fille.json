@@ -1,0 +1,21 @@
+{
+  "id": "Petite_Fille",
+  "order": 11,
+  "name": "Petite Fille",
+  "emoji": "👧",
+  "camp": "Village",
+  "hasNightAction": true,
+  "hasDayAction": false,
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "spy",
+      "phase": "everyNight",
+      "instruction": "👧 Écoute les Loups la nuit",
+      "stateKey": "petiteFilleEcoute"
+    }
+  },
+  "specialBehaviors": [],
+  "tips": "💡 Joue stratégiquement avec le rôle Petite_Fille!",
+  "winCondition": "Village"
+}

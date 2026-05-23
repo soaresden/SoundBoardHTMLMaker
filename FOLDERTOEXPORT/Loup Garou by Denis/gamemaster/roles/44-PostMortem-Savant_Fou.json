@@ -1,0 +1,21 @@
+{
+  "id": "Savant_Fou",
+  "order": 44,
+  "name": "Savant Fou",
+  "emoji": "🧪",
+  "camp": "Village",
+  "hasNightAction": false,
+  "hasDayAction": false,
+  "actions": {
+    "PostMortem": {
+      "enabled": true,
+      "type": "killNeighbors",
+      "phase": "onDeath",
+      "instruction": "🧪 Si tu meurs: les 2 personnes à côté de toi meurent aussi",
+      "stateKey": "savantEffect"
+    }
+  },
+  "specialBehaviors": [],
+  "tips": "💡 Joue stratégiquement avec le rôle Savant_Fou!",
+  "winCondition": "Village"
+}

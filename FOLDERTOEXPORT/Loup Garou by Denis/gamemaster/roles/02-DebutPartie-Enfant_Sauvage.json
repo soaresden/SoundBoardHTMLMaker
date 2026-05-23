@@ -1,0 +1,40 @@
+{
+  "id": "Enfant_Sauvage",
+  "order": 2,
+  "name": "Enfant Sauvage",
+  "emoji": "🐵",
+  "camp": "Village",
+  "hasNightAction": false,
+  "hasDayAction": false,
+  "actions": {
+    "DebutPartie": {
+      "enabled": true,
+      "type": "selectIdol",
+      "phase": "gameStart",
+      "instruction": "🐵 Choisis ton idole - si elle meurt par les Loups, tu deviens un Loup!",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "idolSelection",
+      "visual": {
+        "self": {
+          "background": "#001a4d",
+          "border": "#0066ff",
+          "borderWidth": "2px"
+        },
+        "idol": {
+          "background": "#00ffff",
+          "border": "#00ffff",
+          "borderWidth": "2px"
+        }
+      },
+      "logging": {
+        "enabled": true,
+        "message": "L'idole est {target}"
+      }
+    }
+  },
+  "specialBehaviors": [],
+  "tips": "💡 Joue stratégiquement avec le rôle Enfant_Sauvage!",
+  "winCondition": "Village"
+}

@@ -1,0 +1,24 @@
+{
+  "id": "Infect_Pere_Loups",
+  "order": 32,
+  "name": "Infect Pere Loups",
+  "emoji": "🐺",
+  "camp": "Seul",
+  "hasNightAction": true,
+  "hasDayAction": false,
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "convert",
+      "phase": "everyNight",
+      "instruction": "🐺 Convertis la victime des Loups en Loup (1x)",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "pereConvert"
+    }
+  },
+  "specialBehaviors": [],
+  "tips": "💡 Joue stratégiquement avec le rôle Infect_Pere_Loups!",
+  "winCondition": "Seul"
+}

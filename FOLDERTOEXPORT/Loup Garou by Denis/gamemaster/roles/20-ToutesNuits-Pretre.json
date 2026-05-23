@@ -1,0 +1,24 @@
+{
+  "id": "Pretre",
+  "order": 20,
+  "name": "Pretre",
+  "emoji": "⛪",
+  "camp": "Village",
+  "hasNightAction": true,
+  "hasDayAction": false,
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "bless",
+      "phase": "everyNight",
+      "instruction": "⛪ Bénis quelqu'un pour lui donner du pouvoir",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "pretrebless"
+    }
+  },
+  "specialBehaviors": [],
+  "tips": "💡 Joue stratégiquement avec le rôle Pretre!",
+  "winCondition": "Village"
+}

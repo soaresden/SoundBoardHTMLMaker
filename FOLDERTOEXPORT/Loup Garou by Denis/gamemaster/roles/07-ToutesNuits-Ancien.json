@@ -1,0 +1,24 @@
+{
+  "id": "Ancien",
+  "order": 7,
+  "name": "Ancien",
+  "emoji": "👴",
+  "camp": "Village",
+  "hasNightAction": true,
+  "hasDayAction": false,
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "protect",
+      "phase": "everyNight",
+      "instruction": "👴 Protège quelqu'un",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "ancienProtection"
+    }
+  },
+  "specialBehaviors": [],
+  "tips": "💡 Joue stratégiquement avec le rôle Ancien!",
+  "winCondition": "Village"
+}

@@ -1,0 +1,24 @@
+{
+  "id": "Renard",
+  "order": 12,
+  "name": "Renard",
+  "emoji": "🦊",
+  "camp": "Village",
+  "hasNightAction": true,
+  "hasDayAction": false,
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "detectWolves",
+      "phase": "everyNight",
+      "instruction": "🦊 Choisis 3 joueurs - gardes ton pouvoir si l'un est Loup",
+      "targets": {
+        "count": 3
+      },
+      "stateKey": "renardDetection"
+    }
+  },
+  "specialBehaviors": [],
+  "tips": "💡 Joue stratégiquement avec le rôle Renard!",
+  "winCondition": "Village"
+}

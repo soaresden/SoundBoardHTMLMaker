@@ -1,0 +1,24 @@
+{
+  "id": "Necromancien",
+  "order": 27,
+  "name": "Necromancien",
+  "emoji": "💀",
+  "camp": "Village",
+  "hasNightAction": true,
+  "hasDayAction": false,
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "resurrect",
+      "phase": "everyNight",
+      "instruction": "💀 Tente de ressusciter un mort en Fantôme",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "necroResurrect"
+    }
+  },
+  "specialBehaviors": [],
+  "tips": "💡 Joue stratégiquement avec le rôle Necromancien!",
+  "winCondition": "Village"
+}

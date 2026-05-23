@@ -1,0 +1,24 @@
+{
+  "id": "Gitane",
+  "order": 21,
+  "name": "Gitane",
+  "emoji": "🔮",
+  "camp": "Village",
+  "hasNightAction": true,
+  "hasDayAction": false,
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "senseConnection",
+      "phase": "everyNight",
+      "instruction": "🔮 Sens la connexion émotionnelle entre 2 personnes",
+      "targets": {
+        "count": 2
+      },
+      "stateKey": "gitaneSense"
+    }
+  },
+  "specialBehaviors": [],
+  "tips": "💡 Joue stratégiquement avec le rôle Gitane!",
+  "winCondition": "Village"
+}

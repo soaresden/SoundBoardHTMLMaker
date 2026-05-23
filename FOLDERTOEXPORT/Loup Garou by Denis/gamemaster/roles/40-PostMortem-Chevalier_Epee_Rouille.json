@@ -1,0 +1,21 @@
+{
+  "id": "Chevalier_Epee_Rouille",
+  "order": 40,
+  "name": "Chevalier Epee Rouille",
+  "emoji": "⚔️",
+  "camp": "Village",
+  "hasNightAction": false,
+  "hasDayAction": false,
+  "actions": {
+    "PostMortem": {
+      "enabled": true,
+      "type": "postDeathEffect",
+      "phase": "onDeath",
+      "instruction": "⚔️ Si tué par Loups: pas de victime suivante, 1er Loup à ta droite meurt",
+      "stateKey": "chevalierEffect"
+    }
+  },
+  "specialBehaviors": [],
+  "tips": "💡 Joue stratégiquement avec le rôle Chevalier_Epee_Rouille!",
+  "winCondition": "Village"
+}

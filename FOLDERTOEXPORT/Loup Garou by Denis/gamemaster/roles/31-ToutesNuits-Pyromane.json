@@ -1,0 +1,21 @@
+{
+  "id": "Pyromane",
+  "order": 31,
+  "name": "Pyromane",
+  "emoji": "🔥",
+  "camp": "Seul",
+  "hasNightAction": true,
+  "hasDayAction": false,
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "arson",
+      "phase": "everyNight",
+      "instruction": "🔥 Imbibe ou brûle les joueurs",
+      "stateKey": "pyromaneFire"
+    }
+  },
+  "specialBehaviors": [],
+  "tips": "💡 Joue stratégiquement avec le rôle Pyromane!",
+  "winCondition": "Seul"
+}

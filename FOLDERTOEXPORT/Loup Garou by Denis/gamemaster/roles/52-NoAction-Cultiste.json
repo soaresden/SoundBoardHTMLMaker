@@ -1,0 +1,21 @@
+{
+  "id": "Cultiste",
+  "order": 52,
+  "name": "Cultiste",
+  "emoji": "🕷️",
+  "camp": "Loups",
+  "hasNightAction": false,
+  "hasDayAction": false,
+  "actions": {
+    "NoAction": {
+      "enabled": true,
+      "type": "disguisedWolf",
+      "phase": "none",
+      "instruction": "🕷️ Gagne avec Loups - caché à la Voyante",
+      "stateKey": "cultiste"
+    }
+  },
+  "specialBehaviors": [],
+  "tips": "💡 Joue stratégiquement avec le rôle Cultiste!",
+  "winCondition": "Loups"
+}

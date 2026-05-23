@@ -1,0 +1,24 @@
+{
+  "id": "Corbeau",
+  "order": 13,
+  "name": "Corbeau",
+  "emoji": "🐦‍⬛",
+  "camp": "Village",
+  "hasNightAction": true,
+  "hasDayAction": false,
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "curse",
+      "phase": "everyNight",
+      "instruction": "🐦‍⬛ Désigne quelqu'un avec -2 voix au vote",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "corbeauCurse"
+    }
+  },
+  "specialBehaviors": [],
+  "tips": "💡 Joue stratégiquement avec le rôle Corbeau!",
+  "winCondition": "Village"
+}

@@ -24,6 +24,11 @@ function renderTableAndRename(gameUI) {
   const scale = 240 / 300;
   const containerCenter = 120;
 
+  // ===== TRACKER DES POSITIONS POUR SAVANT_FOU =====
+  if (!gm.state.playerPositions) {
+    gm.state.playerPositions = {};
+  }
+
   players.forEach((p, idx) => {
     if (!p.tableX || !p.tableY) {
       if (defaultPositions[idx]) {
@@ -31,6 +36,15 @@ function renderTableAndRename(gameUI) {
         const posY = defaultPositions[idx].y - tableCenter.y;
         p.tableX = containerCenter + (posX * scale);
         p.tableY = containerCenter + (posY * scale);
+
+        // Sauvegarder la position de table et l'index circulaire
+        gm.state.playerPositions[p.id] = {
+          x: p.tableX,
+          y: p.tableY,
+          circleIndex: idx,
+          totalPlayers: players.length
+        };
+
         gm.saveState();
       }
     }

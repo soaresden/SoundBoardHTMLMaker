@@ -1,0 +1,24 @@
+{
+  "id": "Deux_Soeurs",
+  "order": 55,
+  "name": "Deux Soeurs",
+  "emoji": "👯‍♀️",
+  "camp": "Village",
+  "hasNightAction": true,
+  "hasDayAction": false,
+  "actions": {
+    "NoAction": {
+      "enabled": true,
+      "type": "twinCommunication",
+      "phase": "everyNight",
+      "instruction": "👯‍♀️ Sœurs peuvent communiquer la nuit",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "soeursTalk"
+    }
+  },
+  "specialBehaviors": [],
+  "tips": "💡 Joue stratégiquement avec le rôle Deux_Soeurs!",
+  "winCondition": "Village"
+}

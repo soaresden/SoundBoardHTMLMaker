@@ -10,7 +10,7 @@ function renderMayorElection(gameUI) {
   const statusText = mayorId ? players.find(p => p.id === mayorId)?.name || 'Sélectionné' : 'Aucun';
   const colCount = players.length > 12 ? 4 : (players.length > 8 ? 3 : 2);
 
-  return `<div style="display:flex; flex-direction:column; height:100vh; background:#1a1a2e; color:#e8e8f0; font-family:Arial,sans-serif;"><div style="padding:6px; background:rgba(100,150,200,0.1); border-bottom:1px solid rgba(199,125,255,0.2);"><div style="font-weight:600; font-size:11px; color:#81dff7;">☀️ ÉLECTION DU MAIRE</div><div style="font-size:8px; color:#aaa; margin-top:2px;">Sélectionné: <strong style="color:#ffd700;">${statusText}</strong></div></div><div style="padding:6px; border-bottom:1px solid rgba(199,125,255,0.2); display:flex; gap:4px; flex-direction:column; flex-shrink:0;"><div style="display:flex; gap:4px;"><button id="gmBtnMayorConfirm" style="flex:1; background:linear-gradient(135deg, #5174db, #c77dff); border:none; padding:8px; border-radius:3px; color:white; font-weight:600; cursor:pointer; font-size:10px;" ${mayorId ? '' : 'disabled style="opacity:0.5;"'}>✓ Suivant (Maire élu)</button></div><button id="gmBtnNoMayor" style="width:100%; background:linear-gradient(135deg, #ff6b6b, #ff8888); border:none; padding:8px; border-radius:3px; color:white; font-weight:600; cursor:pointer; font-size:10px;">⊘ Pas de Maire - Passer</button></div><div style="flex:1; overflow-y:auto; padding:6px;"><div style="display:grid; grid-template-columns:repeat(${colCount}, 1fr); gap:4px;">${players.map(p => {
+  return `<div style="display:flex; flex-direction:column; height:100vh; background:#1a1a2e; color:#e8e8f0; font-family:Arial,sans-serif;"><div style="padding:6px; background:rgba(100,150,200,0.1); border-bottom:1px solid rgba(199,125,255,0.2);"><div style="font-weight:600; font-size:11px; color:#81dff7;">☀️ ÉLECTION DU MAIRE</div><div style="font-size:8px; color:#aaa; margin-top:2px;">Sélectionné: <strong style="color:#ffd700;">${statusText}</strong></div></div><div style="padding:6px; border-bottom:1px solid rgba(199,125,255,0.2); display:flex; gap:4px; flex-direction:column; flex-shrink:0;"><div style="display:flex; gap:4px;"><button id="gmBtnMayorPrev" style="flex:0 0 40px; background:rgba(100,100,150,0.4); border:1px solid rgba(100,150,200,0.5); padding:8px; border-radius:3px; color:#81dff7; font-weight:600; cursor:pointer; font-size:10px;">← Retour</button><button id="gmBtnMayorConfirm" style="flex:1; background:linear-gradient(135deg, #5174db, #c77dff); border:none; padding:8px; border-radius:3px; color:white; font-weight:600; cursor:pointer; font-size:10px; opacity:${mayorId ? '1' : '0.4'};transition:opacity 0.2s;">✓ Suivant (Maire élu)</button></div><button id="gmBtnNoMayor" style="width:100%; background:linear-gradient(135deg, #ff6b6b, #ff8888); border:none; padding:8px; border-radius:3px; color:white; font-weight:600; cursor:pointer; font-size:10px;">⊘ Pas de Maire - Passer</button></div><div style="flex:1; overflow-y:auto; padding:6px;"><div style="display:grid; grid-template-columns:repeat(${colCount}, 1fr); gap:4px;">${players.map(p => {
       const isMayor = p.id === mayorId;
       const bgColor = isMayor ? 'rgba(255,215,0,0.2)' : 'rgba(107,76,154,0.1)';
       const borderColor = isMayor ? '#ffd700' : '#9966ff';
@@ -52,12 +52,18 @@ function attachMayorElectionEvents(gameUI) {
       if (mayorId) {
         const mayor = players.find(p => p.id === mayorId);
         if (mayor) {
-          gm.mayorElected(mayor.name);
+          // Log with [MayorElection] tag
+          gm.addGameLog(`👑 ${mayor.name} devient le Maire du village`, '[MayorElection]');
+          // Mark player as mayor
+          mayor.isMayor = true;
         }
       }
 
-      // Passer à la nuit
-      gm.state.gameState.phase = 'night1-wolves';
+      // Passer au jour
+      gm.state.mode = 'day1';
+      gm.state.gameState.phase = 'day1-voting';
+      gm.state.currentTurn = 1;
+      gm.state.nightPhase = false;
       gm.saveState();
       gameUI.render();
     });
@@ -67,9 +73,25 @@ function attachMayorElectionEvents(gameUI) {
   const btnNoMayor = document.getElementById('gmBtnNoMayor');
   if (btnNoMayor) {
     btnNoMayor.addEventListener('click', () => {
-      gm.addGameLog('👑 <strong>Aucun Maire</strong> n\'a été élu cette nuit.');
+      gm.addGameLog('👑 Aucun Maire n\'a été élu', '[MayorElection]');
       gm.state.gameState.mayor = null;
-      gm.state.gameState.phase = 'night1-wolves';
+
+      // Passer au jour (sans maire)
+      gm.state.mode = 'day1';
+      gm.state.gameState.phase = 'day1-voting';
+      gm.state.currentTurn = 1;
+      gm.state.nightPhase = false;
+      gm.saveState();
+      gameUI.render();
+    });
+  }
+
+  // Bouton "Retour"
+  const btnPrev = document.getElementById('gmBtnMayorPrev');
+  if (btnPrev) {
+    btnPrev.addEventListener('click', () => {
+      gm.state.mode = 'assignRoles';
+      gm.state.nightStep = 2;
       gm.saveState();
       gameUI.render();
     });

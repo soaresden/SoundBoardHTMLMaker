@@ -1,0 +1,24 @@
+{
+  "id": "Chasseur",
+  "order": 39,
+  "name": "Chasseur",
+  "emoji": "🏹",
+  "camp": "Village",
+  "hasNightAction": false,
+  "hasDayAction": false,
+  "actions": {
+    "PostMortem": {
+      "enabled": true,
+      "type": "killOnDeath",
+      "phase": "onDeath",
+      "instruction": "🏹 Tue quelqu'un en mourant",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "chasseurKill"
+    }
+  },
+  "specialBehaviors": [],
+  "tips": "💡 Joue stratégiquement avec le rôle Chasseur!",
+  "winCondition": "Village"
+}

@@ -1,0 +1,24 @@
+{
+  "id": "Chaman",
+  "order": 18,
+  "name": "Chaman",
+  "emoji": "🧙",
+  "camp": "Village",
+  "hasNightAction": true,
+  "hasDayAction": false,
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "talkToDead",
+      "phase": "everyNightFrom2",
+      "instruction": "🧙 Dialogue avec les morts (à partir de la nuit 2)",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "chamanTalk"
+    }
+  },
+  "specialBehaviors": [],
+  "tips": "💡 Joue stratégiquement avec le rôle Chaman!",
+  "winCondition": "Village"
+}

@@ -1,0 +1,24 @@
+{
+  "id": "Salvateur",
+  "order": 9,
+  "name": "Salvateur",
+  "emoji": "🖖",
+  "camp": "Village",
+  "hasNightAction": true,
+  "hasDayAction": false,
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "protect",
+      "phase": "everyNight",
+      "instruction": "🖖 Protège quelqu'un contre les attaques",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "salvatorProtection"
+    }
+  },
+  "specialBehaviors": [],
+  "tips": "💡 Joue stratégiquement avec le rôle Salvateur!",
+  "winCondition": "Village"
+}

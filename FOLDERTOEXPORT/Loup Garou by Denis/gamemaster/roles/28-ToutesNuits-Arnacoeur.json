@@ -1,0 +1,24 @@
+{
+  "id": "Arnacoeur",
+  "order": 28,
+  "name": "Arnacoeur",
+  "emoji": "💔",
+  "camp": "Village",
+  "hasNightAction": true,
+  "hasDayAction": false,
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "seduce",
+      "phase": "everyNight",
+      "instruction": "💔 Séduis un Amoureux pour gainer avec le couple",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "arnacoeurSeduce"
+    }
+  },
+  "specialBehaviors": [],
+  "tips": "💡 Joue stratégiquement avec le rôle Arnacoeur!",
+  "winCondition": "Village"
+}

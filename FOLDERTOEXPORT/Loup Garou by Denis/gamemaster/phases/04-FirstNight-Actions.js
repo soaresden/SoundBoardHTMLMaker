@@ -388,10 +388,10 @@ function attachChienLoupHandlers(gameUI, players, playerAssignedToRole) {
     const choice = gm.state.chienLoupChoice;
     if (choice === 'villageois') {
       resultDisplay.innerHTML = `✓ Tu restes <strong>Villageois</strong>`;
-      resultDisplay.style.color = '#5174db';
+      resultDisplay.style.color = '#66d999';
     } else if (choice === 'loup') {
       resultDisplay.innerHTML = `✓ Tu deviens <strong>Loup Garou</strong>`;
-      resultDisplay.style.color = '#d46666';
+      resultDisplay.style.color = '#66d999';
     } else {
       resultDisplay.textContent = 'Aucun choix';
       resultDisplay.style.color = '#aaa';
@@ -458,19 +458,31 @@ function attachVoyanteHandlers(gameUI, players, selectedRoles) {
 
       const newSeesSelect = document.getElementById('gmVoyanteSees');
       if (newSeesSelect) {
-        newSeesSelect.onchange = (e) => {
-          gm.state.voyanteLook.roleId = e.target.value;
+        newSeesSelect.addEventListener('change', (e) => {
+          const selectedRoleId = e.target.value;
+          gm.state.voyanteLook.roleId = selectedRoleId;
           // Assigner immédiatement le rôle au joueur si pas encore assigné
           const targetPlayer = players.find(p => p.id === gm.state.voyanteLook.playerId);
-          if (targetPlayer && !targetPlayer.roleId && e.target.value) {
-            targetPlayer.roleId = e.target.value;
+          if (targetPlayer && !targetPlayer.roleId && selectedRoleId) {
+            targetPlayer.roleId = selectedRoleId;
           }
           gm.saveState();
           updateVoyanteResult();
           gameUI.render();
-        };
+
+          // Restaurer la sélection après le render
+          setTimeout(() => {
+            const refreshedSelect = document.getElementById('gmVoyanteSees');
+            if (refreshedSelect && selectedRoleId) {
+              refreshedSelect.value = selectedRoleId;
+            }
+          }, 0);
+        });
+        // Restaurer la valeur sélectionnée s'il existe déjà une sélection
+        if (gm.state.voyanteLook.roleId) {
+          newSeesSelect.value = gm.state.voyanteLook.roleId;
+        }
       }
-      gm.state.voyanteLook.roleId = null;
     }
     updateVoyanteResult();
   };
@@ -891,9 +903,6 @@ function attachFirstNightEvents(gameUI) {
         // Les autres Loups sont ROUGES
         bgColor = 'rgba(212, 102, 102, 0.9)'; // Rouge
         borderColor = '#d46666'; // Rouge vif
-      } else if (isLover) {
-        bgColor = 'rgba(255, 105, 180, 0.8)'; // Rose
-        borderColor = '#ff1493'; // Rose vif
       } else if (isIdol) {
         bgColor = 'rgba(255, 165, 0, 0.8)'; // Orange
         borderColor = '#ff8c00'; // Orange vif
@@ -903,6 +912,12 @@ function attachFirstNightEvents(gameUI) {
       } else {
         bgColor = 'rgba(107, 76, 154, 0.6)'; // Violet
         borderColor = '#9966ff';
+      }
+
+      // Amoureux: garder le background déterminé ci-dessus, changer UNIQUEMENT le border
+      if (isLover) {
+        const loverVisual = gm.getRoleVisual('Cupidon', 'lovers');
+        borderColor = loverVisual?.border || '#ff69b4';
       }
 
       // Afficher l'emoji du rôle ou la première lettre du nom
@@ -1038,26 +1053,8 @@ function attachFirstNightEvents(gameUI) {
         const renardAlreadyAssigned = rolesAssigned['Renard'] || 0;
         const renardTotal = renardAlreadyAssigned + unassignedPlayers.length;
 
-        if (renardTotal !== renardNeeded) {
-          isValid = false;
-          issues.push(`Renard: ${renardAlreadyAssigned} déjà assigné(s) + ${unassignedPlayers.length} non-assigné(s) = ${renardTotal}/${renardNeeded}`);
-        }
-
-        // 3. Auto-assignation DÉSACTIVÉE - L'utilisateur assign manuellement
-        // (La validation reste active pour vérifier la cohérence)
-        if (!isValid) {
-          // Afficher les problèmes détectés
-          console.log('%c❌ [AutoAssign Renard] ERREUR DE COHÉRENCE - Auto-assignation BLOQUÉE!', 'color: #ff6b6b; font-weight: bold; font-size: 14px;');
-          console.log('%c⚠️ Problèmes détectés:', 'color: #ff9999; font-weight: bold;');
-          issues.forEach(issue => {
-            console.log(`%c   • ${issue}`, 'color: #ff9999; font-size: 12px;');
-          });
-          console.log('%c💡 Solution: Vérifiez les assignations précédentes avec gm.findMissingRoles()', 'color: #ffb84d; font-weight: bold; font-size: 11px;');
-
-          // Afficher aussi une alerte visuelle à l'utilisateur
-          const alertMsg = `❌ ERREUR: Impossible d'assigner Renard!\n\nProblèmes:\n${issues.join('\n')}\n\nVérifiez avec: gm.findMissingRoles()`;
-          alert(alertMsg);
-        }
+        // Renard assignation - pas de validation, l'utilisateur assign manuellement
+        // (Tous les autres rôles doivent être complets avant le Renard)
       }
     }
   }
@@ -1123,6 +1120,168 @@ function attachFirstNightEvents(gameUI) {
 
             gm.addLog(`👼 ${assignedPlayer.name} a sauvé ${savedPlayer.name} de l'infection!`, 'action');
             console.log(`[Salvateur] ${savedPlayer.name} sauvé de l'infection cette nuit`);
+          }
+        }
+
+        // ===== LOG IMMÉDIAT DE L'ACTION =====
+        const turn = gm.state.currentTurn || 1;
+        const nightTag = `[🌛${turn}]`;
+
+        if (currentRole === 'Cupidon' && gm.state.cupidoSelection && gm.state.cupidoSelection.length === 2) {
+          const selected = gm.state.cupidoSelection;
+          const p1 = players.find(p => p.id === selected[0]);
+          const p2 = players.find(p => p.id === selected[1]);
+          if (assignedPlayer && p1 && p2) {
+            gm.addGameLog(`${nightTag} 💘 Cupidon (${assignedPlayer.name}) lie <strong>${p1.name}</strong> ♡ <strong>${p2.name}</strong>`);
+          }
+        }
+        else if (currentRole === 'Enfant_Sauvage' && gm.state.enfantSauvageIdol?.playerId) {
+          const idol = players.find(p => p.id === gm.state.enfantSauvageIdol.playerId);
+          if (assignedPlayer && idol) {
+            gm.addGameLog(`${nightTag} 👦 Enfant Sauvage (${assignedPlayer.name}) choisit <strong>${idol.name}</strong> comme idole`);
+          }
+        }
+        else if (currentRole === 'Chien_Loup' && gm.state.chienLoupChoice) {
+          if (assignedPlayer) {
+            const choice = gm.state.chienLoupChoice === 'loup' ? 'devient LOUP GAROU' : 'reste Villageois';
+            gm.addGameLog(`${nightTag} 🐕 Chien Loup (${assignedPlayer.name}) ${choice}`);
+          }
+        }
+        else if (currentRole === 'Voyante' && gm.state.voyanteLook?.playerId && gm.state.voyanteLook?.roleId) {
+          const target = players.find(p => p.id === gm.state.voyanteLook.playerId);
+          if (assignedPlayer && target) {
+            const role = gm.state.voyanteLook.roleId || 'Inconnu';
+            gm.addGameLog(`${nightTag} 👁️ Voyante (${assignedPlayer.name}) regarde <strong>${target.name}</strong> → ${role}`);
+          }
+        }
+        else if (currentRole === 'Sorcière' && gm.state.sorcierePotions) {
+          if (assignedPlayer) {
+            const choice = gm.state.sorcierePotions.choice;
+            if (choice === 'save') {
+              gm.addGameLog(`${nightTag} 🧪 Sorcière (${assignedPlayer.name}) garde sa potion de VIE`);
+            } else if (choice === 'kill' && gm.state.sorcierePotions.mortTarget) {
+              const target = players.find(p => p.id === gm.state.sorcierePotions.mortTarget);
+              if (target) gm.addGameLog(`${nightTag} ☠️ Sorcière (${assignedPlayer.name}) empoisonne <strong>${target.name}</strong>`);
+            }
+          }
+        }
+        else if (currentRole === 'Ancien' && gm.state.AncienTarget) {
+          const target = players.find(p => p.id === gm.state.AncienTarget);
+          if (assignedPlayer && target) {
+            gm.addGameLog(`${nightTag} 👴 Ancien (${assignedPlayer.name}) protège <strong>${target.name}</strong> du Loup-garou`);
+          }
+        }
+        else if (currentRole === 'Salvateur' && gm.state.SalvateurTarget) {
+          const target = players.find(p => p.id === gm.state.SalvateurTarget);
+          if (assignedPlayer && target) {
+            gm.addGameLog(`${nightTag} 👼 Salvateur (${assignedPlayer.name}) sauve <strong>${target.name}</strong> de l'infection`);
+          }
+        }
+        else if (currentRole === 'Corbeau' && gm.state.CorbeauTarget) {
+          const target = players.find(p => p.id === gm.state.CorbeauTarget);
+          if (assignedPlayer && target) {
+            gm.addGameLog(`${nightTag} 🐦‍⬛ Corbeau (${assignedPlayer.name}) curse <strong>${target.name}</strong> (perd 2 votes demain)`);
+          }
+        }
+        else if (currentRole === 'Renard' && gm.state.renardSniff?.targetId) {
+          const target = players.find(p => p.id === gm.state.renardSniff.targetId);
+          if (assignedPlayer && target) {
+            const wolfCount = (gm.state.renardSniff.leftWolf ? 1 : 0) + (gm.state.renardSniff.centerWolf ? 1 : 0) + (gm.state.renardSniff.rightWolf ? 1 : 0);
+            let sniffResult = 'pas de Loup';
+            if (wolfCount === 1) sniffResult = '1 Loup autour';
+            else if (wolfCount === 2) sniffResult = '2 Loups autour';
+            else if (wolfCount === 3) sniffResult = '3 Loups autour!';
+            gm.addGameLog(`${nightTag} 🦊 Renard (${assignedPlayer.name}) flaire <strong>${target.name}</strong> → ${sniffResult}`);
+          }
+        }
+        else if (currentRole === 'Simple_Loup_Garou' && gm.state.wolvesVictim) {
+          const victim = players.find(p => p.id === gm.state.wolvesVictim);
+          if (victim && victim.name) {
+            gm.addGameLog(`${nightTag} 🐺 Les Loups dévorent <strong>${victim.name}</strong>`);
+          }
+        }
+        else if (currentRole === 'Grand_Mechant_Loup' && gm.state.MechanLoupVictim) {
+          const mechant = assignedPlayer;
+          const victim = players.find(p => p.id === gm.state.MechanLoupVictim);
+          if (mechant && victim) {
+            gm.addGameLog(`${nightTag} 🐺👹 Grand Mechant Loup (${mechant.name}) tue <strong>${victim.name}</strong>`);
+          }
+        }
+        else if (currentRole === 'Loup_Garou_Blanc' && gm.state.LoupBlancVictim) {
+          const loupBlanc = assignedPlayer;
+          const victim = players.find(p => p.id === gm.state.LoupBlancVictim);
+          if (loupBlanc && victim) {
+            gm.addGameLog(`${nightTag} 🐺⚪ Loup Blanc (${loupBlanc.name}) élimine <strong>${victim.name}</strong>`);
+          }
+        }
+        else if (currentRole === 'Ange' && gm.state.AngeTarget) {
+          const target = players.find(p => p.id === gm.state.AngeTarget);
+          if (assignedPlayer && target) {
+            gm.addGameLog(`${nightTag} 😇 Ange (${assignedPlayer.name}) protège <strong>${target.name}</strong>`);
+          }
+        }
+        else if (currentRole === 'Servante_Devouee' && gm.state.Servante_DevoueeTarget) {
+          const target = players.find(p => p.id === gm.state.Servante_DevoueeTarget);
+          if (assignedPlayer && target) {
+            gm.addGameLog(`${nightTag} 👸 Servante Dévouée (${assignedPlayer.name}) protège <strong>${target.name}</strong>`);
+          }
+        }
+        else if (currentRole === 'Gitane' && gm.state.GitaneSelection && gm.state.GitaneSelection.length === 2) {
+          const selected = gm.state.GitaneSelection;
+          const p1 = players.find(p => p.id === selected[0]);
+          const p2 = players.find(p => p.id === selected[1]);
+          if (assignedPlayer && p1 && p2) {
+            gm.addGameLog(`${nightTag} 🔮 Gitane (${assignedPlayer.name}) sent une connexion entre <strong>${p1.name}</strong> et <strong>${p2.name}</strong>`);
+          }
+        }
+        else if (currentRole === 'Joueur_Flute' && gm.state.Joueur_FluteSelection && gm.state.Joueur_FluteSelection.length === 2) {
+          const selected = gm.state.Joueur_FluteSelection;
+          const p1 = players.find(p => p.id === selected[0]);
+          const p2 = players.find(p => p.id === selected[1]);
+          if (assignedPlayer && p1 && p2) {
+            gm.addGameLog(`${nightTag} 🎵 Joueur de Flûte (${assignedPlayer.name}) charme <strong>${p1.name}</strong> et <strong>${p2.name}</strong>`);
+          }
+        }
+        else if (currentRole === 'Marionnettiste' && gm.state.MarionettisteTarget) {
+          const target = players.find(p => p.id === gm.state.MarionettisteTarget);
+          if (assignedPlayer && target) {
+            gm.addGameLog(`${nightTag} 🎭 Marionnettiste (${assignedPlayer.name}) contrôle <strong>${target.name}</strong>`);
+          }
+        }
+        else if (currentRole === 'Voleur' && gm.state.VoleurTarget) {
+          const target = players.find(p => p.id === gm.state.VoleurTarget);
+          if (assignedPlayer && target) {
+            gm.addGameLog(`${nightTag} 🎩 Voleur (${assignedPlayer.name}) vole le rôle de <strong>${target.name}</strong>`);
+          }
+        }
+        else if (currentRole === 'Pyromane' && gm.state.PyromaneTarget) {
+          const target = players.find(p => p.id === gm.state.PyromaneTarget);
+          if (assignedPlayer && target) {
+            gm.addGameLog(`${nightTag} 🔥 Pyromane (${assignedPlayer.name}) marque <strong>${target.name}</strong> à l'essence`);
+          }
+        }
+        else if (currentRole === 'Ankou' && gm.state.AnkouTarget) {
+          const target = players.find(p => p.id === gm.state.AnkouTarget);
+          if (assignedPlayer && target) {
+            gm.addGameLog(`${nightTag} ☠️ Ankou (${assignedPlayer.name}) marque <strong>${target.name}</strong> pour la mort`);
+          }
+        }
+        else if (currentRole === 'Abominable_Sectaire' && gm.state.Abominable_SectaireTarget) {
+          const target = players.find(p => p.id === gm.state.Abominable_SectaireTarget);
+          if (assignedPlayer && target) {
+            gm.addGameLog(`${nightTag} 👿 Abominable Sectaire (${assignedPlayer.name}) corrompt <strong>${target.name}</strong>`);
+          }
+        }
+        else if (currentRole === 'Noctambule' && gm.state.NoctambuloTarget) {
+          const target = players.find(p => p.id === gm.state.NoctambuloTarget);
+          if (assignedPlayer && target) {
+            gm.addGameLog(`${nightTag} 🌙 Noctambule (${assignedPlayer.name}) observe <strong>${target.name}</strong>`);
+          }
+        }
+        else if (currentRole === 'Necromancien' && gm.state.NecromancienTarget) {
+          const target = players.find(p => p.id === gm.state.NecromancienTarget);
+          if (assignedPlayer && target) {
+            gm.addGameLog(`${nightTag} 💀 Necromancien (${assignedPlayer.name}) ressuscite <strong>${target.name}</strong>`);
           }
         }
 

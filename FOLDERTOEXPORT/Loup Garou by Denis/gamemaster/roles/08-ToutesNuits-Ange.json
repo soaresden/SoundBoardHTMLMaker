@@ -1,0 +1,24 @@
+{
+  "id": "Ange",
+  "order": 8,
+  "name": "Ange",
+  "emoji": "😇",
+  "camp": "Village",
+  "hasNightAction": true,
+  "hasDayAction": false,
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "protect",
+      "phase": "everyNight",
+      "instruction": "😇 Protège quelqu'un des Loups",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "angeProtection"
+    }
+  },
+  "specialBehaviors": [],
+  "tips": "💡 Joue stratégiquement avec le rôle Ange!",
+  "winCondition": "Village"
+}

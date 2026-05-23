@@ -1,0 +1,24 @@
+{
+  "id": "Comedien",
+  "order": 26,
+  "name": "Comedien",
+  "emoji": "🎪",
+  "camp": "Village",
+  "hasNightAction": true,
+  "hasDayAction": false,
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "changeRole",
+      "phase": "everyNightFirst3",
+      "instruction": "🎪 Change ton rôle (première 3 nuits)",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "comedienChange"
+    }
+  },
+  "specialBehaviors": [],
+  "tips": "💡 Joue stratégiquement avec le rôle Comedien!",
+  "winCondition": "Village"
+}

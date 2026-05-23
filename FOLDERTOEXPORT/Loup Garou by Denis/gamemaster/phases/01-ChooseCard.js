@@ -309,6 +309,12 @@ function attachChooseCardEvents(gameUI) {
       return;
     }
 
+    // Charger UNIQUEMENT les rôles sélectionnés depuis les fichiers JSON
+    const selectedRoleIds = Object.keys(selectedRoles);
+    if (window.loadSelectedRolesFromJSON) {
+      window.loadSelectedRolesFromJSON(selectedRoleIds);
+    }
+
     const playerNames = getRandomPlayerNames(playerCount);
     gameUI.gm.state.players = [];
     for (let i = 0; i < playerCount; i++) {

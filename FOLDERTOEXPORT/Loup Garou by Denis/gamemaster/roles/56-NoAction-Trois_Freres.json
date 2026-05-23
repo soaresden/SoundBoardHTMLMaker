@@ -1,0 +1,24 @@
+{
+  "id": "Trois_Freres",
+  "order": 56,
+  "name": "Trois Freres",
+  "emoji": "👬",
+  "camp": "Village",
+  "hasNightAction": true,
+  "hasDayAction": false,
+  "actions": {
+    "NoAction": {
+      "enabled": true,
+      "type": "twinCommunication",
+      "phase": "everyNight",
+      "instruction": "👬 Frères peuvent communiquer la nuit",
+      "targets": {
+        "count": 2
+      },
+      "stateKey": "freresTalk"
+    }
+  },
+  "specialBehaviors": [],
+  "tips": "💡 Joue stratégiquement avec le rôle Trois_Freres!",
+  "winCondition": "Village"
+}

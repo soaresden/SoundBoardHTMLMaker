@@ -470,6 +470,24 @@ class LoupsGarousGameMaster {
     return window.ROLES_DATA.roles?.[roleId] || null;
   }
 
+  // Récupère les infos visuelles d'un rôle depuis roles.json (plutôt que hardcodé)
+  getRoleVisual(roleId, visualKey) {
+    const roleData = this.getRoleInfo(roleId);
+    if (!roleData) return null;
+
+    // Chercher dans les actions du rôle
+    for (const phase in roleData.actions) {
+      const action = roleData.actions[phase];
+      if (action.visual) {
+        if (visualKey) {
+          return action.visual[visualKey];
+        }
+        return action.visual;
+      }
+    }
+    return null;
+  }
+
   // Ajouter une entrée à l'historique du jeu
   addLog(message, type = 'info') {
     const now = new Date();
@@ -672,12 +690,13 @@ class LoupsGarousGameMaster {
     });
     console.groupEnd();
 
-    // 5. HISTORIQUE DU JEU
-    console.group('%c📝 HISTORIQUE (derniers 10)', 'color: #F44336; font-weight: bold;');
-    if (this.state.gameHistory && this.state.gameHistory.length > 0) {
-      const recent = this.state.gameHistory.slice(-10);
+    // 5. HISTORIQUE DU JEU (GAME LOG avec tags)
+    console.group('%c📝 HISTORIQUE (derniers 15 entrées)', 'color: #F44336; font-weight: bold;');
+    if (this.state.gameLog && this.state.gameLog.length > 0) {
+      const recent = this.state.gameLog.slice(-15);
       recent.forEach(log => {
-        console.log(`[${log.timestamp}] ${log.message}`);
+        const turnInfo = log.turn || '[?]';
+        console.log(`${turnInfo} [${log.timestamp}] ${log.text}`);
       });
     } else {
       console.log('Aucune entrée');
@@ -700,7 +719,37 @@ class LoupsGarousGameMaster {
     console.log('Lookups:', this.state.voyanteLook);
     console.groupEnd();
 
-    // 9. ÉTAT COMPLET (si besoin)
+    // 9. INFOS MORTES
+    console.group('%c💀 JOUEURS MORTS', 'color: #990000; font-weight: bold;');
+    if (this.state.players) {
+      const deadPlayers = this.state.players.filter(p => p.isDead);
+      if (deadPlayers.length > 0) {
+        deadPlayers.forEach(p => {
+          console.log(`${p.name} (${p.id}) - Rôle: ${p.roleId || '?'}`);
+        });
+      } else {
+        console.log('Aucun joueur mort');
+      }
+    }
+    console.groupEnd();
+
+    // 10. MAYOR/STATUTS
+    console.group('%c👑 STATUTS SPÉCIAUX', 'color: #FFD700; font-weight: bold;');
+    if (this.state.gameState?.mayor) {
+      const mayor = this.state.players?.find(p => p.id === this.state.gameState.mayor);
+      console.log('Mayor:', mayor?.name || 'Unknown');
+    } else {
+      console.log('Mayor: None');
+    }
+    if (this.state.cupidoSelection && this.state.cupidoSelection.length > 0) {
+      const lovers = this.state.cupidoSelection.map(id =>
+        this.state.players?.find(p => p.id === id)?.name || 'Unknown'
+      );
+      console.log('Lovers:', lovers.join(' ↔️ '));
+    }
+    console.groupEnd();
+
+    // 11. ÉTAT COMPLET (si besoin)
     console.group('%c⚙️ ÉTAT COMPLET (JSON)', 'color: #607D8B; font-weight: bold;');
     console.log(JSON.stringify(this.state, null, 2));
     console.groupEnd();
@@ -712,6 +761,214 @@ class LoupsGarousGameMaster {
   areLovers(playerId1, playerId2) {
     const lovers = this.state.cupidoSelection || [];
     return lovers.includes(playerId1) && lovers.includes(playerId2);
+  }
+
+  // ========== VÉRIFICATION DES CONDITIONS DE VICTOIRE ==========
+  checkWinCondition() {
+    const players = this.state.players || [];
+    const livingPlayers = players.filter(p => !p.isDead);
+    const deadPlayers = players.filter(p => p.isDead);
+
+    // Compter les loups vivants
+    const wolfRoles = ['Simple_Loup_Garou', 'Grand_Mechant_Loup', 'Loup_Garou_Blanc', 'Loup_Garou_Voyant', 'Infect_Pere_Loups'];
+    const livingWolves = livingPlayers.filter(p => wolfRoles.includes(p.roleId));
+    const livingVillagers = livingPlayers.filter(p => !wolfRoles.includes(p.roleId));
+
+    // ===== VÉRIFICATIONS DES CONDITIONS SPÉCIALES AVANT TOUT =====
+
+    // Condition Spéciale 1: Joueur de Flûte - Tous les joueurs charmés vivants
+    const charmedPlayers = Object.keys(this.state.playerStatuses || {}).filter(id =>
+      this.state.playerStatuses[id]['Charmé'] && livingPlayers.find(p => p.id === id)
+    );
+    const flutePlayer = livingPlayers.find(p => p.roleId === 'Joueur_Flute');
+
+    if (flutePlayer && charmedPlayers.length === livingPlayers.length) {
+      const charmedNames = charmedPlayers.map(id =>
+        players.find(p => p.id === id)?.name
+      ).filter(Boolean).join(', ');
+      return {
+        isGameOver: true,
+        winners: 'Joueur de Flûte',
+        details: `🎵 Le Joueur de Flûte a charmé TOUS les autres joueurs: ${charmedNames}! Il gagne!`
+      };
+    }
+
+    // Condition Spéciale 2: Amoureux seuls (Cupidon) - Si seulement les 2 amoureux restent
+    const amoureux = Object.keys(this.state.playerStatuses || {}).filter(id =>
+      this.state.playerStatuses[id]['Amoureux'] && livingPlayers.find(p => p.id === id)
+    );
+    if (amoureux.length === 2 && livingPlayers.length === 2) {
+      const lover1 = players.find(p => p.id === amoureux[0])?.name;
+      const lover2 = players.find(p => p.id === amoureux[1])?.name;
+      return {
+        isGameOver: true,
+        winners: 'Amoureux',
+        details: `💕 Les Amoureux <strong>${lover1}</strong> et <strong>${lover2}</strong> sont les seuls survivants! Ils gagnent ensemble!`
+      };
+    }
+
+    // ===== CONDITIONS PRINCIPALES =====
+
+    // Condition 1: Tous les Loups sont morts → Village gagne
+    if (livingWolves.length === 0 && livingVillagers.length > 0) {
+      return {
+        isGameOver: true,
+        winners: 'Village',
+        details: `Tous les Loups ont été éliminés! Le village est sauvé!`
+      };
+    }
+
+    // Condition 2: Loups >= Villageois vivants → Loups gagnent
+    if (livingWolves.length >= livingVillagers.length && livingWolves.length > 0) {
+      return {
+        isGameOver: true,
+        winners: 'Loups',
+        details: `Il y a maintenant autant de Loups que de Villageois! Les Loups ont pris le contrôle!`
+      };
+    }
+
+    // Condition 3: Plus personne d'accord → Nulle (edge case)
+    if (livingPlayers.length === 0) {
+      return {
+        isGameOver: true,
+        winners: 'Draw',
+        details: `Tous les joueurs sont morts! Partie nulle!`
+      };
+    }
+
+    // Pas de condition de victoire atteinte
+    return {
+      isGameOver: false,
+      winners: null,
+      details: null
+    };
+  }
+
+  // ========== GESTION DES ACTIONS POSTHUMES (PostMortem) ==========
+  // Actions que les rôles PostMortem exécutent quand ils meurent
+
+  getPostMortemRolesNeedingAction() {
+    const players = this.state.players || [];
+    const postMortemRoles = ['Chasseur', 'Chevalier_Epee_Rouille', 'Fils_Lune', 'Louveteau', 'Lepreux', 'Savant_Fou'];
+
+    // Trouver les rôles PostMortem qui viennent de mourir et qui n'ont pas encore agi
+    const deadPostMortemPlayers = players.filter(p =>
+      p.isDead &&
+      postMortemRoles.includes(p.roleId) &&
+      !this.state.postMortemActionsProcessed?.[p.id]
+    );
+
+    return deadPostMortemPlayers;
+  }
+
+  hasPostMortemActionsPending() {
+    return this.getPostMortemRolesNeedingAction().length > 0;
+  }
+
+  markPostMortemActionProcessed(playerId) {
+    if (!this.state.postMortemActionsProcessed) {
+      this.state.postMortemActionsProcessed = {};
+    }
+    this.state.postMortemActionsProcessed[playerId] = true;
+    this.saveState();
+  }
+
+  // Traiter une action posthume spécifique
+  processPostMortemAction(playerId, actionData) {
+    const player = this.state.players.find(p => p.id === playerId);
+    if (!player || !player.isDead) return false;
+
+    const roleId = player.roleId;
+    const dayTag = `[Jour${this.state.currentTurn}]`;
+
+    switch(roleId) {
+      case 'Chasseur': {
+        // Chasseur tire sur quelqu'un d'autre
+        const targetId = actionData.targetId;
+        const target = this.state.players.find(p => p.id === targetId);
+        if (target && !target.isDead) {
+          target.isDead = true;
+          this.addGameLog(`🏹 <strong>${player.name}</strong> (Chasseur) tire sur <strong>${target.name}</strong> avant de mourir!`, dayTag);
+          // Cascade: gérer les morts liées (amoureux, etc.)
+          this.handlePlayerDeath(targetId);
+        }
+        break;
+      }
+      case 'Chevalier_Epee_Rouille': {
+        // Chevalier: quand il meurt, le premier loup à sa droite meurt
+        const wolfRoles = ['Simple_Loup_Garou', 'Grand_Mechant_Loup', 'Loup_Garou_Blanc', 'Loup_Garou_Voyant', 'Infect_Pere_Loups'];
+        const livingWolves = this.state.players.filter(p => !p.isDead && wolfRoles.includes(p.roleId));
+
+        if (livingWolves.length > 0) {
+          const killedWolf = livingWolves[0]; // Première position (à droite)
+          killedWolf.isDead = true;
+          this.addGameLog(`⚔️ <strong>${player.name}</strong> (Chevalier à l'Épée Rouillée) tue <strong>${killedWolf.name}</strong> en mourant!`, dayTag);
+          // Cascade: gérer les morts liées
+          this.handlePlayerDeath(killedWolf.id);
+          // Les loups ne chassent pas la nuit suivante
+          this.state.wolvesCantHuntNextNight = true;
+        }
+        break;
+      }
+      case 'Lepreux': {
+        // Lepreux: L'effet est géré dans 05-Day.js lors du vote confirmation
+        // Pas d'action spéciale ici car c'est un effet de vote
+        break;
+      }
+      case 'Louveteau': {
+        // Louveteau: Les loups font 2 victimes la nuit suivante
+        this.state.wolvesBonusKillNextNight = true;
+        this.addGameLog(`🐶 <strong>${player.name}</strong> (Louveteau) meurt - les Loups auront 2 victimes la prochaine nuit!`, dayTag);
+        break;
+      }
+      case 'Fils_Lune': {
+        // Fils de la Lune: Les loups ne chassent pas la nuit suivante
+        this.state.wolvesCantHuntNextNight = true;
+        this.addGameLog(`🌙 <strong>${player.name}</strong> (Fils de la Lune) meurt - les Loups ne chassent pas la prochaine nuit...`, dayTag);
+        break;
+      }
+      case 'Savant_Fou': {
+        // Savant Fou: Les 2 personnes assises à côté meurent aussi
+        const playerPos = this.state.playerPositions?.[playerId];
+
+        if (playerPos) {
+          const totalPlayers = playerPos.totalPlayers;
+          const idx = playerPos.circleIndex;
+          const leftNeighborIdx = (idx - 1 + totalPlayers) % totalPlayers; // Voisin de gauche
+          const rightNeighborIdx = (idx + 1) % totalPlayers; // Voisin de droite
+
+          // Trouver les joueurs aux positions des voisins
+          const neighbors = [];
+          Object.entries(this.state.playerPositions).forEach(([playerId, pos]) => {
+            if (pos.circleIndex === leftNeighborIdx || pos.circleIndex === rightNeighborIdx) {
+              const neighbor = this.state.players.find(p => p.id === playerId);
+              if (neighbor && !neighbor.isDead) {
+                neighbors.push(neighbor);
+              }
+            }
+          });
+
+          if (neighbors.length > 0) {
+            this.addGameLog(`🧪 <strong>${player.name}</strong> (Savant Fou) emporte ses voisins dans la mort!`, dayTag);
+            neighbors.forEach(neighbor => {
+              neighbor.isDead = true;
+              this.addGameLog(`💀 <strong>${neighbor.name}</strong> meurt car assis à côté du Savant Fou!`, dayTag);
+              // Cascades de mort (amoureux, etc.)
+              this.handlePlayerDeath(neighbor.id);
+            });
+          }
+        } else {
+          // Si pas de tracking de position, message d'erreur
+          this.addGameLog(`🧪 <strong>${player.name}</strong> (Savant Fou) meurt - position tracking non disponible`, dayTag);
+        }
+        break;
+      }
+      // Autres rôles PostMortem peuvent être ajoutés ici
+    }
+
+    this.markPostMortemActionProcessed(playerId);
+    this.saveState();
+    return true;
   }
 
   // ========== SYSTÈME DE STATUTS ==========
@@ -869,6 +1126,87 @@ class LoupsGarousGameMaster {
 
       this.addGameLog(summary, `Nuit ${this.getCurrentTurn()}`);
     }
+  }
+
+  // ===== LOG IMMÉDIAT POUR LES ACTIONS DE RÔLE =====
+  logNightRoleAction(role, playerName, description) {
+    const turn = this.state.currentTurn || 1;
+    const nightTag = `[🌛${turn}]`;
+    const logMsg = `${nightTag} ${description}`;
+    this.addGameLog(logMsg);
+  }
+
+  // ===== RÉSOLUTION COMPLÈTE DES ACTIONS DE NUIT =====
+  // IMPORTANT: Le logging des actions est fait AU FUR ET À MESURE pendant les assignations (04-FirstNight-Actions.js)
+  // Cette fonction ne fait que marquer les victimes comme mortes et vérifier les statuts spéciaux
+  resolveNightActions(turn) {
+    const gm = this;
+    const players = gm.state.players || [];
+    const victims = new Set();
+
+    console.log(`[ResolveNight] Résolution des victimes de Nuit ${turn}`);
+
+    // === MARQUER LES VICTIMES COMME MORTES ===
+    // Loups normaux
+    if (gm.state.wolvesVictim) {
+      const victim = players.find(p => p.id === gm.state.wolvesVictim);
+      if (victim) {
+        victim.isDead = true;
+        victims.add(victim.id);
+      }
+    }
+
+    // Loup Blanc
+    if (gm.state.LoupBlancVictim) {
+      const victim = players.find(p => p.id === gm.state.LoupBlancVictim);
+      if (victim && !victim.isDead) {
+        victim.isDead = true;
+        victims.add(victim.id);
+      }
+    }
+
+    // Grand Mechant Loup
+    if (gm.state.MechanLoupVictim) {
+      const victim = players.find(p => p.id === gm.state.MechanLoupVictim);
+      if (victim && !victim.isDead) {
+        victim.isDead = true;
+        victims.add(victim.id);
+      }
+    }
+
+    // === VÉRIFIER LES STATUTS SPÉCIAUX ===
+
+    // 1. ENFANT SAUVAGE - Si l'idole est morte, l'Enfant devient Loup
+    if (gm.state.enfantSauvageIdol?.playerId) {
+      const idol = players.find(p => p.id === gm.state.enfantSauvageIdol.playerId);
+      const enfant = players.find(p => p.roleId === 'Enfant_Sauvage');
+      if (idol && idol.isDead && enfant && !enfant.isDead && enfant.roleId === 'Enfant_Sauvage') {
+        enfant.roleId = 'Simple_Loup_Garou';
+        gm.addGameLog(`🐺 ${enfant.name} devient Loup car son idole ${idol.name} est mort(e)`);
+        console.log(`[SpecialStatus] ${enfant.name} devient Loup (idole morte)`);
+      }
+    }
+
+    // 2. AMOUREUX (CUPIDON) - Si l'un des amoureux meurt, l'autre meurt aussi
+    if (gm.state.cupidoSelection && gm.state.cupidoSelection.length === 2) {
+      const p1 = players.find(p => p.id === gm.state.cupidoSelection[0]);
+      const p2 = players.find(p => p.id === gm.state.cupidoSelection[1]);
+
+      if (p1 && p2) {
+        if (p1.isDead && !p2.isDead) {
+          p2.isDead = true;
+          gm.addGameLog(`💔 ${p2.name} meurt aussi car amoureux de ${p1.name}`);
+          console.log(`[SpecialStatus] ${p2.name} meurt (lien amoureux)`);
+        } else if (p2.isDead && !p1.isDead) {
+          p1.isDead = true;
+          gm.addGameLog(`💔 ${p1.name} meurt aussi car amoureux de ${p2.name}`);
+          console.log(`[SpecialStatus] ${p1.name} meurt (lien amoureux)`);
+        }
+      }
+    }
+
+    console.log(`[ResolveNight] ${victims.size} victimes marquées comme mortes`);
+    gm.saveState();
   }
 
   // ========== HOOKS DE COMPORTEMENT ==========

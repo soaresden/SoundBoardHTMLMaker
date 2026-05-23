@@ -1,0 +1,24 @@
+{
+  "id": "Mamie_Grincheuse",
+  "order": 24,
+  "name": "Mamie Grincheuse",
+  "emoji": "👵",
+  "camp": "Village",
+  "hasNightAction": true,
+  "hasDayAction": false,
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "silence",
+      "phase": "everyNight",
+      "instruction": "👵 Rends quelqu'un sans voix au vote demain",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "mamieSilence"
+    }
+  },
+  "specialBehaviors": [],
+  "tips": "💡 Joue stratégiquement avec le rôle Mamie_Grincheuse!",
+  "winCondition": "Village"
+}

@@ -1,0 +1,21 @@
+{
+  "id": "Lapin_Blanc",
+  "order": 29,
+  "name": "Lapin Blanc",
+  "emoji": "🐰",
+  "camp": "Seul",
+  "hasNightAction": true,
+  "hasDayAction": false,
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "randomEvent",
+      "phase": "everyNight",
+      "instruction": "🐰 Crée un événement aléatoire",
+      "stateKey": "lapinEvent"
+    }
+  },
+  "specialBehaviors": [],
+  "tips": "💡 Joue stratégiquement avec le rôle Lapin_Blanc!",
+  "winCondition": "Seul"
+}
