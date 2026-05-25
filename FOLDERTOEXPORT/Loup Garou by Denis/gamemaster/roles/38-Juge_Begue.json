@@ -1,0 +1,46 @@
+{
+  "id": "Juge_Begue",
+  "order": 38,
+  "name": "Juge Begue",
+  "emoji": "⚖️",
+  "camp": "Village",
+  "origin": "base",
+  "description": "Rôle: Juge_Begue",
+  "instruction": "Une seule fois dans le jeu, vous pouvez demander un nouveau vote immédiatement.",
+  "tips": "Utilisez ce pouvoir quand vous êtes en danger ou pour changer un vote.",
+  "actions": {
+    "UneFoisPartie": {
+      "enabled": true,
+      "type": "secondVote",
+      "phase": "anyTime",
+      "targets": {},
+      "stateKey": "jugeSecondVote"
+    }
+  },
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "⚖️",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "actionStartMessage": "🎭 Juge_Begue agit",
+    "actionCompleteMessage": "✅ Juge_Begue a complété son action"
+  },
+  "winConditions": [
+    {
+      "type": "camp",
+      "condition": "Village",
+      "description": "Gagner avec le camp Village"
+    }
+  ],
+  "specialBehaviors": [],
+  "cardImage": "gamemaster/roles/38-Juge_Begue.png",
+  "pouvoir": "Une seule fois, peut forcer un nouveau vote immédiatement.",
+  "notes": "Une fois activé, tous connaissent votre rôle. Utilisez-le stratégiquement."
+}

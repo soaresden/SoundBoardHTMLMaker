@@ -1,0 +1,46 @@
+{
+  "id": "Humain_Maudit",
+  "order": 47,
+  "name": "Humain Maudit",
+  "emoji": "👻",
+  "camp": "Village",
+  "origin": "base",
+  "description": "Rôle: Humain_Maudit",
+  "instruction": "Vous êtes un Simple Villageois normalement.",
+  "tips": "Agissez comme un Simple Villageois. Si attaqué par les Loups, vous devenez un Simple Loup-Garou.",
+  "actions": {
+    "SpecialDeath": {
+      "enabled": true,
+      "type": "turnOnWolfKill",
+      "phase": "gameProgress",
+      "targets": {},
+      "stateKey": "mauditTurn"
+    }
+  },
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "👻",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "actionStartMessage": "🎭 Humain_Maudit agit",
+    "actionCompleteMessage": "✅ Humain_Maudit a complété son action"
+  },
+  "winConditions": [
+    {
+      "type": "camp",
+      "condition": "Village",
+      "description": "Gagner avec le camp Village"
+    }
+  ],
+  "specialBehaviors": [],
+  "cardImage": "gamemaster/roles/47-Humain_Maudit.png",
+  "pouvoir": "Est un Simple Villageois sauf s'il est attaqué par les Loups.",
+  "notes": "Si les Loups vous visent, vous basculez à leur camp. Sinon, vous gagnez avec le village."
+}

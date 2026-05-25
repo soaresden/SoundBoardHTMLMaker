@@ -1,0 +1,48 @@
+{
+  "id": "Pretre",
+  "order": 20,
+  "name": "Pretre",
+  "emoji": "⛪",
+  "camp": "Village",
+  "origin": "base",
+  "description": "Rôle: Pretre",
+  "instruction": "Chaque nuit, bénissez ou maudissez un joueur.",
+  "tips": "Bénissez les amis, maudissez les ennemis. Gardez vos bénédictions secrètes.",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "bless",
+      "phase": "everyNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "pretrebless"
+    }
+  },
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "⛪",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "actionStartMessage": "🎭 Pretre agit",
+    "actionCompleteMessage": "✅ Pretre a complété son action"
+  },
+  "winConditions": [
+    {
+      "type": "camp",
+      "condition": "Village",
+      "description": "Gagner avec le camp Village"
+    }
+  ],
+  "specialBehaviors": [],
+  "cardImage": "gamemaster/roles/20-Pretre.png",
+  "pouvoir": "Peut bénir ou maudire un joueur avec des effets spéciaux.",
+  "notes": "Les effets dépendent de si le joueur est un Loup ou un Villageois. Vous gagnez avec le village."
+}

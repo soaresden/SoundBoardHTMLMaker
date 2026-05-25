@@ -1,0 +1,37 @@
+{
+  "id": "Villageois",
+  "order": 49,
+  "name": "Villageois",
+  "emoji": "👨‍🌾",
+  "camp": "Village",
+  "origin": "base",
+  "pouvoir": "Aucun pouvoir spécial",
+  "instruction": "Vous êtes un simple villageois. De jour, participez au vote pour éliminer un loup-garou. De nuit, dormez.",
+  "tips": "Observez les comportements des autres joueurs. Construisez des alliances. Votez intelligemment.",
+  "notes": "Vous gagnez quand tous les loups-garous sont morts. Pas d'action spéciale la nuit.",
+
+  "gamePhases": [],
+
+  "winConditions": [
+    {
+      "type": "camp",
+      "value": "Village",
+      "description": "Gagne avec le camp Village quand tous les loups-garous sont morts"
+    }
+  ],
+
+  "specialBehaviors": [],
+
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "👨‍🌾",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+
+  "cardImage": "gamemaster/roles/49-Villageois_Villageois.png"
+}

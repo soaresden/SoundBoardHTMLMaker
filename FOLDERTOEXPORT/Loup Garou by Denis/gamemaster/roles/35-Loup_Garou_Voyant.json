@@ -1,0 +1,48 @@
+{
+  "id": "Loup_Garou_Voyant",
+  "order": 35,
+  "name": "Loup Garou Voyant",
+  "emoji": "🐺",
+  "camp": "Loups",
+  "origin": "base",
+  "description": "Rôle: Loup_Garou_Voyant",
+  "instruction": "Chaque nuit, sélectionnez un joueur pour découvrir son rôle exact.",
+  "tips": "Partagez les informations utiles avec les autres Loups. Cachez votre identité.",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "hunt",
+      "phase": "everyNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "loupVoyantKill"
+    }
+  },
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "🐺",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "actionStartMessage": "🎭 Loup_Garou_Voyant agit",
+    "actionCompleteMessage": "✅ Loup_Garou_Voyant a complété son action"
+  },
+  "winConditions": [
+    {
+      "type": "camp",
+      "condition": "Loups",
+      "description": "Gagner avec le camp Loups"
+    }
+  ],
+  "specialBehaviors": [],
+  "cardImage": "gamemaster/roles/35-Loup_Garou_Voyant.png",
+  "pouvoir": "Découvre le rôle exact d'un joueur chaque nuit comme la Voyante.",
+  "notes": "Vous gagnez avec les Loups. Si vous êtes le dernier Loup, vous devenez Simple Loup-Garou."
+}

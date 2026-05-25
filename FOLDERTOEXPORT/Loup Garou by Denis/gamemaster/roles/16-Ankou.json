@@ -1,0 +1,48 @@
+{
+  "id": "Ankou",
+  "order": 16,
+  "name": "Ankou",
+  "emoji": "☠️",
+  "camp": "Village",
+  "origin": "base",
+  "description": "Rôle: Ankou",
+  "instruction": "Après votre mort, vous pouvez continuer à voter secrètement pendant 2 tours.",
+  "tips": "Gardez votre rôle secret. Utilisez vos votes après votre mort pour aider le village.",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "mark",
+      "phase": "everyNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "ankouMark"
+    }
+  },
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "☠️",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "actionStartMessage": "🎭 Ankou agit",
+    "actionCompleteMessage": "✅ Ankou a complété son action"
+  },
+  "winConditions": [
+    {
+      "type": "camp",
+      "condition": "Village",
+      "description": "Gagner avec le camp Village"
+    }
+  ],
+  "specialBehaviors": [],
+  "cardImage": "gamemaster/roles/16-Ankou.png",
+  "pouvoir": "Après sa mort, continue à voter depuis le cimetière pendant 2 tours.",
+  "notes": "Vos votes ne sont pas visibles mais comptent dans l'élimination du jour. Personne ne sait que vous votez."
+}

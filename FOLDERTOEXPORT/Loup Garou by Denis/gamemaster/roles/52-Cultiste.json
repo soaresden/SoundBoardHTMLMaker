@@ -1,0 +1,46 @@
+{
+  "id": "Cultiste",
+  "order": 52,
+  "name": "Cultiste",
+  "emoji": "🕷️",
+  "camp": "Loups",
+  "origin": "base",
+  "description": "Rôle: Cultiste",
+  "instruction": "Chaque nuit, tentez d'enrôler un joueur à votre culte.",
+  "tips": "Enrôlez les joueurs importants. Renforcez votre culte pour gagner ensemble.",
+  "actions": {
+    "NoAction": {
+      "enabled": true,
+      "type": "disguisedWolf",
+      "phase": "none",
+      "targets": {},
+      "stateKey": "cultiste"
+    }
+  },
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "🕷️",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "actionStartMessage": "🎭 Cultiste agit",
+    "actionCompleteMessage": "✅ Cultiste a complété son action"
+  },
+  "winConditions": [
+    {
+      "type": "camp",
+      "condition": "Loups",
+      "description": "Gagner avec le camp Loups"
+    }
+  ],
+  "specialBehaviors": [],
+  "cardImage": "gamemaster/roles/52-Cultiste.png",
+  "pouvoir": "Peut enrôler d'autres joueurs à son culte.",
+  "notes": "Vous gagnez quand votre culte compte plus de membres que n'importe quel camp."
+}

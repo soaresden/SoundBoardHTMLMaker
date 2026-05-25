@@ -1,0 +1,326 @@
+// ========================================
+// LOADER DYNAMIQUE - Charge UNIQUEMENT les rôles sélectionnés depuis JSON
+// ========================================
+// Cette fonction fusionne les données JSON avec window.ROLES_DATA
+// pour une source unique de vérité
+// Optimisé: charge seulement les rôles utilisés dans la partie
+
+// Mapping de roleId -> nom du fichier JSON
+const ROLE_FILE_MAPPING = {
+  'Cupidon': '01-Cupidon',
+  'Enfant_Sauvage': '02-Enfant_Sauvage',
+  'Chien_Loup': '03-Chien_Loup',
+  'Abominable_Sectaire': '04-Abominable_Sectaire',
+  'Voyante': '05-Voyante',
+  'Sorcière': '06-Sorcière',
+  'Ancien': '07-Ancien',
+  'Ange': '08-Ange',
+  'Salvateur': '09-Salvateur',
+  'Voleur': '10-Voleur',
+  'Petite_Fille': '11-Petite_Fille',
+  'Renard': '12-Renard',
+  'Corbeau': '13-Corbeau',
+  'Servante_Devouee': '14-Servante_Devouee',
+  'Joueur_Flute': '15-Joueur_Flute',
+  'Ankou': '16-Ankou',
+  'Marionnettiste': '17-Marionnettiste',
+  'Chaman': '18-Chaman',
+  'Garde_Du_Corps': '19-Garde_Du_Corps',
+  'Pretre': '20-Pretre',
+  'Gitane': '21-Gitane',
+  'Noctambule': '22-Noctambule',
+  'Mystique': '23-Mystique',
+  'Mamie_Grincheuse': '24-Mamie_Grincheuse',
+  'Fille_Joie': '25-Fille_Joie',
+  'Comedien': '26-Comedien',
+  'Necromancien': '27-Necromancien',
+  'Arnacoeur': '28-Arnacoeur',
+  'Lapin_Blanc': '29-Lapin_Blanc',
+  'Tueur_Serie': '30-Tueur_Serie',
+  'Pyromane': '31-Pyromane',
+  'Infect_Pere_Loups': '32-Infect_Pere_Loups',
+  'Grand_Mechant_Loup': '33-Grand_Mechant_Loup',
+  'Simple_Loup_Garou': '34-Simple_Loup_Garou',
+  'Loup_Garou_Voyant': '35-Loup_Garou_Voyant',
+  'Loup_Garou_Blanc': '36-Loup_Garou_Blanc',
+  'Tireur': '37-Tireur',
+  'Juge_Begue': '38-Juge_Begue',
+  'Chasseur': '39-Chasseur',
+  'Chevalier_Epee_Rouille': '40-Chevalier_Epee_Rouille',
+  'Fils_Lune': '41-Fils_Lune',
+  'Louveteau': '42-Louveteau',
+  'Lepreux': '43-Lepreux',
+  'Savant_Fou': '44-Savant_Fou',
+  'Ange_Dechu': '45-Ange_Dechu',
+  'Gros_Dur': '46-Gros_Dur',
+  'Humain_Maudit': '47-Humain_Maudit',
+  'Porteur_Amulette': '48-Porteur_Amulette',
+  'Villageois_Villageois': '49-Villageois_Villageois',
+  'Bouc_Emissaire': '50-Bouc_Emissaire',
+  'Idiot_Village': '51-Idiot_Village',
+  'Cultiste': '52-Cultiste',
+  'Capitaine': '53-Capitaine',
+  'President': '54-President',
+  'Deux_Soeurs': '55-Deux_Soeurs',
+  'Trois_Freres': '56-Trois_Freres',
+  'Montreur_Ours': '57-Montreur_Ours'
+};
+
+const CACHE_KEY = 'LoupsGarous_RolesJSON_Cache';
+const CACHE_VERSION = 11; // Fixed: emoji colors (emojiColor), Salvateur with buttons, Voyante role display
+
+// ===== INITIALISER IMMÉDIATEMENT =====
+if (!window.ROLES_DATA) {
+  window.ROLES_DATA = { roles: {} };
+}
+if (!window.ROLES_DATA.roles) {
+  window.ROLES_DATA.roles = {};
+}
+
+// Initialiser le cache global des visuels si pas déjà fait
+if (!window.ROLE_VISUALS) {
+  window.ROLE_VISUALS = {};
+}
+
+// Restaurer depuis le cache IMMÉDIATEMENT (synchrone)
+function restoreCacheSync() {
+  try {
+    const cachedData = localStorage.getItem(CACHE_KEY);
+    if (cachedData) {
+      const cached = JSON.parse(cachedData);
+      if (cached.version === CACHE_VERSION && cached.rolesData && window.ROLES_DATA && window.ROLES_DATA.roles) {
+        Object.assign(window.ROLES_DATA.roles, cached.rolesData);
+        console.log('✓ Cache restauré synchronement');
+        return true;
+      } else if (cached.version !== CACHE_VERSION) {
+        // Cache invalidé - nouvelle version détectée
+        console.log(`⚠️ Cache invalidé: version ${cached.version} vs CACHE_VERSION ${CACHE_VERSION}`);
+        localStorage.removeItem(CACHE_KEY);
+      }
+    }
+  } catch (e) {
+    console.warn('Erreur lors de la restauration du cache:', e);
+  }
+  return false;
+}
+
+// Restaurer le cache dès que possible
+restoreCacheSync();
+
+// Fonction principale: charger UNIQUEMENT les rôles sélectionnés
+async function loadSelectedRolesFromJSON(selectedRoleIds) {
+  if (!selectedRoleIds || selectedRoleIds.length === 0) {
+    console.log('ℹ️ Aucun rôle sélectionné à charger');
+    return;
+  }
+
+  try {
+    const cachedData = localStorage.getItem(CACHE_KEY);
+    let cachedRoles = {};
+
+    // Charger les rôles en cache s'ils existent
+    if (cachedData) {
+      try {
+        const cached = JSON.parse(cachedData);
+        if (cached.version === CACHE_VERSION && cached.rolesData) {
+          cachedRoles = cached.rolesData;
+        }
+      } catch (e) {
+        // Cache invalide, ignore
+      }
+    }
+
+    const rolesData = { ...cachedRoles };
+    let loadedCount = 0;
+    const neededRoles = [];
+
+    // Identifier les rôles à charger
+    for (const roleId of selectedRoleIds) {
+      if (!rolesData[roleId]) {
+        // Rôle pas en cache - à fetcher
+        neededRoles.push(roleId);
+      }
+    }
+
+    // Charger les rôles manquants depuis les fichiers JSON
+    for (const roleId of neededRoles) {
+      const fileName = ROLE_FILE_MAPPING[roleId];
+      if (!fileName) {
+        console.warn(`⚠️ Pas de fichier JSON trouvé pour ${roleId}`);
+        continue;
+      }
+
+      try {
+        const timestamp = Date.now();
+        const response = await fetch(`gamemaster/roles/${fileName}.json?v=${timestamp}`);
+        if (!response.ok) {
+          console.warn(`❌ Impossible de charger ${fileName}.json`);
+          continue;
+        }
+        const roleData = await response.json();
+
+        if (roleData.id) {
+          // Fusionner avec window.ROLES_DATA
+          if (window.ROLES_DATA && window.ROLES_DATA.roles) {
+            window.ROLES_DATA.roles[roleData.id] = {
+              ...window.ROLES_DATA.roles[roleData.id],
+              ...roleData
+            };
+            console.log(`✓ ${roleData.id} fusionné - visual présent:`, !!roleData.visual, 'data keys:', Object.keys(roleData));
+          }
+          rolesData[roleData.id] = roleData;
+
+          // Stocker les visuels dans le cache global pour un accès rapide
+          if (roleData.visual) {
+            window.ROLE_VISUALS[roleData.id] = roleData.visual;
+            console.log(`🎨 Visuels stockés pour ${roleData.id}:`, Object.keys(roleData.visual));
+          }
+          if (roleData.actions) {
+            const visuals = {};
+            for (const phase in roleData.actions) {
+              const action = roleData.actions[phase];
+              if (action.visual) {
+                Object.assign(visuals, action.visual);
+              }
+            }
+            if (Object.keys(visuals).length > 0) {
+              window.ROLE_VISUALS[roleData.id] = { ...window.ROLE_VISUALS[roleData.id], ...visuals };
+              console.log(`🎨 Visuels actions stockés pour ${roleData.id}:`, Object.keys(visuals));
+            }
+          }
+
+          loadedCount++;
+          console.log(`✓ ${roleData.id} chargé depuis JSON`);
+        }
+      } catch (error) {
+        console.error(`Erreur lors du chargement de ${fileName}:`, error);
+      }
+    }
+
+    // Sauvegarder le cache mis à jour
+    if (loadedCount > 0) {
+      try {
+        const cacheData = {
+          version: CACHE_VERSION,
+          timestamp: new Date().toISOString(),
+          rolesData: rolesData
+        };
+        localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+        console.log(`✓ Cache mis à jour (${loadedCount} nouveaux rôles)`);
+      } catch (e) {
+        console.warn('Impossible de sauvegarder le cache:', e);
+      }
+    }
+
+    console.log(`✓ Rôles sélectionnés chargés: ${selectedRoleIds.join(', ')}`);
+
+    // ⚠️ IMPORTANT: Après le chargement, reconstruire ROLE_ACTIONS depuis les nouvelles données
+    if (typeof window.rebuildRoleDataFromJSON === 'function') {
+      console.log('🔄 Reconstruction de ROLE_ACTIONS après chargement des rôles...');
+      window.rebuildRoleDataFromJSON();
+    } else {
+      console.warn('⚠️ rebuildRoleDataFromJSON non trouvée pour reconstruction post-load');
+    }
+  } catch (error) {
+    console.error('Erreur lors du chargement des rôles JSON:', error);
+  }
+}
+
+// ========================================
+// FONCTION UTILITAIRE: Obtenir l'emoji d'un rôle depuis le JSON
+// ========================================
+function getVisualEmoji(roleId) {
+  if (!roleId || !window.ROLES_DATA?.roles?.[roleId]) {
+    return '❓'; // Fallback si rôle non trouvé
+  }
+  return window.ROLES_DATA.roles[roleId].visualEmoji || '❓';
+}
+
+// Exposer les fonctions globalement
+window.loadSelectedRolesFromJSON = loadSelectedRolesFromJSON;
+window.getVisualEmoji = getVisualEmoji;
+
+// ========================================
+// Charger les couleurs des états depuis JSON
+// ========================================
+async function loadStateColorsFromJSON() {
+  try {
+    const timestamp = Date.now();
+    const response = await fetch(`gamemaster/config/game-states-colors.json?v=${timestamp}`);
+    if (!response.ok) {
+      console.warn('❌ Impossible de charger game-states-colors.json');
+      return;
+    }
+    const stateColorsData = await response.json();
+
+    if (stateColorsData.stateColors) {
+      // Stocker dans le cache global
+      window.STATE_COLORS = stateColorsData.stateColors;
+      console.log('✓ Couleurs des états chargées depuis JSON:', Object.keys(window.STATE_COLORS));
+    }
+  } catch (error) {
+    console.error('Erreur lors du chargement des couleurs des états:', error);
+  }
+}
+
+// Charger les couleurs d'états au démarrage
+loadStateColorsFromJSON();
+window.loadStateColorsFromJSON = loadStateColorsFromJSON;
+
+// ========================================
+// Charger les descriptions de TOUS les rôles au démarrage
+// ========================================
+async function loadAllRolesDescriptions() {
+  if (!window.ROLES_DATA) {
+    window.ROLES_DATA = { roles: {} };
+  }
+
+  if (!window.ROLES_DATA.roles) {
+    window.ROLES_DATA.roles = {};
+  }
+
+  const rolesLoaded = [];
+  let successCount = 0;
+
+  // Charger la description de CHAQUE rôle
+  for (const [roleId, fileName] of Object.entries(ROLE_FILE_MAPPING)) {
+    try {
+      const response = await fetch(`gamemaster/roles/${fileName}.json`);
+      if (!response.ok) {
+        console.warn(`⚠️ Description non disponible pour ${roleId}`);
+        continue;
+      }
+
+      const roleData = await response.json();
+
+      if (roleData.id && roleData.description) {
+        // Fusionner UNIQUEMENT la description
+        if (!window.ROLES_DATA.roles[roleData.id]) {
+          window.ROLES_DATA.roles[roleData.id] = {};
+        }
+        window.ROLES_DATA.roles[roleData.id].description = roleData.description;
+        window.ROLES_DATA.roles[roleData.id].image = roleData.image;
+        rolesLoaded.push(roleData.id);
+        successCount++;
+      }
+    } catch (error) {
+      console.warn(`⚠️ Erreur lors du chargement de ${fileName}:`, error.message);
+    }
+  }
+
+  console.log(`✓ Descriptions chargées pour ${successCount}/${Object.keys(ROLE_FILE_MAPPING).length} rôles`);
+  return rolesLoaded;
+}
+
+// Charger toutes les descriptions au démarrage
+loadAllRolesDescriptions().then(() => {
+  console.log('✓ Toutes les descriptions des rôles sont disponibles');
+
+  // Déclencher un re-render si gameUI est disponible (descriptions sont maintenant disponibles)
+  if (window.gameUI && window.gameUI.render) {
+    console.log('🔄 Re-rendering UI après chargement des descriptions');
+    window.gameUI.render();
+  }
+});
+
+window.loadAllRolesDescriptions = loadAllRolesDescriptions;

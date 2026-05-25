@@ -1,0 +1,48 @@
+{
+  "id": "Noctambule",
+  "order": 22,
+  "name": "Noctambule",
+  "emoji": "🦉",
+  "camp": "Village",
+  "origin": "base",
+  "description": "Rôle: Noctambule",
+  "instruction": "Chaque nuit, sélectionnez un joueur pour bloquer son pouvoir.",
+  "tips": "Bloquez les rôles puissants comme la Sorcière ou la Voyante. Variez vos cibles.",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "spy",
+      "phase": "everyNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "noctambuloObserve"
+    }
+  },
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "🦉",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "actionStartMessage": "🎭 Noctambule agit",
+    "actionCompleteMessage": "✅ Noctambule a complété son action"
+  },
+  "winConditions": [
+    {
+      "type": "camp",
+      "condition": "Village",
+      "description": "Gagner avec le camp Village"
+    }
+  ],
+  "specialBehaviors": [],
+  "cardImage": "gamemaster/roles/22-Noctambule.png",
+  "pouvoir": "Chaque nuit, choisit un joueur dont elle bloque le pouvoir pour cette nuit.",
+  "notes": "Le joueur bloqué ne saura pas qu'il a été bloqué. C'est un rôle de rôle de voyance mineur."
+}

@@ -1,0 +1,46 @@
+{
+  "id": "Lapin_Blanc",
+  "order": 29,
+  "name": "Lapin Blanc",
+  "emoji": "🐰",
+  "camp": "Seul",
+  "origin": "base",
+  "description": "Rôle: Lapin_Blanc",
+  "instruction": "Chaque nuit, donnez du chocolat à jusqu'à 2 joueurs vivants.",
+  "tips": "Donnez du chocolat intelligemment pour identifier les joueurs importants.",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "randomEvent",
+      "phase": "everyNight",
+      "targets": {},
+      "stateKey": "lapinEvent"
+    }
+  },
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "🐰",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "actionStartMessage": "🎭 Lapin_Blanc agit",
+    "actionCompleteMessage": "✅ Lapin_Blanc a complété son action"
+  },
+  "winConditions": [
+    {
+      "type": "camp",
+      "condition": "Seul",
+      "description": "Gagner avec le camp Seul"
+    }
+  ],
+  "specialBehaviors": [],
+  "cardImage": "gamemaster/roles/29-Lapin_Blanc.png",
+  "pouvoir": "Doit donner du chocolat à tous les joueurs vivants. Peut en donner 2 par nuit.",
+  "notes": "C'est un rôle solitaire similaire au Joueur de Flute. Vous gagnez si vous donnez du chocolat à tout le monde vivant."
+}

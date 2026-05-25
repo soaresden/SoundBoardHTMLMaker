@@ -1,0 +1,48 @@
+{
+  "id": "Renard",
+  "order": 12,
+  "name": "Renard",
+  "emoji": "🦊",
+  "camp": "Village",
+  "origin": "base",
+  "description": "Rôle: Renard",
+  "instruction": "Chaque nuit, sélectionnez 3 joueurs pour connaître le nombre de Loups parmi eux.",
+  "tips": "Testez différents groupes pour identifier les patterns. Gardez votre rôle secret.",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "discover",
+      "phase": "everyNight",
+      "targets": {
+        "count": 3
+      },
+      "stateKey": "renardDetection"
+    }
+  },
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "🦊",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "actionStartMessage": "🎭 Renard agit",
+    "actionCompleteMessage": "✅ Renard a complété son action"
+  },
+  "winConditions": [
+    {
+      "type": "camp",
+      "condition": "Village",
+      "description": "Gagner avec le camp Village"
+    }
+  ],
+  "specialBehaviors": [],
+  "cardImage": "gamemaster/roles/12-Renard.png",
+  "pouvoir": "Flaire le nombre de Loups parmi 3 joueurs sélectionnés (0, 1, 2 ou 3).",
+  "notes": "Vous apprenez le nombre exact, pas l'identité. Vous pouvez vous tester vous-même."
+}

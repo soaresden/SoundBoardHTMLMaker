@@ -1,0 +1,48 @@
+{
+  "id": "Mamie_Grincheuse",
+  "order": 24,
+  "name": "Mamie Grincheuse",
+  "emoji": "👵",
+  "camp": "Village",
+  "origin": "base",
+  "pouvoir": "Frappe un joueur chaque nuit avec sa canne. Si c'est le Voleur, il meurt. Sinon, il perd son droit de vote.",
+  "description": "Mamie Grincheuse (Mère-Grand) a eu son sac à main volé et est prête à faire n'importe quoi pour le récupérer. Chaque nuit, elle frappe un joueur avec sa canne.",
+  "instruction": "Chaque nuit, sélectionnez un joueur à frapper avec votre canne.",
+  "tips": "Ciblez les joueurs suspects. Si vous touchez le Voleur, vous gagnez.",
+  "notes": "Vous avez une unique objectif: trouver et éliminer le Voleur. Vous gagnez seule si vous l'éliminez.",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "silence",
+      "phase": "everyNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "mamieSilence"
+    }
+  },
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "👵",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "actionStartMessage": "🎭 Mamie_Grincheuse agit",
+    "actionCompleteMessage": "✅ Mamie_Grincheuse a complété son action"
+  },
+  "winConditions": [
+    {
+      "type": "camp",
+      "condition": "Village",
+      "description": "Gagner avec le camp Village"
+    }
+  ],
+  "specialBehaviors": [],
+  "cardImage": "gamemaster/roles/24-Mamie_Grincheuse.png"
+}

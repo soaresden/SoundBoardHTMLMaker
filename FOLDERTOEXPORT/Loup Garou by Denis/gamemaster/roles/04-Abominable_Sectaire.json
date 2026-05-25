@@ -1,0 +1,46 @@
+{
+  "id": "Abominable_Sectaire",
+  "order": 4,
+  "name": "Abominable Sectaire",
+  "emoji": "👹",
+  "camp": "Seul",
+  "origin": "base",
+  "description": "Rôle: Abominable_Sectaire",
+  "instruction": "Vous devez éliminer tous les joueurs du groupe opposé (défini par le Meneur avant le jeu).",
+  "tips": "Déguisez-vous en Simple Villageois. Révélez-vous seulement à la fin quand vous êtes sûr de gagner.",
+  "actions": {
+    "DebutPartie": {
+      "enabled": true,
+      "type": "dividePlayers",
+      "phase": "gameStart",
+      "targets": {},
+      "stateKey": "sectaireDivision"
+    }
+  },
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "👹",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "actionStartMessage": "🎭 Abominable_Sectaire agit",
+    "actionCompleteMessage": "✅ Abominable_Sectaire a complété son action"
+  },
+  "winConditions": [
+    {
+      "type": "camp",
+      "condition": "Seul",
+      "description": "Gagner avec le camp Seul"
+    }
+  ],
+  "specialBehaviors": [],
+  "cardImage": "gamemaster/roles/04-Abominable_Sectaire.png",
+  "pouvoir": "Doit éliminer tous les joueurs d'un groupe défini par le Meneur.",
+  "notes": "C'est le rôle le plus compliqué car vous n'avez aucun pouvoir spécial. Vous gagnez seul."
+}

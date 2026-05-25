@@ -1,0 +1,46 @@
+{
+  "id": "Savant_Fou",
+  "order": 44,
+  "name": "Savant Fou",
+  "emoji": "🧪",
+  "camp": "Village",
+  "origin": "base",
+  "description": "Rôle: Savant_Fou",
+  "instruction": "Chaque nuit, vous devez identifier la position de joueurs spécifiques.",
+  "tips": "Observez attentivement les positions. Gardez vos informations secrètes.",
+  "actions": {
+    "PostMortem": {
+      "enabled": true,
+      "type": "killNeighbors",
+      "phase": "onDeath",
+      "targets": {},
+      "stateKey": "savantEffect"
+    }
+  },
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "🧪",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "actionStartMessage": "🎭 Savant_Fou agit",
+    "actionCompleteMessage": "✅ Savant_Fou a complété son action"
+  },
+  "winConditions": [
+    {
+      "type": "camp",
+      "condition": "Village",
+      "description": "Gagner avec le camp Village"
+    }
+  ],
+  "specialBehaviors": [],
+  "cardImage": "gamemaster/roles/44-Savant_Fou.png",
+  "pouvoir": "Doit reconnaître la position exacte de joueurs importants chaque nuit.",
+  "notes": "C'est un rôle de voyance complexe. Vous gagnez avec le village en utilisant vos observations."
+}

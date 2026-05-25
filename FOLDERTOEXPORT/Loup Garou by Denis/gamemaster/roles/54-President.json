@@ -1,0 +1,46 @@
+{
+  "id": "President",
+  "order": 54,
+  "name": "President",
+  "emoji": "🎩",
+  "camp": "Village",
+  "origin": "base",
+  "description": "Rôle: President",
+  "instruction": "Pendant les votes, votre voix a un poids supplémentaire.",
+  "tips": "Utilisez votre influence politiquement. Cachez votre pouvoir jusqu'au moment crucial.",
+  "actions": {
+    "NoAction": {
+      "enabled": true,
+      "type": "vultureCondition",
+      "phase": "gameProgress",
+      "targets": {},
+      "stateKey": "president"
+    }
+  },
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "🎩",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "actionStartMessage": "🎭 President agit",
+    "actionCompleteMessage": "✅ President a complété son action"
+  },
+  "winConditions": [
+    {
+      "type": "camp",
+      "condition": "Village",
+      "description": "Gagner avec le camp Village"
+    }
+  ],
+  "specialBehaviors": [],
+  "cardImage": "gamemaster/roles/54-President.png",
+  "pouvoir": "A un pouvoir politique spécial au moment du vote.",
+  "notes": "Une fois révélé, vous devenez une cible prioritaire. Vous gagnez avec le village."
+}

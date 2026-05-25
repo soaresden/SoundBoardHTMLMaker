@@ -1,0 +1,48 @@
+{
+  "id": "Marionnettiste",
+  "order": 17,
+  "name": "Marionnettiste",
+  "emoji": "🎭",
+  "camp": "Village",
+  "origin": "base",
+  "description": "Rôle: Marionnettiste",
+  "instruction": "Une fois dans le jeu, contrôlez les votes d'un joueur pendant un jour complet.",
+  "tips": "Gardez l'identité de votre marionnette secrète. Contrôlez les votes stratégiquement.",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "controlAction",
+      "phase": "everyNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "marionnetteControl"
+    }
+  },
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "🎭",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "actionStartMessage": "🎭 Marionnettiste agit",
+    "actionCompleteMessage": "✅ Marionnettiste a complété son action"
+  },
+  "winConditions": [
+    {
+      "type": "camp",
+      "condition": "Village",
+      "description": "Gagner avec le camp Village"
+    }
+  ],
+  "specialBehaviors": [],
+  "cardImage": "gamemaster/roles/17-Marionnettiste.png",
+  "pouvoir": "Désigne un joueur comme 'marionnette' qui obéit à ses ordres pendant la journée.",
+  "notes": "La marionnette ne sait pas qu'elle est contrôlée. Le contrôle ne dure qu'un jour."
+}

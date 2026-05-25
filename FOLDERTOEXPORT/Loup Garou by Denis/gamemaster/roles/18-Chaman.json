@@ -1,0 +1,48 @@
+{
+  "id": "Chaman",
+  "order": 18,
+  "name": "Chaman",
+  "emoji": "🧙",
+  "camp": "Village",
+  "origin": "base",
+  "description": "Rôle: Chaman",
+  "instruction": "Chaque nuit, vous contactez un esprit pour obtenir une information.",
+  "tips": "Posez des questions stratégiques aux esprits. Cachez vos découvertes.",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "talkToDead",
+      "phase": "everyNightFrom2",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "chamanTalk"
+    }
+  },
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "🧙",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "actionStartMessage": "🎭 Chaman agit",
+    "actionCompleteMessage": "✅ Chaman a complété son action"
+  },
+  "winConditions": [
+    {
+      "type": "camp",
+      "condition": "Village",
+      "description": "Gagner avec le camp Village"
+    }
+  ],
+  "specialBehaviors": [],
+  "cardImage": "gamemaster/roles/18-Chaman.png",
+  "pouvoir": "Peut communiquer avec les esprits pour obtenir des informations.",
+  "notes": "C'est un rôle de voyance spirituelle. Vous gagnez avec le village."
+}

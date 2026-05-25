@@ -1,0 +1,48 @@
+{
+  "id": "Grand_Mechant_Loup",
+  "order": 33,
+  "name": "Grand Mechant Loup",
+  "emoji": "🐺",
+  "camp": "Loups",
+  "origin": "base",
+  "description": "Rôle: Grand_Mechant_Loup",
+  "instruction": "Chaque nuit, tant qu'aucun autre Loup n'a été tué, sélectionnez une victime supplémentaire.",
+  "tips": "Terminez le jeu rapidement avant que les villageois ne vous découvrent. Cible d'abord les rôles puissants.",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "extraKill",
+      "phase": "everyNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "grandLoupKill"
+    }
+  },
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "🐺",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "actionStartMessage": "🎭 Grand_Mechant_Loup agit",
+    "actionCompleteMessage": "✅ Grand_Mechant_Loup a complété son action"
+  },
+  "winConditions": [
+    {
+      "type": "camp",
+      "condition": "Loups",
+      "description": "Gagner avec le camp Loups"
+    }
+  ],
+  "specialBehaviors": [],
+  "cardImage": "gamemaster/roles/33-Grand_Mechant_Loup.png",
+  "pouvoir": "Tant qu'aucun autre Loup n'est mort, peut dévorer une victime supplémentaire chaque nuit.",
+  "notes": "C'est un avantage majeur pour le camp des Loups. Attendez-vous à être une cible prioritaire."
+}

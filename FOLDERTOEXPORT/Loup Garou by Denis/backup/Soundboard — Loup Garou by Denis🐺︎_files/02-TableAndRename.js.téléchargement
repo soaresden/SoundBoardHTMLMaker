@@ -1,0 +1,306 @@
+// ========================================
+// ÉCRAN 2: TABLE SETUP + PLACE PLAYERS
+// ========================================
+
+function renderTableAndRename(gameUI) {
+  const gm = gameUI.gm;
+  const players = gm.state.players;
+  const tableType = gm.state.tableType || 'circle';
+  const tablePresets = {
+    'circle': { width: 140, height: 140 },
+    'oval-v': { width: 100, height: 180 },
+    'rect-v': { width: 80, height: 200 },
+    'square': { width: 140, height: 140 }
+  };
+
+  const preset = tablePresets[tableType];
+  const tableWidth = preset.width;
+  const tableHeight = preset.height;
+
+  const result = gameUI.generatePositionsByTableType(players.length, tableType);
+  const defaultPositions = result.positions;
+  const tableCenter = result.center;
+
+  const scale = 240 / 300;
+  const containerCenter = 120;
+
+  // ===== TRACKER DES POSITIONS POUR SAVANT_FOU =====
+  if (!gm.state.playerPositions) {
+    gm.state.playerPositions = {};
+  }
+
+  players.forEach((p, idx) => {
+    if (!p.tableX || !p.tableY) {
+      if (defaultPositions[idx]) {
+        const posX = defaultPositions[idx].x - tableCenter.x;
+        const posY = defaultPositions[idx].y - tableCenter.y;
+        p.tableX = containerCenter + (posX * scale);
+        p.tableY = containerCenter + (posY * scale);
+
+        // Sauvegarder la position de table et l'index circulaire
+        gm.state.playerPositions[p.id] = {
+          x: p.tableX,
+          y: p.tableY,
+          circleIndex: idx,
+          totalPlayers: players.length
+        };
+
+        gm.saveState();
+      }
+    }
+  });
+
+  const playerPoints = players.map((p) => {
+    // Vérifier si le joueur est mort
+    const isDead = p.statusData && p.statusData.Mort;
+    const deadStyle = isDead ? 'opacity: 0.4; filter: grayscale(100%);' : '';
+    const playerInitial = p.name.charAt(0).toUpperCase();
+
+    // Déterminer l'emoji et la couleur à afficher
+    let displayContent = playerInitial; // Par défaut: première lettre du nom
+    let bgColor = 'rgba(81, 116, 219, 0.3)';
+    let borderColor = 'var(--gm-border)';
+
+    if (p.roleId) {
+      // Si rôle assigné: montrer l'emoji du rôle
+      const roleEmoji = window.getVisualEmoji?.(p.roleId);
+      if (roleEmoji) {
+        displayContent = roleEmoji;
+      }
+
+      // Appliquer les couleurs du rôle
+      const roleVisual = gameUI?.gm?.getRoleVisual?.(p.roleId, 'self');
+      if (roleVisual) {
+        if (roleVisual.background) bgColor = roleVisual.background;
+        if (roleVisual.border) borderColor = roleVisual.border;
+      }
+    }
+
+    const dotStyle = isDead ? 'background:#000000; border-color:#555555;' : `background:${bgColor}; border-color:${borderColor};`;
+
+    return `
+      <div class="gm-player-point" data-player-id="${p.id}" style="left: ${p.tableX}px; top: ${p.tableY}px; position:absolute; cursor:grab; ${deadStyle}" draggable="true" title="${p.name}${isDead ? ' (MORT)' : ''}">
+        <div class="gm-point-dot" style="${dotStyle}">
+          ${displayContent}
+        </div>
+        <div class="gm-point-name">${p.name}</div>
+      </div>
+    `;
+  }).join('');
+
+  const playerNamesHtml = players.map((p, idx) => `
+    <div style="display:flex; flex-direction:column; align-items:center; gap:1px; padding:1px; background:rgba(0,0,0,0.2); border-radius:1px;">
+      <div style="font-size:7px; opacity:0.7; text-align:center; font-weight:600;">J${idx + 1}</div>
+      <input type="text" class="gm-player-name-input-place" data-player-id="${p.id}" value="${p.name}" placeholder="Nom..." style="width:58%; padding:1px; border:none; background:rgba(0,0,0,0.4); border-radius:2px; color:#e8e8f0; text-align:center; font-size:8px;">
+    </div>
+  `).join('');
+
+  let tableStyle = `position:relative; width:${tableWidth}px; height:${tableHeight}px; margin:0 auto; background:rgba(120, 85, 60, 0.6); border:3px solid var(--gm-border); box-shadow:inset 0 2px 8px rgba(0,0,0,0.5);`;
+  if (tableType === 'circle' || tableType === 'oval-v' || tableType === 'oval-h') {
+    tableStyle += ` border-radius:50%;`;
+  } else if (tableType.includes('rect')) {
+    tableStyle += ` border-radius:8px;`;
+  }
+
+  const tableTypeOptions = Object.keys(tablePresets).map(type =>
+    `<option value="${type}" ${type === tableType ? 'selected' : ''}>${type}</option>`
+  ).join('');
+
+  return `
+    <div class="gm-screen" style="display:flex; flex-direction:column; height:100%; gap:0; padding:0;">
+      <h2 style="padding:16px; margin:0; border-bottom:2px solid rgba(199,125,255,0.3); background:linear-gradient(135deg, rgba(25,25,45,0.95), rgba(35,30,55,0.95)); font-size:18px; color:#e8e8f0;">
+         🪑 Placer les Joueurs & Nommer
+      </h2>
+      <div style="padding:1px; background:linear-gradient(135deg, rgba(20,25,45,0.9), rgba(30,35,55,0.9));">
+        <select id="gmTableTypeSelect" style="width:100%; padding:2px; background:rgba(0,0,0,0.5); border:1px solid rgba(199,125,255,0.3); color:#e8e8f0; border-radius:2px; font-size:8px; box-sizing:border-box;">
+          ${tableTypeOptions}
+        </select>
+      </div>
+      <div style="flex:1; padding:0px; display:flex; flex-direction:row; gap:0px; background:linear-gradient(135deg, rgba(20,25,45,0.9), rgba(30,35,55,0.9)); overflow:hidden; box-sizing:border-box;">
+        <!-- GAUCHE: TABLE (1/3) -->
+        <div style="flex:0 0 33%; display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; background:rgba(0,0,0,0.2); border:1px solid rgba(199,125,255,0.2); border-radius:6px; padding:1px; margin:1px;">
+          <div style="position:relative; display:inline-block;">
+            <div style="position:relative; display:inline-block; width:240px; height:240px;">
+              <div class="gm-table-setup-container" id="gmTableResize" style="${tableStyle} position:absolute; top:50%; left:50%; transform:translate(-50%, -50%);">
+                <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); opacity:0.3; font-size:24px;">🪵</div>
+              </div>
+              <div id="gmPlayersContainer" style="position:absolute; width:240px; height:240px; top:50%; left:50%; transform:translate(-50%, -50%);">
+                ${playerPoints}
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- DROITE: NOMS DES JOUEURS (2/3) -->
+        <div style="flex:0 0 58%; display:flex; flex-direction:column; gap:0px; background:rgba(0,0,0,0.15); border:1px solid rgba(199,125,255,0.2); border-radius:6px; padding:0px; box-sizing:border-box; margin:1px;">
+          <div style="font-size:8px; opacity:0.8; font-weight:600; color:#81dff7; text-align:center; padding:1px; border-bottom:1px solid rgba(199,125,255,0.2);">📝 Nommer</div>
+          <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:0px; flex:1; overflow-y:auto; min-height:0; padding:1px;">
+            ${playerNamesHtml}
+          </div>
+        </div>
+      </div>
+      <div style="padding:12px; border-top:1px solid rgba(199,125,255,0.2); display:flex; gap:12px; background:rgba(0,0,0,0.3); flex-shrink:0;">
+        <button id="gmBtnBackPlacePlayers" style="background:rgba(255,255,255,0.1); border:1px solid rgba(199,125,255,0.3); padding:10px 16px; border-radius:6px; color:#e8e8f0; font-weight:600; cursor:pointer; flex:1;">
+           ← Retour
+        </button>
+        <button id="gmBtnStartGame" style="background:linear-gradient(135deg, #5174db, #c77dff); border:none; padding:10px 16px; border-radius:6px; color:white; font-weight:600; cursor:pointer; flex:1;">
+           Suivant: Première Nuit →
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function attachTableAndRenameEvents(gameUI) {
+  const gm = gameUI.gm;
+
+  document.getElementById('gmTableTypeSelect')?.addEventListener('change', (e) => {
+    gm.state.tableType = e.target.value;
+    gm.state.players.forEach(p => { p.tableX = null; p.tableY = null; });
+    gm.saveState();
+    gameUI.render();
+  });
+
+  document.querySelectorAll('.gm-player-name-input-place').forEach(input => {
+    input.addEventListener('input', (e) => {
+      const playerId = e.target.dataset.playerId;
+      const player = gm.state.players.find(p => p.id === playerId);
+      if (player) {
+        player.name = e.target.value;
+        gm.saveState();
+        // Mise à jour live du nom sur la map
+        const playerPoint = document.querySelector(`[data-player-id="${playerId}"] .gm-point-name`);
+        if (playerPoint) {
+          playerPoint.textContent = e.target.value;
+        }
+      }
+    });
+  });
+
+  document.getElementById('gmBtnBackPlacePlayers')?.addEventListener('click', () => {
+    gm.state.mode = 'selectRoles';
+    gm.saveState();
+    gameUI.render();
+  });
+
+  document.getElementById('gmBtnStartGame')?.addEventListener('click', () => {
+    gm.state.mode = 'assignRoles';
+    gm.state.currentRoleIdx = 0;
+    gm.saveState();
+    gameUI.render();
+  });
+
+  // Drag & drop
+  setupDragDrop(gameUI);
+}
+
+function detectSide(x, y, width, height) {
+  // Déterminer le côté basé sur la position du drop
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const distFromCenter = Math.max(Math.abs(x - centerX), Math.abs(y - centerY));
+  const threshold = Math.min(width, height) / 2.5;
+
+  if (Math.abs(x - centerX) > Math.abs(y - centerY)) {
+    return x < centerX ? 'LEFT' : 'RIGHT';
+  } else {
+    return y < centerY ? 'TOP' : 'BOTTOM';
+  }
+}
+
+function repositionPlayersOnSide(gameUI, side, draggedPlayerId) {
+  const gm = gameUI.gm;
+  const players = gm.state.players;
+  const container = document.getElementById('gmPlayersContainer');
+  if (!container) return;
+
+  const width = 240;
+  const height = 240;
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const padding = 30; // espacement des bords
+
+  // Trouver les joueurs sur ce côté
+  const playersOnSide = players.filter(p => {
+    const x = p.tableX;
+    const y = p.tableY;
+    const detectedSide = detectSide(x, y, width, height);
+    return detectedSide === side;
+  });
+
+  if (playersOnSide.length === 0) return;
+
+  // Recalculer les positions selon le côté
+  if (side === 'TOP' || side === 'BOTTOM') {
+    // Horizontal: positions côte à côte
+    const y = side === 'TOP' ? padding : height - padding;
+    const spacing = (width - 2 * padding) / (playersOnSide.length + 1);
+    playersOnSide.forEach((p, i) => {
+      p.tableX = padding + spacing * (i + 1);
+      p.tableY = y;
+    });
+  } else {
+    // Vertical: positions empilées
+    const x = side === 'LEFT' ? padding : width - padding;
+    const spacing = (height - 2 * padding) / (playersOnSide.length + 1);
+    playersOnSide.forEach((p, i) => {
+      p.tableX = x;
+      p.tableY = padding + spacing * (i + 1);
+    });
+  }
+
+  gm.saveState();
+  gameUI.render();
+}
+
+function setupDragDrop(gameUI) {
+  const container = document.getElementById('gmPlayersContainer');
+  if (!container) return;
+
+  let draggedPoint = null;
+  let draggedPlayerId = null;
+  let offsetX = 0;
+  let offsetY = 0;
+
+  document.querySelectorAll('.gm-player-point').forEach(point => {
+    point.addEventListener('dragstart', (e) => {
+      draggedPoint = point;
+      draggedPlayerId = point.dataset.playerId;
+      const rect = point.getBoundingClientRect();
+      offsetX = e.clientX - rect.left;
+      offsetY = e.clientY - rect.top;
+      e.dataTransfer.effectAllowed = 'move';
+      point.style.opacity = '0.5';
+    });
+
+    point.addEventListener('dragend', () => {
+      point.style.opacity = '1';
+      draggedPoint = null;
+      draggedPlayerId = null;
+    });
+  });
+
+  container.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  });
+
+  container.addEventListener('drop', (e) => {
+    e.preventDefault();
+    if (!draggedPoint || !draggedPlayerId) return;
+
+    const rect = container.getBoundingClientRect();
+    const x = e.clientX - rect.left - offsetX;
+    const y = e.clientY - rect.top - offsetY;
+
+    const maxX = rect.width - 20;
+    const maxY = rect.height - 20;
+    const finalX = Math.max(20, Math.min(x, maxX));
+    const finalY = Math.max(20, Math.min(y, maxY));
+
+    // Détecter le côté
+    const side = detectSide(finalX, finalY, 240, 240);
+
+    // Recalculer les positions du côté
+    repositionPlayersOnSide(gameUI, side, draggedPlayerId);
+  });
+}

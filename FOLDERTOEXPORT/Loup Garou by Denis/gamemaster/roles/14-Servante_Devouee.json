@@ -1,0 +1,48 @@
+{
+  "id": "Servante_Devouee",
+  "order": 14,
+  "name": "Servante Devouee",
+  "emoji": "👸",
+  "camp": "Village",
+  "origin": "base",
+  "description": "Rôle: Servante_Devouee",
+  "instruction": "Une seule fois dans la partie, sacrifiez-vous pour sauver un autre joueur.",
+  "tips": "Gardez votre identité secrète. Utilisez votre sacrifice pour sauver quelqu'un de stratégiquement important.",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "roleSwapDead",
+      "phase": "everyNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "servantSwap"
+    }
+  },
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "👸",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "actionStartMessage": "🎭 Servante_Devouee agit",
+    "actionCompleteMessage": "✅ Servante_Devouee a complété son action"
+  },
+  "winConditions": [
+    {
+      "type": "camp",
+      "condition": "Village",
+      "description": "Gagner avec le camp Village"
+    }
+  ],
+  "specialBehaviors": [],
+  "cardImage": "gamemaster/roles/14-Servante_Devouee.png",
+  "pouvoir": "Donne sa vie pour sauver un autre joueur désigné.",
+  "notes": "Vous ne pouvez sacrifier qu'une fois. Vous mourez, mais vous sauvez le joueur désigné."
+}

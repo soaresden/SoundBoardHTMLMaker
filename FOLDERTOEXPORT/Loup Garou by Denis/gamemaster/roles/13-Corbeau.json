@@ -1,0 +1,48 @@
+{
+  "id": "Corbeau",
+  "order": 13,
+  "name": "Corbeau",
+  "emoji": "🐦‍⬛",
+  "camp": "Village",
+  "origin": "base",
+  "description": "Rôle: Corbeau",
+  "instruction": "Chaque nuit, sélectionnez un joueur à maudire. Il mourra 3 nuits après.",
+  "tips": "Maudissez sans créer d'urgence immédiate. Les malédictions prennent du temps.",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "curse",
+      "phase": "everyNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "corbeauCurse"
+    }
+  },
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "🐦‍⬛",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "actionStartMessage": "🎭 Corbeau agit",
+    "actionCompleteMessage": "✅ Corbeau a complété son action"
+  },
+  "winConditions": [
+    {
+      "type": "camp",
+      "condition": "Village",
+      "description": "Gagner avec le camp Village"
+    }
+  ],
+  "specialBehaviors": [],
+  "cardImage": "gamemaster/roles/13-Corbeau.png",
+  "pouvoir": "Maudit un joueur qui sera éliminé 3 nuits plus tard.",
+  "notes": "Vous pouvez maudire le même joueur pour accélérer sa mort. Le joueur ne sait pas qu'il est maudit."
+}

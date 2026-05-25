@@ -1,0 +1,46 @@
+{
+  "id": "Pyromane",
+  "order": 31,
+  "name": "Pyromane",
+  "emoji": "🔥",
+  "camp": "Seul",
+  "origin": "base",
+  "description": "Rôle: Pyromane",
+  "instruction": "Une seule fois, versez de l'huile sur un joueur chaque nuit, puis enflammez-le.",
+  "tips": "Ciblez les bâtiments des Loups. Planifiez votre incendie stratégiquement.",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "arson",
+      "phase": "everyNight",
+      "targets": {},
+      "stateKey": "pyromaneFire"
+    }
+  },
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "🔥",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "actionStartMessage": "🎭 Pyromane agit",
+    "actionCompleteMessage": "✅ Pyromane a complété son action"
+  },
+  "winConditions": [
+    {
+      "type": "camp",
+      "condition": "Seul",
+      "description": "Gagner avec le camp Seul"
+    }
+  ],
+  "specialBehaviors": [],
+  "cardImage": "gamemaster/roles/31-Pyromane.png",
+  "pouvoir": "Peut déclencher un feu qui élimine un bâtiment et son occupant.",
+  "notes": "Les joueurs couverts d'huile se reconnaissent entre eux chaque nuit. Un rôle de village complexe."
+}

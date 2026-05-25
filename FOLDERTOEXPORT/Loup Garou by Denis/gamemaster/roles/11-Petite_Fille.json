@@ -1,0 +1,46 @@
+{
+  "id": "Petite_Fille",
+  "order": 11,
+  "name": "Petite Fille",
+  "emoji": "👧",
+  "camp": "Village",
+  "origin": "base",
+  "description": "Rôle: Petite_Fille",
+  "instruction": "Chaque nuit, vous observez secrètement les Loups-Garous agir.",
+  "tips": "Utilisez vos observations pour identifier les Loups. Attendez plusieurs confirmations.",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "spy",
+      "phase": "everyNight",
+      "targets": {},
+      "stateKey": "petiteFilleEcoute"
+    }
+  },
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "👧",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "actionStartMessage": "🎭 Petite_Fille agit",
+    "actionCompleteMessage": "✅ Petite_Fille a complété son action"
+  },
+  "winConditions": [
+    {
+      "type": "camp",
+      "condition": "Village",
+      "description": "Gagner avec le camp Village"
+    }
+  ],
+  "specialBehaviors": [],
+  "cardImage": "gamemaster/roles/11-Petite_Fille.png",
+  "pouvoir": "Observe les réunions nocturnes des Loups-Garous sans être vue.",
+  "notes": "Vous voyez les Loups mais n'entendez pas ce qu'ils disent. Les Loups ne savent pas que vous les regardez."
+}

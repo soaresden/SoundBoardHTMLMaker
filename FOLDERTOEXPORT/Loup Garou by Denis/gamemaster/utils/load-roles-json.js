@@ -5,65 +5,65 @@
 // pour une source unique de vérité
 // Optimisé: charge seulement les rôles utilisés dans la partie
 
-// Mapping de roleId -> nom du fichier JSON
+// Mapping de roleId -> nom du fichier JSON (CORRIGÉ avec les vrais noms de fichiers)
 const ROLE_FILE_MAPPING = {
-  'Cupidon': '01-Nuit01-Cupidon',
-  'Enfant_Sauvage': '02-DebutPartie-Enfant_Sauvage',
-  'Chien_Loup': '03-DebutPartie-Chien_Loup',
-  'Abominable_Sectaire': '04-DebutPartie-Abominable_Sectaire',
-  'Voyante': '05-ToutesNuits-Voyante',
-  'Sorciere': '06-ToutesNuits-Sorciere',
-  'Ancien': '07-ToutesNuits-Ancien',
-  'Ange': '08-ToutesNuits-Ange',
-  'Salvateur': '09-ToutesNuits-Salvateur',
-  'Voleur': '10-ToutesNuits-Voleur',
-  'Petite_Fille': '11-ToutesNuits-Petite_Fille',
-  'Renard': '12-ToutesNuits-Renard',
-  'Corbeau': '13-ToutesNuits-Corbeau',
-  'Servante_Devouee': '14-ToutesNuits-Servante_Devouee',
-  'Joueur_Flute': '15-ToutesNuits-Joueur_Flute',
-  'Ankou': '16-ToutesNuits-Ankou',
-  'Marionnettiste': '17-ToutesNuits-Marionnettiste',
-  'Chaman': '18-ToutesNuits-Chaman',
-  'Garde_Du_Corps': '19-ToutesNuits-Garde_Du_Corps',
-  'Pretre': '20-ToutesNuits-Pretre',
-  'Gitane': '21-ToutesNuits-Gitane',
-  'Noctambule': '22-ToutesNuits-Noctambule',
-  'Mystique': '23-ToutesNuits-Mystique',
-  'Mamie_Grincheuse': '24-ToutesNuits-Mamie_Grincheuse',
-  'Fille_Joie': '25-ToutesNuits-Fille_Joie',
-  'Comedien': '26-ToutesNuits-Comédien',
-  'Necromancien': '27-ToutesNuits-Necromancien',
-  'Arnacoeur': '28-ToutesNuits-Arnacoeur',
-  'Lapin_Blanc': '29-ToutesNuits-Lapin_Blanc',
-  'Tueur_Serie': '30-ToutesNuits-Tueur_Serie',
-  'Pyromane': '31-ToutesNuits-Pyromane',
-  'Infect_Pere_Loups': '32-ToutesNuits-Infect_Pere_Loups',
-  'Grand_Mechant_Loup': '33-ToutesNuits-Grand_Mechant_Loup',
-  'Simple_Loup_Garou': '34-ToutesNuits-Simple_Loup_Garou',
-  'Loup_Garou_Voyant': '35-ToutesNuits-Loup_Garou_Voyant',
-  'Loup_Garou_Blanc': '36-ToutesNuits1sur2-Loup_Garou_Blanc',
-  'Tireur': '37-TousLesJours-Tireur',
-  'Juge_Begue': '38-UneFoisPartie-Juge_Begue',
-  'Chasseur': '39-PostMortem-Chasseur',
-  'Chevalier_Epee_Rouille': '40-PostMortem-Chevalier_Epee_Rouille',
-  'Fils_Lune': '41-PostMortem-Fils_Lune',
-  'Louveteau': '42-PostMortem-Louveteau',
-  'Lepreux': '43-PostMortem-Lepreux',
-  'Savant_Fou': '44-PostMortem-Savant_Fou',
-  'Ange_Dechu': '45-SpecialDeath-Ange_Dechu',
-  'Gros_Dur': '46-SpecialDeath-Gros_Dur',
-  'Humain_Maudit': '47-SpecialDeath-Humain_Maudit',
-  'Porteur_Amulette': '48-SpecialDeath-Porteur_Amulette',
-  'Villageois_Villageois': '49-NoAction-Villageois_Villageois',
-  'Bouc_Emissaire': '50-NoAction-Bouc_Emissaire',
-  'Idiot_Village': '51-NoAction-Idiot_Village',
-  'Cultiste': '52-NoAction-Cultiste',
-  'Capitaine': '53-NoAction-Capitaine',
-  'President': '54-NoAction-President',
-  'Deux_Soeurs': '55-NoAction-Deux_Soeurs',
-  'Trois_Freres': '56-NoAction-Trois_Freres',
-  'Montreur_Ours': '57-NoAction-Montreur_Ours'
+  'Cupidon': '01-Cupidon',
+  'Enfant_Sauvage': '02-Enfant_Sauvage',
+  'Chien_Loup': '03-Chien_Loup',
+  'Abominable_Sectaire': '04-Abominable_Sectaire',
+  'Voyante': '05-Voyante',
+  'Sorciere': '06-Sorcière',
+  'Ancien': '07-Ancien',
+  'Ange': '08-Ange',
+  'Salvateur': '09-Salvateur',
+  'Voleur': '10-Voleur',
+  'Petite_Fille': '11-Petite_Fille',
+  'Renard': '12-Renard',
+  'Corbeau': '13-Corbeau',
+  'Servante_Devouee': '14-Servante_Devouee',
+  'Joueur_Flute': '15-Joueur_Flute',
+  'Ankou': '16-Ankou',
+  'Marionnettiste': '17-Marionnettiste',
+  'Chaman': '18-Chaman',
+  'Garde_Du_Corps': '19-Garde_Du_Corps',
+  'Pretre': '20-Pretre',
+  'Gitane': '21-Gitane',
+  'Noctambule': '22-Noctambule',
+  'Mystique': '23-Mystique',
+  'Mamie_Grincheuse': '24-Mamie_Grincheuse',
+  'Fille_Joie': '25-Fille_Joie',
+  'Comedien': '26-Comedien',
+  'Necromancien': '27-Necromancien',
+  'Arnacoeur': '28-Arnacoeur',
+  'Lapin_Blanc': '29-Lapin_Blanc',
+  'Tueur_Serie': '30-Tueur_Serie',
+  'Pyromane': '31-Pyromane',
+  'Infect_Pere_Loups': '32-Infect_Pere_Loups',
+  'Grand_Mechant_Loup': '33-Grand_Mechant_Loup',
+  'Simple_Loup_Garou': '34-Simple_Loup_Garou',
+  'Loup_Garou_Voyant': '35-Loup_Garou_Voyant',
+  'Loup_Garou_Blanc': '36-Loup_Garou_Blanc',
+  'Tireur': '37-Tireur',
+  'Juge_Begue': '38-Juge_Begue',
+  'Chasseur': '39-Chasseur',
+  'Chevalier_Epee_Rouille': '40-Chevalier_Epee_Rouille',
+  'Fils_Lune': '41-Fils_Lune',
+  'Louveteau': '42-Louveteau',
+  'Lepreux': '43-Lepreux',
+  'Savant_Fou': '44-Savant_Fou',
+  'Ange_Dechu': '45-Ange_Dechu',
+  'Gros_Dur': '46-Gros_Dur',
+  'Humain_Maudit': '47-Humain_Maudit',
+  'Porteur_Amulette': '48-Porteur_Amulette',
+  'Villageois_Villageois': '49-Villageois_Villageois',
+  'Bouc_Emissaire': '50-Bouc_Emissaire',
+  'Idiot_Village': '51-Idiot_Village',
+  'Cultiste': '52-Cultiste',
+  'Capitaine': '53-Capitaine',
+  'President': '54-President',
+  'Deux_Soeurs': '55-Deux_Soeurs',
+  'Trois_Freres': '56-Trois_Freres',
+  'Montreur_Ours': '57-Montreur_Ours'
 };
 
 const CACHE_KEY = 'LoupsGarous_RolesJSON_Cache';
@@ -89,6 +89,43 @@ function restoreCacheSync() {
 
 // Restaurer le cache dès que possible
 restoreCacheSync();
+
+// ========== FONCTION DE RECHARGEMENT DU CACHE ==========
+function reloadJsonCache() {
+  console.log('🔄 Vidage du cache localStorage...');
+  localStorage.removeItem('LoupsGarous_RolesJSON_Cache');
+  console.log('✓ Cache vidé. Rechargement de la page...');
+  location.reload();
+}
+
+// Exposer globalement pour accès console
+if (typeof window !== 'undefined') {
+  window.reloadJsonCache = reloadJsonCache;
+}
+
+// ========== CHARGER TOUS LES RÔLES AU DÉMARRAGE ==========
+// Pour que CardSelection affiche les bons textes dès le départ
+async function loadAllRolesAtStartup() {
+  const allRoleIds = Object.keys(ROLE_FILE_MAPPING);
+  console.log(`[LoadRolesJSON] Chargement de tous les ${allRoleIds.length} rôles...`);
+  await loadSelectedRolesFromJSON(allRoleIds);
+  console.log(`[LoadRolesJSON] ✓ Tous les rôles chargés. Re-render UI.`);
+
+  // Après le chargement, re-render l'UI si elle existe déjà
+  // Cela résout la race condition où CardSelection était vide si elle rendait avant que les rôles soient chargés
+  if (window.gameUI && window.gameUI.render) {
+    console.log('[LoadRolesJSON] Calling gameUI.render() to display loaded roles');
+    window.gameUI.render();
+  }
+}
+
+// Charger tous les rôles quand la page est prête
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', loadAllRolesAtStartup);
+} else {
+  // DOM déjà chargé
+  loadAllRolesAtStartup().catch(err => console.error('Erreur lors du chargement des rôles:', err));
+}
 
 // Fonction principale: charger UNIQUEMENT les rôles sélectionnés
 async function loadSelectedRolesFromJSON(selectedRoleIds) {
@@ -134,7 +171,7 @@ async function loadSelectedRolesFromJSON(selectedRoleIds) {
       }
 
       try {
-        const response = await fetch(`gamemaster/roles/${fileName}.json`);
+        const response = await fetch(`gamemaster/roles/${fileName}.json?t=${Date.now()}`);
         if (!response.ok) {
           console.warn(`❌ Impossible de charger ${fileName}.json`);
           continue;

@@ -49,16 +49,29 @@ class GameMasterUI {
       'Comedien': 'Comedien',
       'Juge_Begue': 'Juge_Begue',
       'Necromancien': 'Necromancien',
+      'Villageois_Villageois': 'Simple_Villageois',
     };
 
     this.init();
   }
 
   getCardFile(roleId) {
-    if (this.roleToCardFile[roleId]) {
-      return this.roleToCardFile[roleId];
+    // Load image path from JSON (preferring cardImage, then image)
+    if (window.ROLES_DATA && window.ROLES_DATA.roles && window.ROLES_DATA.roles[roleId]) {
+      const roleData = window.ROLES_DATA.roles[roleId];
+      // Try cardImage first (gamemaster/roles/*)
+      if (roleData.cardImage) {
+        return roleData.cardImage; // Full path like "gamemaster/roles/01-Cupidon.png"
+      }
+      // Fall back to image field
+      if (roleData.image) {
+        return roleData.image; // Return full path like "gamemaster/cards/Cupidon.webp"
+      }
     }
-    return roleId.normalize('NFD').replace(/[-]/g, '').replace(/[\s-]/g, '_');
+
+    // Fallback: construct path if not in JSON (default to gamemaster/roles/)
+    const filename = this.roleToCardFile[roleId] || roleId;
+    return `gamemaster/roles/${filename}.png`;
   }
 
   init() {
@@ -78,21 +91,19 @@ class GameMasterUI {
     overlay = document.createElement('div');
     overlay.id = 'gameMasterOverlay';
     overlay.className = 'game-master-overlay';
+    // Utiliser le module WindowsButtons pour le header
     overlay.innerHTML = `
-      <div class="gm-header" id="gmHeader" style="cursor:move; display:flex; gap:8px; align-items:center;">
-        <div style="padding:4px 8px; color:#81dff7; font-size:14px; flex-shrink:0; touch-action:none;">⋮⋮</div>
-        <div class="gm-title" style="flex:1;">🐺 Maître du Jeu</div>
-        <div style="display: flex; gap: 6px; align-items: center; flex-shrink:0;">
-          <button id="gmBtnReset" title="Réinitialiser la partie" style="width:24px; height:24px; padding:0; border:1px solid rgba(199,125,255,0.4); background:rgba(220,100,100,0.3); border-radius:3px; color:#ff6b6b; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;">↻</button>
-          <button id="gmBtnCollapse" title="Réduire/Maximiser" style="width:24px; height:24px; padding:0; border:1px solid rgba(199,125,255,0.4); background:rgba(100,150,255,0.3); border-radius:3px; color:#6699ff; font-size:14px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;">−</button>
-          <button id="gmBtnClose" title="Fermer" style="width:24px; height:24px; padding:0; border:1px solid rgba(199,125,255,0.4); background:rgba(200,100,200,0.3); border-radius:3px; color:#dd77ff; font-size:14px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;">✕</button>
-        </div>
-      </div>
+      ${renderWindowsButtons()}
       <div class="gm-tabs" id="gmTabs" style="display:flex; gap:0; background:rgba(0,0,0,0.3); border-bottom:1px solid rgba(199,125,255,0.2);">
-        <button id="gmTabGame" class="gm-tab" data-tab="game" style="flex:1; padding:8px 12px; border:none; background:rgba(81,116,219,0.3); color:#81dff7; font-weight:600; cursor:pointer; font-size:11px; border-bottom:2px solid #5174db;">🎮 Jeu</button>
-        <button id="gmTabJournal" class="gm-tab" data-tab="journal" style="flex:1; padding:8px 12px; border:none; background:transparent; color:#aaa; font-weight:600; cursor:pointer; font-size:11px; border-bottom:2px solid transparent;">📖 Journal</button>
+        <button id="gmTabGame" class="gm-tab" data-tab="game" style="flex:1; padding:8px 12px; border:none; background:rgba(81,116,219,0.3); color:#81dff7; font-weight:600; cursor:pointer; font-size:11px; border-bottom:2px solid #5174db;">Jeu</button>
+        <button id="gmTabJournal" class="gm-tab" data-tab="journal" style="flex:1; padding:8px 12px; border:none; background:transparent; color:#aaa; font-weight:600; cursor:pointer; font-size:11px; border-bottom:2px solid transparent;">Journal</button>
       </div>
-      <div class="gm-content" id="gmContent"></div>
+      <div class="gm-content" id="gmContent" style="display:flex; flex:1; gap:0; overflow:hidden;">
+        <!-- Colonne de gauche: Table (persistante) -->
+        <div id="gmLeftColumn" style="flex:0 0 50%; border-right:1px solid rgba(199,125,255,0.2); overflow:auto; background:rgba(10,10,20,0.8);"></div>
+        <!-- Colonne de droite: Contenu de la phase -->
+        <div id="gmRightColumn" style="flex:1; overflow:auto; background:rgba(10,10,20,0.8);"></div>
+      </div>
       <div class="gm-resize-overlay" id="gmResizeOverlay" title="Glissez pour redimensionner"></div>
     `;
     document.body.appendChild(overlay);
@@ -102,16 +113,9 @@ class GameMasterUI {
   }
 
   attachEventListeners() {
-    document.getElementById('gmBtnReset')?.addEventListener('click', () => {
-      if (confirm('Êtes-vous sûr? Cela réinitialisera le jeu.')) {
-        this.gm.resetState();
-        this.gm.state.mode = 'selectRoles';
-        this.gm.saveState();
-        this.render();
-      }
-    });
-    document.getElementById('gmBtnClose')?.addEventListener('click', () => this.close());
-    document.getElementById('gmBtnCollapse')?.addEventListener('click', () => this.toggleMinimized());
+    // Note: Les event listeners pour les boutons du header (Reset, Close, Collapse)
+    // sont maintenant attachés via attachWindowsButtonsEvents() appelé depuis attachEventListenersAfterRender()
+    // Cela évite les doublons et permet une meilleure séparation des responsabilités
 
     // Event listeners pour les onglets
     document.getElementById('gmTabGame')?.addEventListener('click', () => {
@@ -157,36 +161,223 @@ class GameMasterUI {
 
   render() {
     const mode = this.gm.state.mode;
-    const content = document.getElementById('gmContent');
-    if (!content) return;
+    const gmContent = document.getElementById('gmContent');
 
-    let html = '';
+    if (!gmContent) return;
 
     // Afficher le journal si l'onglet journal est actif
     if (this.activeTab === 'journal') {
-      html = this.renderJournal();
+      // En mode journal, on utilise l'ancienne structure (full-width)
+      gmContent.style.display = 'block !important';
+      gmContent.style.flexDirection = 'column';
+      gmContent.style.overflow = 'auto';
+      gmContent.style.padding = '16px';
+      gmContent.innerHTML = this.renderJournal();
+    } else if (mode === 'selectRoles') {
+      // En mode sélection des rôles, afficher en full-width
+      gmContent.style.display = 'block !important';
+      gmContent.style.flexDirection = 'column';
+      gmContent.style.overflow = 'auto';
+      gmContent.style.padding = '0';
+      gmContent.innerHTML = renderCardSelection(this);
+    } else if (mode === 'modeSelection') {
+      // En mode sélection du mode de jeu, afficher en full-width
+      gmContent.style.display = 'block !important';
+      gmContent.style.flexDirection = 'column';
+      gmContent.style.overflow = 'auto';
+      gmContent.style.padding = '0';
+      gmContent.innerHTML = renderModeSelection(this);
     } else {
-      // Afficher le jeu normal
-      if (mode === 'selectRoles') {
-        html = renderChooseCard(this);
-      } else if (mode === 'tableSetup') {
-        html = renderTableAndRename(this);
-      } else if (mode === 'assignRoles') {
-        // Nuit 1 (avec assignation des rôles)
-        html = renderFirstNight(this);
-      } else if (mode === 'night') {
-        // Nuits 2+ (sans assignation, juste actions)
-        html = renderNight(this);
-      } else if (mode === 'mayorElection') {
-        html = renderMayorElection(this);
-      } else if (mode === 'day1' || mode === 'day') {
-        html = renderDay(this);
-      } else if (mode === 'gameRunning') {
-        html = '<div style="padding:20px; color:#e8e8f0; text-align:center;">Jeu en cours...</div>';
-      }
-    }
+      // Mode jeu normal - layout deux colonnes
+      // Recréer les colonnes si elles n'existent pas (elles sont supprimées en mode selectRoles)
+      let leftColumn = document.getElementById('gmLeftColumn');
+      let rightColumn = document.getElementById('gmRightColumn');
 
-    content.innerHTML = html;
+      if (!leftColumn || !rightColumn) {
+        gmContent.style.display = 'flex';
+        gmContent.style.padding = '0';
+        gmContent.style.flexDirection = 'row';
+        gmContent.style.gap = '0';
+        gmContent.style.overflow = 'hidden';
+        gmContent.innerHTML = `
+          <div id="gmLeftColumn" style="flex:0 0 50%; border-right:1px solid rgba(199,125,255,0.2); overflow:auto; background:rgba(10,10,20,0.8); padding:8px; min-height:200px; display:flex; flex-direction:column; box-sizing:border-box;"></div>
+          <div id="gmRightColumn" style="flex:1; overflow:auto; background:rgba(10,10,20,0.8); padding:8px; min-height:200px; display:flex; flex-direction:column; box-sizing:border-box;"></div>
+        `;
+        leftColumn = document.getElementById('gmLeftColumn');
+        rightColumn = document.getElementById('gmRightColumn');
+      }
+
+      gmContent.style.display = 'flex';
+      gmContent.style.padding = '0';
+      gmContent.style.flexDirection = 'row';
+      gmContent.style.overflow = 'hidden';
+
+      // Colonne GAUCHE: Table (toujours)
+      leftColumn.innerHTML = renderLiveMap(this);
+
+      // Colonne DROITE: Contenu de la phase
+      let rightHtml = '';
+      if (mode === 'tableSetup') {
+        const players = this.gm.state.players || [];
+        const tableType = this.gm.state.tableType || 'circle';
+
+        if (tableType === 'circle') {
+          // Mode CERCLE: liste simple draggable - ULTRA COMPACT & PRETTY
+          const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B88B', '#52C41A'];
+          const playersList = players.map((p, idx) => {
+            const color = colors[idx % colors.length];
+            const initials = p.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || `J${idx + 1}`;
+            return `
+              <div class="gm-player-vignette" data-player-id="${p.id}" draggable="true" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:3px 2px; background:linear-gradient(135deg, ${color}20, ${color}10); border:1px solid ${color}60; border-radius:5px; margin:1px; cursor:grab; transition:all 0.15s; flex-shrink:0; min-width:58px; text-align:center; box-shadow:0 1px 4px ${color}30; user-select:none;">
+                <div style="display:flex; align-items:center; justify-content:center; width:24px; height:24px; background:linear-gradient(135deg, ${color}, ${color}dd); border-radius:50%; font-size:10px; font-weight:700; color:white; line-height:1; box-shadow:inset 0 1px 2px rgba(0,0,0,0.2);">${initials}</div>
+                <div style="font-size:7px; font-weight:600; color:#e8e8f0; line-height:1; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.name.substring(0, 10)}</div>
+                <input type="text" class="gm-player-name-input-place" data-player-id="${p.id}" value="${p.name}" placeholder="Nom..." style="width:100%; padding:0.5px 1px; border:0.5px solid ${color}40; background:rgba(0,0,0,0.6); border-radius:2px; color:#fff; text-align:center; font-size:6.5px; font-weight:500;" onclick="event.stopPropagation();">
+              </div>
+            `;
+          }).join('');
+          rightHtml = `
+            <div style="display:flex; flex-direction:column; height:100%; padding:0;">
+              <h3 style="padding:10px 8px; margin:0; border-bottom:1px solid rgba(199,125,255,0.2); color:#81dff7; font-size:11px; flex-shrink:0;">👥 Glissez pour réorganiser</h3>
+              <div id="gmPlayersList" style="flex:1; overflow-y:auto; padding:4px; display:flex; flex-direction:column; gap:0;">
+                ${playersList}
+              </div>
+              <div style="padding:8px 12px; display:flex; gap:12px; background:rgba(0,0,0,0.4); border-top:1px solid rgba(199,125,255,0.2); flex-shrink:0;">
+                <button id="gmBtnBackTableSetup" style="background:rgba(100,100,150,0.3); border:1px solid rgba(199,125,255,0.3); padding:8px 14px; border-radius:4px; color:#c1a8ff; font-weight:600; cursor:pointer; font-size:10px;">
+                   ← Retour
+                </button>
+                <div style="flex:1;"></div>
+                <button id="gmBtnNextTableSetup" style="background:linear-gradient(135deg, #5174db, #c77dff); border:none; padding:8px 14px; border-radius:4px; color:white; font-weight:600; cursor:pointer; font-size:10px;">
+                   Suivant →
+                </button>
+              </div>
+            </div>
+          `;
+        } else {
+          // Mode RECTANGLE: vignettes par zones - toutes dans gmPlayersList pour drag-drop
+          const zoneConfig = this.gm.state.zoneConfig || { top: 2, left: 2, right: 2, bottom: 2 };
+          let playerIdx = 0;
+
+          const createZoneBlock = (zoneName, zoneLabel, count) => {
+            const zonePlayers = players.slice(playerIdx, playerIdx + count);
+            playerIdx += count;
+
+            const vignetteHtml = zonePlayers.map((p, idx) => {
+              const playerIdx = players.indexOf(p) + 1;
+              const shortName = p.name.substring(0, 10);
+              return `
+                <div class="gm-player-vignette" data-player-id="${p.id}" data-zone="${zoneName}" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:2px 3px; background:transparent; border:none; margin:1px; cursor:grab; transition:all 0.2s; flex-shrink:0; user-select:none; line-height:1.1; min-width:50px; text-align:center;" draggable="true" title="${p.name}">
+                  <div style="font-weight:700; color:#81dff7; line-height:1; font-size:8px;">J${playerIdx}</div>
+                  <div style="color:#e8e8f0; font-size:7px; word-break:break-word; width:100%;">${shortName}</div>
+                </div>
+              `;
+            }).join('');
+
+            return `
+              <div class="gm-zone-block" data-zone="${zoneName}" style="flex:1; border:1px solid rgba(199,125,255,0.2); border-radius:2px; padding:4px 3px; margin:2px; background:rgba(50,50,100,0.2); min-height:50px; display:flex; flex-direction:column;">
+                <div style="font-size:7px; color:#81dff7; font-weight:600; margin-bottom:2px; padding-bottom:1px; border-bottom:0.5px solid rgba(199,125,255,0.15); flex-shrink:0;">
+                  ${zoneLabel} (${count})
+                </div>
+                <div class="gm-zone-vignettes" data-zone="${zoneName}" style="display:grid; grid-template-columns:repeat(${Math.min(2, Math.ceil(count / 2))}, 1fr); gap:0px; flex:1; overflow:hidden;">
+                  ${vignetteHtml}
+                </div>
+              </div>
+            `;
+          };
+
+          // Créer les blocs de zones avec layout correct
+          const topPlayers = players.slice(0, zoneConfig.top);
+          const leftPlayers = players.slice(zoneConfig.top, zoneConfig.top + zoneConfig.left);
+          const rightPlayers = players.slice(zoneConfig.top + zoneConfig.left, zoneConfig.top + zoneConfig.left + zoneConfig.right);
+          const bottomPlayers = players.slice(zoneConfig.top + zoneConfig.left + zoneConfig.right);
+
+          const createHorizontalZone = (zoneName, zoneLabel, zonePlayers) => {
+            const html = zonePlayers.map((p, idx) => {
+              const playerIdx = players.indexOf(p) + 1;
+              const shortName = p.name.substring(0, 10);
+              return `
+                <div class="gm-player-vignette" data-player-id="${p.id}" data-zone="${zoneName}" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:2px 3px; background:transparent; border:none; margin:0; cursor:grab; user-select:none; line-height:1.1; flex-shrink:0; text-align:center;" draggable="true" title="${p.name}">
+                  <div style="font-weight:700; color:#81dff7; line-height:1; font-size:8px;">J${playerIdx}</div>
+                  <div style="color:#e8e8f0; font-size:7px; word-break:break-word;">${shortName}</div>
+                </div>
+              `;
+            }).join('');
+            return `
+              <div class="gm-zone-block" style="padding:3px; margin:2px; background:rgba(50,50,100,0.2); border:1px solid rgba(199,125,255,0.2); border-radius:2px;">
+                <div style="font-size:7px; color:#81dff7; font-weight:600; margin-bottom:1px;">
+                  ${zoneLabel} (${zonePlayers.length})
+                </div>
+                <div class="gm-zone-vignettes" data-zone="${zoneName}" style="display:flex; gap:0px; height:45px; align-items:center;">
+                  ${html}
+                </div>
+              </div>
+            `;
+          };
+
+          const createVerticalZone = (zoneName, zoneLabel, zonePlayers) => {
+            const html = zonePlayers.map((p, idx) => {
+              const playerIdx = players.indexOf(p) + 1;
+              const shortName = p.name.substring(0, 10);
+              return `
+                <div class="gm-player-vignette" data-player-id="${p.id}" data-zone="${zoneName}" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:2px 3px; background:transparent; border:none; margin:1px; cursor:grab; transition:all 0.2s; flex-shrink:0; user-select:none; line-height:1.1; text-align:center;" draggable="true" title="${p.name}">
+                  <div style="font-weight:700; color:#81dff7; line-height:1; font-size:8px;">J${playerIdx}</div>
+                  <div style="color:#e8e8f0; font-size:7px; word-break:break-word;">${shortName}</div>
+                </div>
+              `;
+            }).join('');
+            return `
+              <div class="gm-zone-block" style="flex:1; padding:4px 3px; margin:2px; background:rgba(50,50,100,0.2); border:1px solid rgba(199,125,255,0.2); border-radius:2px; display:flex; flex-direction:column;">
+                <div style="font-size:7px; color:#81dff7; font-weight:600; margin-bottom:2px; flex-shrink:0;">
+                  ${zoneLabel} (${zonePlayers.length})
+                </div>
+                <div class="gm-zone-vignettes" data-zone="${zoneName}" style="display:flex; flex-direction:column; gap:1px; flex:1;">
+                  ${html}
+                </div>
+              </div>
+            `;
+          };
+
+          const topBlock = createHorizontalZone('top', '▲ Haut', topPlayers);
+          const leftBlock = createVerticalZone('left', '◀ Gauche', leftPlayers);
+          const rightBlock = createVerticalZone('right', '▶ Droite', rightPlayers);
+          const bottomBlock = createHorizontalZone('bottom', '▼ Bas', bottomPlayers);
+
+          rightHtml = `
+            <div style="display:flex; flex-direction:column; height:100%; padding:0;">
+              <h3 style="padding:8px; margin:0; border-bottom:1px solid rgba(199,125,255,0.2); color:#81dff7; font-size:10px; flex-shrink:0;">👥 Zones</h3>
+              <div id="gmPlayersList" style="flex:1; display:flex; flex-direction:column; overflow-y:auto;">
+                ${topBlock}
+                <div style="display:flex; gap:0; flex:1; min-height:0;">
+                  ${leftBlock}
+                  ${rightBlock}
+                </div>
+                ${bottomBlock}
+              </div>
+              <div style="padding:8px 12px; display:flex; gap:12px; background:rgba(0,0,0,0.4); border-top:1px solid rgba(199,125,255,0.2); flex-shrink:0;">
+                <button id="gmBtnBackTableSetup" style="background:rgba(100,100,150,0.3); border:1px solid rgba(199,125,255,0.3); padding:8px 14px; border-radius:4px; color:#c1a8ff; font-weight:600; cursor:pointer; font-size:10px;">
+                   ← Retour
+                </button>
+                <div style="flex:1;"></div>
+                <button id="gmBtnNextTableSetup" style="background:linear-gradient(135deg, #5174db, #c77dff); border:none; padding:8px 14px; border-radius:4px; color:white; font-weight:600; cursor:pointer; font-size:10px;">
+                   Suivant →
+                </button>
+              </div>
+            </div>
+          `;
+        }
+
+      } else if (mode === 'assignRoles') {
+        rightHtml = renderRoleDetailandTips(this);
+      } else if (mode === 'night') {
+        rightHtml = renderNightPhase(this);
+      } else if (mode === 'mayorElection') {
+        rightHtml = renderMayorElectionPhase(this);
+      } else if (mode === 'day1' || mode === 'day') {
+        rightHtml = renderDayPhase(this);
+      } else if (mode === 'gameRunning') {
+        rightHtml = '<div style="padding:20px; color:#e8e8f0; text-align:center;">Jeu en cours...</div>';
+      }
+      rightColumn.innerHTML = rightHtml;
+    }
 
     // Auto-scroll du log vers le dernier message
     if (this.activeTab === 'journal') {
@@ -198,7 +389,498 @@ class GameMasterUI {
       }, 50);
     }
 
+    // Attacher les événements des contrôles flèches pour mode tableSetup
+    if (mode === 'tableSetup') {
+      this.attachPlayerControlEvents();
+      this.attachTableSetupFooterEvents();
+    }
+
     this.attachEventListenersAfterRender();
+  }
+
+  attachPlayerControlEvents() {
+    const gm = this.gm;
+    const playersList = document.getElementById('gmPlayersList');
+    if (!playersList) return;
+
+    const vignettes = playersList.querySelectorAll('.gm-player-vignette');
+    let draggedElement = null;
+    let draggedIndex = null;
+
+    vignettes.forEach((vignette, idx) => {
+      const playerId = vignette.dataset.playerId;
+
+      // DRAGSTART: Marquer l'élément en cours de déplacement
+      vignette.addEventListener('dragstart', (e) => {
+        draggedElement = vignette;
+        draggedIndex = idx;
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', vignette.innerHTML);
+        // Feedback visuel du drag
+        vignette.style.opacity = '0.6';
+        vignette.style.transform = 'scale(1.05)';
+        vignette.style.boxShadow = '0 4px 12px rgba(255,255,255,0.3)';
+      });
+
+      // DRAGEND: Nettoyer le drag et animations
+      vignette.addEventListener('dragend', (e) => {
+        vignette.style.opacity = '1';
+        vignette.style.transform = 'scale(1)';
+        vignette.style.backgroundColor = 'rgba(81,116,219,0.1)';
+
+        // Nettoyer tous les indicateurs de drop
+        document.querySelectorAll('.gm-drop-indicator').forEach(ind => ind.remove());
+
+        draggedElement = null;
+        draggedIndex = null;
+      });
+
+      // DRAGOVER sur vignette - permet le drop
+      vignette.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (draggedIndex !== null) {
+          console.log(`➡️ DRAGOVER vignette ${idx} (target: ${vignette.dataset.zone})`);
+        }
+      });
+
+      // DROP: Réorganiser les joueurs
+      vignette.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (draggedIndex === null || draggedElement === null) {
+          return;
+        }
+
+        const players = gm.state.players;
+        const draggedPlayer = players[draggedIndex];
+        const tableType = gm.state.tableType || 'circle';
+
+        // MODE SIMPLE (CERCLE): Simple réorganisation de liste
+        if (tableType === 'circle') {
+          const targetIndex = Array.from(vignettes).indexOf(vignette);
+
+          if (draggedIndex === targetIndex) {
+            draggedElement = null;
+            draggedIndex = null;
+            return;
+          }
+
+          // Réorganiser les joueurs
+          players.splice(draggedIndex, 1);
+          const newTarget = draggedIndex < targetIndex ? targetIndex - 1 : targetIndex;
+          players.splice(newTarget, 0, draggedPlayer);
+        }
+        // MODE RECTANGLE: Avec zones
+        else {
+          const targetZone = vignette.dataset.zone;
+          const draggedZone = draggedElement?.dataset.zone;
+          const targetZoneContainer = vignette.closest('.gm-zone-vignettes');
+          const zoneVignettes = Array.from(targetZoneContainer?.querySelectorAll('.gm-player-vignette') || []);
+
+          const isHorizontal = targetZone === 'top' || targetZone === 'bottom';
+          let targetIndexInZone = zoneVignettes.indexOf(vignette);
+          let shouldInsertAfter;
+
+          const rect = vignette.getBoundingClientRect();
+          if (isHorizontal) {
+            const midpoint = rect.left + rect.width / 2;
+            shouldInsertAfter = e.clientX > midpoint;
+          } else {
+            const midpoint = rect.top + rect.height / 2;
+            shouldInsertAfter = e.clientY > midpoint;
+          }
+
+          if (shouldInsertAfter) {
+            targetIndexInZone += 1;
+          }
+
+          const zoneConfig = gm.state.zoneConfig || { top: 0, left: 0, right: 0, bottom: 0 };
+          let zoneStart = 0;
+          if (targetZone === 'left') {
+            zoneStart = zoneConfig.top;
+          } else if (targetZone === 'right') {
+            zoneStart = zoneConfig.top + zoneConfig.left;
+          } else if (targetZone === 'bottom') {
+            zoneStart = zoneConfig.top + zoneConfig.left + zoneConfig.right;
+          }
+
+          let targetIndex = zoneStart + targetIndexInZone;
+
+          if (draggedZone === targetZone && draggedIndex < targetIndex) {
+            targetIndex -= 1;
+          }
+
+          if (draggedIndex === targetIndex) {
+            draggedElement = null;
+            draggedIndex = null;
+            return;
+          }
+
+          players.splice(draggedIndex, 1);
+          players.splice(targetIndex, 0, draggedPlayer);
+
+          if (draggedZone !== targetZone && draggedZone && targetZone) {
+            if (gm.state.zoneConfig[draggedZone] > 0) {
+              gm.state.zoneConfig[draggedZone]--;
+            }
+            gm.state.zoneConfig[targetZone]++;
+          }
+        }
+
+        // Recalculer les positions
+        this.recalculateCirclePositions(players);
+
+        gm.saveState();
+        this.render();
+      });
+
+      // INPUT: Mettre à jour le nom en live sur la map
+      const nameInput = vignette.querySelector('.gm-player-name-input-place');
+      if (nameInput) {
+        nameInput.addEventListener('input', (e) => {
+          const newName = e.target.value;
+          const player = gm.state.players.find(p => p.id === playerId);
+
+          if (player) {
+            player.name = newName;
+
+            // Mettre à jour le nom sur la map
+            const mapPoint = document.querySelector(`.gm-player-point[data-player-id="${playerId}"]`);
+            if (mapPoint) {
+              const nameElement = mapPoint.querySelector('.gm-point-name');
+              if (nameElement) {
+                nameElement.textContent = newName;
+              }
+            }
+
+            // Mettre à jour le label J1, J2, etc. aussi (optionnel, mais bonne UX)
+            const jLabel = vignette.querySelector('div:first-child');
+            if (jLabel) {
+              const jIdx = Array.from(playersList.querySelectorAll('.gm-player-vignette')).indexOf(vignette);
+              jLabel.textContent = `J${jIdx + 1}`;
+            }
+          }
+        });
+
+        // BLUR: Sauvegarder l'état quand on quitte le champ
+        nameInput.addEventListener('blur', (e) => {
+          gm.saveState();
+        });
+      }
+    });
+
+    // Dragover sur chaque conteneur de zone pour montrer l'indicateur
+    document.querySelectorAll('.gm-zone-vignettes').forEach(zoneContainer => {
+      zoneContainer.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+
+        if (draggedIndex === null) {
+          console.log(`⚠️ DRAGOVER on zone but draggedIndex is null`);
+          return;
+        }
+
+        const zone = zoneContainer.dataset.zone;
+        const isHorizontal = zone === 'top' || zone === 'bottom';
+        const vignettes = Array.from(zoneContainer.querySelectorAll('.gm-player-vignette'));
+
+        // Nettoyer les anciens indicateurs
+        document.querySelectorAll('.gm-drop-indicator').forEach(ind => ind.remove());
+
+        // Trouver quelle vignette est la plus proche de la souris
+        let insertIndex = vignettes.length;
+        let closestVignette = null;
+
+        if (isHorizontal) {
+          // Pour zones horizontales: comparer X
+          let closestDistance = Infinity;
+          vignettes.forEach((v, idx) => {
+            const rect = v.getBoundingClientRect();
+            const midpoint = rect.left + rect.width / 2;
+            const distance = Math.abs(e.clientX - midpoint);
+
+            if (distance < closestDistance) {
+              closestDistance = distance;
+              closestVignette = v;
+              insertIndex = e.clientX < midpoint ? idx : idx + 1;
+            }
+          });
+          console.log(`  - Horizontal: closest vignette at index ${insertIndex}, distance ${closestDistance.toFixed(2)}px`);
+        } else {
+          // Pour zones verticales: comparer Y
+          let closestDistance = Infinity;
+          vignettes.forEach((v, idx) => {
+            const rect = v.getBoundingClientRect();
+            const midpoint = rect.top + rect.height / 2;
+            const distance = Math.abs(e.clientY - midpoint);
+
+            if (distance < closestDistance) {
+              closestDistance = distance;
+              closestVignette = v;
+              insertIndex = e.clientY < midpoint ? idx : idx + 1;
+            }
+          });
+          console.log(`  - Vertical: closest vignette at index ${insertIndex}, distance ${closestDistance.toFixed(2)}px`);
+        }
+
+        // Créer et insérer l'indicateur
+        const indicator = document.createElement('div');
+        indicator.className = 'gm-drop-indicator';
+
+        if (isHorizontal) {
+          // Ligne VERTICALE (2px wide, full height) pour zones horizontales
+          indicator.style.cssText = `
+            width: 2px !important;
+            min-width: 2px;
+            max-width: 2px;
+            height: 45px;
+            background: #66d999;
+            flex-shrink: 0 !important;
+            flex-grow: 0 !important;
+            margin: 0 -1px;
+            display: flex;
+          `;
+          console.log(`  - Created VERTICAL indicator (2px wide, 45px tall)`);
+        } else {
+          // Ligne HORIZONTALE (full width, 2px tall) pour zones verticales
+          indicator.style.cssText = `
+            height: 2px !important;
+            min-height: 2px;
+            max-height: 2px;
+            width: 100%;
+            background: #66d999;
+            flex-shrink: 0 !important;
+            flex-grow: 0 !important;
+            margin: -1px 0;
+            display: flex;
+          `;
+          console.log(`  - Created HORIZONTAL indicator (full width, 2px tall)`);
+        }
+
+        if (closestVignette && insertIndex > vignettes.indexOf(closestVignette)) {
+          closestVignette.parentNode.insertBefore(indicator, closestVignette.nextSibling);
+          console.log(`  - Inserted indicator AFTER vignette at index ${vignettes.indexOf(closestVignette)}`);
+        } else if (closestVignette) {
+          closestVignette.parentNode.insertBefore(indicator, closestVignette);
+          console.log(`  - Inserted indicator BEFORE vignette at index ${vignettes.indexOf(closestVignette)}`);
+        } else {
+          zoneContainer.appendChild(indicator);
+          console.log(`  - Appended indicator at end of zone`);
+        }
+      });
+
+      zoneContainer.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (draggedIndex === null || draggedElement === null) {
+          console.log(`❌ DROP on zone container - draggedIndex or draggedElement is null`);
+          return;
+        }
+
+        const zone = zoneContainer.dataset.zone;
+        console.log(`💧 DROP on zone container ${zone}`);
+
+        const vignettes = Array.from(zoneContainer.querySelectorAll('.gm-player-vignette'));
+        const draggedZone = draggedElement?.dataset.zone;
+        const isHorizontal = zone === 'top' || zone === 'bottom';
+
+        const players = gm.state.players;
+        const draggedPlayer = players[draggedIndex];
+
+        console.log(`  - Dragged: ${draggedPlayer.name} (index ${draggedIndex}, zone ${draggedZone}) → ${zone}`);
+
+        // Trouver l'index d'insertion dans la zone
+        let insertIndex = vignettes.length;
+
+        // Calculer où insérer basé sur la position de la souris
+        if (vignettes.length > 0) {
+          let closestDistance = Infinity;
+          vignettes.forEach((v, idx) => {
+            const rect = v.getBoundingClientRect();
+            let distance;
+
+            if (isHorizontal) {
+              const midpoint = rect.left + rect.width / 2;
+              distance = Math.abs(e.clientX - midpoint);
+            } else {
+              const midpoint = rect.top + rect.height / 2;
+              distance = Math.abs(e.clientY - midpoint);
+            }
+
+            if (distance < closestDistance) {
+              closestDistance = distance;
+              if (isHorizontal) {
+                insertIndex = e.clientX < rect.left + rect.width / 2 ? idx : idx + 1;
+              } else {
+                insertIndex = e.clientY < rect.top + rect.height / 2 ? idx : idx + 1;
+              }
+            }
+          });
+        }
+
+        // Convertir l'index de zone en index global dans players[]
+        const zoneConfig = gm.state.zoneConfig || { top: 0, left: 0, right: 0, bottom: 0 };
+        let zoneStart = 0;
+        if (zone === 'left') {
+          zoneStart = zoneConfig.top;
+        } else if (zone === 'right') {
+          zoneStart = zoneConfig.top + zoneConfig.left;
+        } else if (zone === 'bottom') {
+          zoneStart = zoneConfig.top + zoneConfig.left + zoneConfig.right;
+        }
+
+        let targetIndex = zoneStart + insertIndex;
+
+        // SI c'est un cross-zone move, ajuster le calcul
+        if (draggedZone !== zone && draggedZone && zone) {
+          console.log(`  - Cross-zone: adjusting targetIndex from ${targetIndex}`);
+          // Retirer le joueur de la zone source du calcul
+          const draggedZoneStart = draggedZone === 'left' ? zoneConfig.top :
+                                   draggedZone === 'right' ? zoneConfig.top + zoneConfig.left :
+                                   draggedZone === 'bottom' ? zoneConfig.top + zoneConfig.left + zoneConfig.right : 0;
+
+          // Si le joueur était avant la zone cible, l'index change
+          if (draggedIndex < zoneStart) {
+            targetIndex -= 1; // Le joueur qu'on retire est avant la zone cible
+          }
+          console.log(`  - Adjusted targetIndex to ${targetIndex}`);
+        } else if (draggedZone === zone && draggedIndex < targetIndex) {
+          // Same zone move
+          targetIndex -= 1;
+        }
+
+        console.log(`  - Insert at zone index ${insertIndex}, global index ${targetIndex}, draggedIndex ${draggedIndex}`);
+
+        // Éviter les mouvements inutiles
+        if (draggedIndex === targetIndex) {
+          console.log(`  ⏭️ Same position, skipping`);
+          draggedElement = null;
+          draggedIndex = null;
+          return;
+        }
+
+        // Supprimer et réinsérer le joueur à la nouvelle position
+        console.log(`  🔄 Moving player from index ${draggedIndex} to ${targetIndex}`);
+        players.splice(draggedIndex, 1);
+        players.splice(targetIndex, 0, draggedPlayer);
+
+        // SI on a dragué entre zones différentes, mettre à jour zoneConfig
+        if (draggedZone !== zone && draggedZone && zone) {
+          console.log(`  🔀 Cross-zone move: ${draggedZone} → ${zone}`);
+          if (gm.state.zoneConfig[draggedZone] > 0) {
+            gm.state.zoneConfig[draggedZone]--;
+          }
+          gm.state.zoneConfig[zone]++;
+        }
+
+        console.log(`✅ DROP complete - saving and re-rendering`);
+        gm.saveState();
+        this.render();
+
+        draggedElement = null;
+        draggedIndex = null;
+      });
+
+      zoneContainer.addEventListener('dragleave', (e) => {
+        document.querySelectorAll('.gm-drop-indicator').forEach(ind => ind.remove());
+      });
+    });
+
+    // Permettre le drop sur le conteneur principal - IMPORTANT pour que le DROP se déclenche
+    playersList.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (draggedIndex !== null) {
+        console.log(`📍 DRAGOVER on playersList`);
+      }
+    });
+
+    // DROP sur le conteneur principal - fallback si on lâche en dehors des zones
+    playersList.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (draggedIndex === null || draggedElement === null) {
+        console.log(`❌ DROP on playersList - draggedIndex or draggedElement is null`);
+        return;
+      }
+
+      console.log(`💧 DROP on playersList (fallback)`);
+      // Le DROP réel a probablement déjà été traité par une zone
+      // Ceci est juste un fallback
+    });
+
+    playersList.addEventListener('dragleave', (e) => {
+      if (e.target === playersList) {
+        document.querySelectorAll('.gm-drop-indicator').forEach(ind => ind.remove());
+      }
+    });
+  }
+
+  attachTableSetupFooterEvents() {
+    const gm = this.gm;
+
+    // Bouton "Suivant" - Aller au mode selection
+    document.getElementById('gmBtnNextTableSetup')?.addEventListener('click', () => {
+      console.log('[TableSetup] Proceeding to mode selection');
+      gm.state.mode = 'modeSelection';
+      gm.saveState();
+      this.render();
+    });
+
+    // Bouton "Retour" - Aller à la sélection des rôles
+    document.getElementById('gmBtnBackTableSetup')?.addEventListener('click', () => {
+      console.log('[TableSetup] Back to role selection');
+      gm.state.mode = 'selectRoles';
+      gm.state.players = [];
+      gm.state.selectedRoles = {};
+      gm.saveState();
+      this.render();
+    });
+  }
+
+  recalculateCirclePositions(players) {
+    const gm = this.gm;
+    const tableType = gm.state.tableType || 'circle';
+
+    if (tableType === 'circle') {
+      // Générer les positions pour la table ronde
+      const result = this.generatePositionsByTableType(players.length, 'circle');
+      const defaultPositions = result.positions;
+      const tableCenter = result.center;
+      const scale = 240 / 300;
+      const containerCenter = 120;
+
+      // Appliquer les positions aux joueurs
+      players.forEach((p, idx) => {
+        if (defaultPositions[idx]) {
+          const posX = defaultPositions[idx].x - tableCenter.x;
+          const posY = defaultPositions[idx].y - tableCenter.y;
+          p.tableX = containerCenter + (posX * scale);
+          p.tableY = containerCenter + (posY * scale);
+        }
+      });
+
+      // Mettre à jour playerPositions pour SAVANT_FOU
+      if (!gm.state.playerPositions) {
+        gm.state.playerPositions = {};
+      }
+      players.forEach((p, idx) => {
+        gm.state.playerPositions[p.id] = {
+          x: p.tableX,
+          y: p.tableY,
+          circleIndex: idx,
+          totalPlayers: players.length
+        };
+      });
+    } else {
+      // Pour les tables rectangulaires, les positions seront recalculées dans renderLiveMap
+      // basées sur la configuration des zones (gm.state.zoneConfig)
+      // Les joueurs seront repositionnés selon leur ordre dans players[]
+    }
   }
 
   renderJournal() {
@@ -262,18 +944,39 @@ class GameMasterUI {
 
   attachEventListenersAfterRender() {
     const mode = this.gm.state.mode;
+
+    // Attacher les événements du WindowsButtons (header)
+    attachWindowsButtonsEvents(this);
+
     if (mode === 'selectRoles') {
-      attachChooseCardEvents(this);
+      attachCardSelectionEvents(this);
+    } else if (mode === 'modeSelection') {
+      attachModeSelectionEvents(this);
     } else if (mode === 'tableSetup') {
-      attachTableAndRenameEvents(this);
+      // En mode tableSetup, on attache les événements SAUF le drag-drop de la map
+      // Les vignettes à droite prennent le contrôle de la réorganisation
+      attachLiveMapEvents(this, true); // true = skip dragdrop
     } else if (mode === 'assignRoles') {
-      attachFirstNightEvents(this);
-    } else if (mode === 'night') {
-      attachNightEvents(this);
-    } else if (mode === 'mayorElection') {
-      attachMayorElectionEvents(this);
-    } else if (mode === 'day1' || mode === 'day') {
-      attachDayEvents(this);
+      // En mode assignRoles, pas de drag-drop de la map
+      attachLiveMapEvents(this, true); // true = skip dragdrop
+      // IMPORTANT: Attacher les événements d'assignation des rôles!
+      attachRoleDetailandTipsEvents(this);
+      if ((this.gm.state.nightStep || 1) === 2) {
+        attachRoleActionsEvents(this);
+      }
+    } else {
+      // Pour tous les autres modes: attacher les événements de la table (gauche) + la phase (droite)
+      // La table reste toujours interactive et draggable
+      attachLiveMapEvents(this);
+
+      // Puis attacher les événements spécifiques de la phase à droite
+      if (mode === 'night') {
+        attachNightPhaseEvents(this);
+      } else if (mode === 'mayorElection') {
+        attachMayorElectionPhaseEvents(this);
+      } else if (mode === 'day1' || mode === 'day') {
+        attachDayPhaseEvents(this);
+      }
     }
   }
 
@@ -284,16 +987,17 @@ class GameMasterUI {
     switch (tableType) {
       case 'circle':
         // Circle: intelligent radius calculation
-        // Table is circular with radius ~70. Players must be outside.
-        // Radius grows slightly with player count to maintain spacing
+        // Table is circular with radius ~70. Players must be outside with good spacing.
+        // Radius grows significantly with player count for 40px bubbles (no overlap)
+        // J1 is always at the top (angle = -π/2)
         {
-          const minRadius = 85; // minimum to clear table radius of 70
-          const maxRadius = 143; // stay within generation bounds (150-7)
-          const radiusGrowth = Math.max(0, (playerCount - 3) * 0.8);
+          const minRadius = 115; // much larger to avoid bubble overlap
+          const maxRadius = 148; // increased max bounds
+          const radiusGrowth = Math.max(0, (playerCount - 3) * 1.8); // strong growth factor
           const radius = Math.min(maxRadius, minRadius + radiusGrowth);
 
           for (let i = 0; i < playerCount; i++) {
-            const angle = (i / playerCount) * Math.PI * 2;
+            const angle = (i / playerCount) * Math.PI * 2 - Math.PI / 2; // -π/2 to start at top
             positions.push({
               x: center.x + Math.cos(angle) * radius,
               y: center.y + Math.sin(angle) * radius
@@ -304,14 +1008,14 @@ class GameMasterUI {
 
       case 'oval-v':
         // Oval vertical: intelligent ellipse dimensions
-        // Table is ~100x180 (rx~50, ry~90). Must be significantly larger.
+        // Table is ~100x180. Much larger spacing for 40px bubbles (no overlap).
         {
           const tableRx = 50;
           const tableRy = 90;
-          const bufferX = 25; // expand beyond table in x
-          const bufferY = 35; // expand beyond table in y
-          const rx = Math.min(143, tableRx + bufferX);
-          const ry = Math.min(143, tableRy + bufferY);
+          const bufferX = 55; // much larger for no overlap
+          const bufferY = 65; // much larger for no overlap
+          const rx = Math.min(148, tableRx + bufferX);
+          const ry = Math.min(148, tableRy + bufferY);
 
           for (let i = 0; i < playerCount; i++) {
             const angle = (i / playerCount) * Math.PI * 2;
@@ -325,14 +1029,14 @@ class GameMasterUI {
 
       case 'rect-v':
         // Rect vertical: intelligent rectangle dimensions
-        // Table is ~80x200. Must be significantly larger to avoid overlap.
+        // Table is ~80x200. Much larger spacing for 40px bubbles (no overlap).
         {
           const tableW = 40; // half of 80
           const tableH = 100; // half of 200
-          const bufferW = 50; // expand beyond table width
-          const bufferH = 40; // expand beyond table height
-          const w = Math.min(143, tableW + bufferW);
-          const h = Math.min(143, tableH + bufferH);
+          const bufferW = 75; // much larger for no overlap
+          const bufferH = 70; // much larger for no overlap
+          const w = Math.min(148, tableW + bufferW);
+          const h = Math.min(148, tableH + bufferH);
 
           const sides = [
             { sx: -w, sy: -h, ex: w, ey: -h },  // top
@@ -359,11 +1063,11 @@ class GameMasterUI {
 
       case 'square':
         // Square: intelligent square dimensions
-        // Table is circular with radius ~70 (occupies ~140x140). Must be significantly larger.
+        // Table is ~140x140. Much larger spacing for 40px bubbles (no overlap).
         {
           const tableS = 70;
-          const buffer = 40; // expand beyond table
-          const s = Math.min(143, tableS + buffer);
+          const buffer = 70; // much larger for no overlap
+          const s = Math.min(148, tableS + buffer);
 
           const sides = [
             { sx: -s, sy: -s, ex: s, ey: -s },  // top
@@ -517,6 +1221,9 @@ class GameMasterUI {
 }
 
 // Export
+if (typeof window !== 'undefined') {
+  window.GameMasterUI = GameMasterUI;
+}
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = GameMasterUI;
 }

@@ -1,0 +1,48 @@
+{
+  "id": "Infect_Pere_Loups",
+  "order": 32,
+  "name": "Infect Pere Loups",
+  "emoji": "🐺",
+  "camp": "Seul",
+  "origin": "base",
+  "description": "Rôle: Infect_Pere_Loups",
+  "instruction": "Chaque nuit, au lieu de voter pour éliminer, vous pouvez infecter quelqu'un.",
+  "tips": "Infectez les joueurs puissants ou influents. Renforcez le camp des Loups.",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "convert",
+      "phase": "everyNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "pereConvert"
+    }
+  },
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "🐺",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "actionStartMessage": "🎭 Infect_Pere_Loups agit",
+    "actionCompleteMessage": "✅ Infect_Pere_Loups a complété son action"
+  },
+  "winConditions": [
+    {
+      "type": "camp",
+      "condition": "Seul",
+      "description": "Gagner avec le camp Seul"
+    }
+  ],
+  "specialBehaviors": [],
+  "cardImage": "gamemaster/roles/32-Infect_Pere_Loups.png",
+  "pouvoir": "Au lieu d'éliminer une victime, peut l'infecter pour la transformer en Loup.",
+  "notes": "L'infecté devient Loup la nuit suivante sans savoir ce qui s'est passé. Vous gagnez avec les Loups."
+}

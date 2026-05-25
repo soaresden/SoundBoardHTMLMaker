@@ -218,8 +218,6 @@ class GameNavigation {
         }
       }
     });
-
-    console.log('%c[Navigation] ⌨️ Shortcuts: Alt+← Précédent | Alt+→ Suivant', 'color: #4CAF50;');
   }
 
   // ========== ÉTAT ET INFOS ==========
@@ -249,6 +247,3 @@ window.gameNavigation = new GameNavigation();
 
 // Initialiser les shortcuts
 window.gameNavigation.attachKeyboardShortcuts();
-
-console.log('%c[Navigation] ✓ Système de navigation chargé', 'color: green; font-weight: bold;');
-console.log('%c[Navigation] ⌨️ Utilisez Alt+← et Alt+→ pour naviguer', 'color: #2196F3;');

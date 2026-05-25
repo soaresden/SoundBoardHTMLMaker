@@ -1,0 +1,48 @@
+{
+  "id": "Ange",
+  "order": 8,
+  "name": "Ange",
+  "emoji": "😇",
+  "camp": "Village",
+  "origin": "base",
+  "description": "Rôle: Ange",
+  "instruction": "Votre objectif est de vous faire éliminer lors du premier vote du village.",
+  "tips": "Comportez-vous bizarrement pour être suspecté. Votez contre vous-même.",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "protect",
+      "phase": "everyNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "angeProtection"
+    }
+  },
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "😇",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "actionStartMessage": "🎭 Ange agit",
+    "actionCompleteMessage": "✅ Ange a complété son action"
+  },
+  "winConditions": [
+    {
+      "type": "camp",
+      "condition": "Village",
+      "description": "Gagner avec le camp Village"
+    }
+  ],
+  "specialBehaviors": [],
+  "cardImage": "gamemaster/roles/08-Ange.png",
+  "pouvoir": "Doit se faire éliminer lors du premier vote du jour pour gagner.",
+  "notes": "Si vous survivez au premier vote, vous devenez Simple Villageois. C'est un rôle qui force le jeu équitable."
+}

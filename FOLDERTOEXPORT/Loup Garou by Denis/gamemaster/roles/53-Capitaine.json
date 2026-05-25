@@ -1,0 +1,46 @@
+{
+  "id": "Capitaine",
+  "order": 53,
+  "name": "Capitaine",
+  "emoji": "🎖️",
+  "camp": "Village",
+  "origin": "base",
+  "description": "Rôle: Capitaine",
+  "instruction": "Pendant les votes du village, votre vote compte double et vous décidez en cas d'égalité.",
+  "tips": "Masquez votre influence. Votez stratégiquement pour contrôler les éliminations.",
+  "actions": {
+    "NoAction": {
+      "enabled": true,
+      "type": "doubleVote",
+      "phase": "dayVote",
+      "targets": {},
+      "stateKey": "capitaine"
+    }
+  },
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "🎖️",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "actionStartMessage": "🎭 Capitaine agit",
+    "actionCompleteMessage": "✅ Capitaine a complété son action"
+  },
+  "winConditions": [
+    {
+      "type": "camp",
+      "condition": "Village",
+      "description": "Gagner avec le camp Village"
+    }
+  ],
+  "specialBehaviors": [],
+  "cardImage": "gamemaster/roles/53-Capitaine.png",
+  "pouvoir": "Son vote compte double. En cas d'égalité, son vote désigne la victime.",
+  "notes": "Une fois révélé (quand le dernier Cultivateur meurt), le Capitaine n'existe plus. Vous pouvez être réélu."
+}

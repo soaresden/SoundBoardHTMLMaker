@@ -1,0 +1,48 @@
+{
+  "id": "Loup_Garou_Blanc",
+  "order": 36,
+  "name": "Loup Garou Blanc",
+  "emoji": "🐺",
+  "camp": "Seul",
+  "origin": "base",
+  "description": "Rôle: Loup_Garou_Blanc",
+  "instruction": "Chaque nuit, vous pouvez dévorer un Loup-Garou en addition de vos votes de groupe.",
+  "tips": "Cachez-vous parmi les Loups. Dévastez les deux côtés avant qu'ils ne réalisent l'existence.",
+  "actions": {
+    "ToutesNuits1sur2": {
+      "enabled": true,
+      "type": "huntSelectively",
+      "phase": "everyOtherNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "blancKill"
+    }
+  },
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "🐺",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "actionStartMessage": "🎭 Loup_Garou_Blanc agit",
+    "actionCompleteMessage": "✅ Loup_Garou_Blanc a complété son action"
+  },
+  "winConditions": [
+    {
+      "type": "camp",
+      "condition": "Seul",
+      "description": "Gagner avec le camp Seul"
+    }
+  ],
+  "specialBehaviors": [],
+  "cardImage": "gamemaster/roles/36-Loup_Garou_Blanc.png",
+  "pouvoir": "Doit tuer tous les villageois ET tous les loups pour gagner seul.",
+  "notes": "C'est le rôle le plus difficile. Vous gagnez seul ou perdez avec tout le monde."
+}

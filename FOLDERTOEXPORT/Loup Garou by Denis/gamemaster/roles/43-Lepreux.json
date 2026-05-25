@@ -1,0 +1,46 @@
+{
+  "id": "Lepreux",
+  "order": 43,
+  "name": "Lepreux",
+  "emoji": "⚠️",
+  "camp": "Village",
+  "origin": "base",
+  "description": "Rôle: Lepreux",
+  "instruction": "Quand vous mourez, les 3 derniers votants deviennent lépreux.",
+  "tips": "Identifiez vos votants avant de mourir. Utilisez cela contre les Loups.",
+  "actions": {
+    "PostMortem": {
+      "enabled": true,
+      "type": "killVoters",
+      "phase": "onDeath",
+      "targets": {},
+      "stateKey": "lepreux Effect"
+    }
+  },
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "⚠️",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "actionStartMessage": "🎭 Lepreux agit",
+    "actionCompleteMessage": "✅ Lepreux a complété son action"
+  },
+  "winConditions": [
+    {
+      "type": "camp",
+      "condition": "Village",
+      "description": "Gagner avec le camp Village"
+    }
+  ],
+  "specialBehaviors": [],
+  "cardImage": "gamemaster/roles/43-Lepreux.png",
+  "pouvoir": "Sa mort rend les 3 joueurs qui ont voté pour lui lépreux.",
+  "notes": "Les lépreux se connaissent après le vote. C'est une malédiction posthume puissante."
+}

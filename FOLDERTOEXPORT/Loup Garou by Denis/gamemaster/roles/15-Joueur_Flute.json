@@ -1,0 +1,48 @@
+{
+  "id": "Joueur_Flute",
+  "order": 15,
+  "name": "Joueur Flute",
+  "emoji": "🎵",
+  "camp": "Seul",
+  "origin": "base",
+  "description": "Rôle: Joueur_Flute",
+  "instruction": "Chaque nuit, sélectionnez jusqu'à 2 joueurs pour les endormir.",
+  "tips": "Endormez les joueurs suspects pour limiter leur influence. Créez de la confusion.",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "charm",
+      "phase": "everyNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "fluteCharm"
+    }
+  },
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "🎵",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "actionStartMessage": "🎭 Joueur_Flute agit",
+    "actionCompleteMessage": "✅ Joueur_Flute a complété son action"
+  },
+  "winConditions": [
+    {
+      "type": "camp",
+      "condition": "Seul",
+      "description": "Gagner avec le camp Seul"
+    }
+  ],
+  "specialBehaviors": [],
+  "cardImage": "gamemaster/roles/15-Joueur_Flute.png",
+  "pouvoir": "Peut faire dormir (endormir) deux joueurs qui ne pourront pas agir la nuit suivante.",
+  "notes": "Les joueurs endormis ne peuvent pas agir mais ne meurent pas. Ils apprendre qu'ils ont été endormis."
+}

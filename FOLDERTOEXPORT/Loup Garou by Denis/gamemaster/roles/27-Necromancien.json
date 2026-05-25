@@ -1,0 +1,48 @@
+{
+  "id": "Necromancien",
+  "order": 27,
+  "name": "Necromancien",
+  "emoji": "💀",
+  "camp": "Village",
+  "origin": "base",
+  "description": "Rôle: Necromancien",
+  "instruction": "Chaque nuit, vous pouvez communiquer silencieusement avec un mort.",
+  "tips": "Posez des questions aux morts pour obtenir des informations. Cachez votre identité.",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "resurrect",
+      "phase": "everyNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "necroResurrect"
+    }
+  },
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "💀",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "actionStartMessage": "🎭 Necromancien agit",
+    "actionCompleteMessage": "✅ Necromancien a complété son action"
+  },
+  "winConditions": [
+    {
+      "type": "camp",
+      "condition": "Village",
+      "description": "Gagner avec le camp Village"
+    }
+  ],
+  "specialBehaviors": [],
+  "cardImage": "gamemaster/roles/27-Necromancien.png",
+  "pouvoir": "Peut échanger silencieusement avec les morts pendant la nuit.",
+  "notes": "C'est un rôle de voyance. Les morts peuvent vous aider à identifier les Loups."
+}

@@ -118,6 +118,27 @@ function attachRenardHandlers(gameUI, players) {
     gm.state.renardSniff = { targetId: null, leftWolf: false, centerWolf: false, rightWolf: false };
   }
 
+  // ===== DÉTECTION: Tous les rôles sont-ils connus? =====
+  const selectedRoles = gm.state.selectedRoles || {};
+  const assignedRoles = {};
+
+  players.forEach(p => {
+    if (p.roleId) {
+      assignedRoles[p.roleId] = (assignedRoles[p.roleId] || 0) + 1;
+    }
+  });
+
+  // Vérifier si tous les rôles sauf Renard sont assignés
+  let allRolesKnown = true;
+  for (const [roleId, needed] of Object.entries(selectedRoles)) {
+    if (roleId === 'Renard') continue;
+    const assigned = assignedRoles[roleId] || 0;
+    if (assigned < needed) {
+      allRolesKnown = false;
+      break;
+    }
+  }
+
   const targetInput = document.getElementById('gmRenardTarget');
   const groupDisplay = document.getElementById('gmRenardGroupDisplay');
   const leftDisplay = document.getElementById('gmRenardLeftDisplay');
@@ -128,7 +149,70 @@ function attachRenardHandlers(gameUI, players) {
 
   // Guard: si les éléments du Renard n'existent pas, sortir (on n'est pas au Renard)
   if (!groupDisplay || !leftDisplay || !centerDisplay || !rightDisplay || !resultDisplay) {
-    return;
+    // Vérifier si on a une combobox alternative
+    const comboboxContainer = document.getElementById('gmRenardManualSelect');
+    if (!comboboxContainer && !resultDisplay) {
+      return; // Aucun élément du Renard trouvé
+    }
+  }
+
+  // ===== SI LES RÔLES NE SONT PAS TOUS CONNUS: COMBOBOX MANUELLE =====
+  if (!allRolesKnown) {
+    const manualContainer = document.getElementById('gmRenardManualSelect');
+    const confirmBtn = document.getElementById('gmRenardManualConfirm');
+
+    if (manualContainer) {
+      const unassignedPlayers = players.filter(p => !p.roleId);
+      const selectCombobox = manualContainer.querySelector('select');
+
+      if (selectCombobox) {
+        selectCombobox.addEventListener('change', (e) => {
+          const selectedPlayerId = e.target.value;
+          gm.state.renardSniff.targetId = selectedPlayerId;
+          gm.saveState();
+
+          const selectedPlayer = players.find(p => p.id === selectedPlayerId);
+          const resultDisplay = document.getElementById('gmRenardManualResult');
+
+          if (selectedPlayer) {
+            gm.addLog(`🦊 Renard choisit: ${selectedPlayer.name}`, 'action');
+            if (resultDisplay) {
+              resultDisplay.innerHTML = `✓ <strong>${selectedPlayer.name}</strong>`;
+              resultDisplay.style.color = '#66d999';
+            }
+          }
+        });
+
+        // Restaurer la sélection si elle existe
+        if (gm.state.renardSniff.targetId) {
+          selectCombobox.value = gm.state.renardSniff.targetId;
+          // Mettre à jour le résumé si une valeur existe
+          const selectedPlayer = players.find(p => p.id === gm.state.renardSniff.targetId);
+          if (selectedPlayer) {
+            const resultDisplay = document.getElementById('gmRenardManualResult');
+            if (resultDisplay) {
+              resultDisplay.innerHTML = `✓ <strong>${selectedPlayer.name}</strong>`;
+              resultDisplay.style.color = '#66d999';
+            }
+          }
+        }
+      }
+
+      // Attacher l'événement du bouton de confirmation
+      if (confirmBtn) {
+        confirmBtn.addEventListener('click', () => {
+          if (!gm.state.renardSniff.targetId) {
+            alert('Veuillez sélectionner un joueur d\'abord!');
+            return;
+          }
+          // La validation du rôle se fera via isActionComplete
+          // Juste signaler que l'action est complète
+          gm.saveState();
+          gameUI.render();
+        });
+      }
+    }
+    return; // Mode manuel activé, sortir
   }
 
   const updateRenardDisplay = () => {
@@ -327,7 +411,8 @@ function attachCupidoHandlers(gameUI, players) {
 
       gm.saveState();
       updateCupidoSelection();
-      gameUI.render();
+      // Note: Ne pas appeler gameUI.render() ici - c'est fait par 05-RoleActions.js
+      // Appeler render() ici causait des doublons de handlers et perdait la sélection
     });
   });
   updateCupidoSelection();
@@ -656,11 +741,16 @@ function attachWolvesKillHandlers(gameUI, players, currentRole) {
     if (victimId) {
       const victim = players.find(p => p.id === victimId);
       // Afficher la carte de la victime
-      const cardFile = victim?.roleId ? gameUI.getCardFile(victim.roleId) : null;
-      if (cardFile) {
+      const imagePath = victim?.roleId ? gameUI.getCardImagePath(victim.roleId) : null;
+      if (imagePath) {
+        const victimRole = gm.roles[victim.roleId];
+        const victimEmoji = victimRole?.emoji || '❓';
         resultDisplay.innerHTML = `
           <div style="display:flex; align-items:center; gap:8px;">
-            <img src="cards/${cardFile}.webp" alt="${victim.name}" style="width:30px; height:42px; border-radius:2px; object-fit:cover; border:1px solid #d46666;">
+            <div style="width:30px; height:42px; display:flex; align-items:center; justify-content:center; background:rgba(212,102,102,0.1); border:1px solid #d46666; border-radius:2px; overflow:hidden; position:relative;">
+              <img class="gm-role-img" src="${imagePath}" alt="${victim.name}" data-emoji="${victimEmoji}" style="width:100%; height:100%; object-fit:cover; border-radius:1px;">
+              <span class="gm-role-emoji" style="position:absolute; font-size:18px; display:none; text-align:center; width:100%; height:100%; display:flex; align-items:center; justify-content:center;">${victimEmoji}</span>
+            </div>
             <div style="flex:1; min-width:0;">
               <div style="font-size:9px; color:#d46666; font-weight:700;">☠️ Victime</div>
               <div style="font-size:10px; color:#e8e8f0; font-weight:600;">${victim?.name || ''}</div>
@@ -1186,12 +1276,18 @@ function attachFirstNightEvents(gameUI) {
         else if (currentRole === 'Renard' && gm.state.renardSniff?.targetId) {
           const target = players.find(p => p.id === gm.state.renardSniff.targetId);
           if (assignedPlayer && target) {
-            const wolfCount = (gm.state.renardSniff.leftWolf ? 1 : 0) + (gm.state.renardSniff.centerWolf ? 1 : 0) + (gm.state.renardSniff.rightWolf ? 1 : 0);
-            let sniffResult = 'pas de Loup';
-            if (wolfCount === 1) sniffResult = '1 Loup autour';
-            else if (wolfCount === 2) sniffResult = '2 Loups autour';
-            else if (wolfCount === 3) sniffResult = '3 Loups autour!';
-            gm.addGameLog(`${nightTag} 🦊 Renard (${assignedPlayer.name}) flaire <strong>${target.name}</strong> → ${sniffResult}`);
+            // Mode normal: utiliser les flags leftWolf, centerWolf, rightWolf
+            if (gm.state.renardSniff.leftWolf !== undefined || gm.state.renardSniff.centerWolf !== undefined || gm.state.renardSniff.rightWolf !== undefined) {
+              const wolfCount = (gm.state.renardSniff.leftWolf ? 1 : 0) + (gm.state.renardSniff.centerWolf ? 1 : 0) + (gm.state.renardSniff.rightWolf ? 1 : 0);
+              let sniffResult = 'pas de Loup';
+              if (wolfCount === 1) sniffResult = '1 Loup autour';
+              else if (wolfCount === 2) sniffResult = '2 Loups autour';
+              else if (wolfCount === 3) sniffResult = '3 Loups autour!';
+              gm.addGameLog(`${nightTag} 🦊 Renard (${assignedPlayer.name}) flaire <strong>${target.name}</strong> → ${sniffResult}`);
+            } else {
+              // Mode manuel: juste montrer le choix du Renard
+              gm.addGameLog(`${nightTag} 🦊 Renard (${assignedPlayer.name}) choisit <strong>${target.name}</strong>`);
+            }
           }
         }
         else if (currentRole === 'Simple_Loup_Garou' && gm.state.wolvesVictim) {

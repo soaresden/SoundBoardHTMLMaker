@@ -1,0 +1,48 @@
+{
+  "id": "Arnacoeur",
+  "order": 28,
+  "name": "Arnacoeur",
+  "emoji": "💔",
+  "camp": "Village",
+  "origin": "base",
+  "description": "Rôle: Arnacoeur",
+  "instruction": "Si vous trouvez un des amoureux du Cupidon, vous le remplacez dans le cœur de l'autre.",
+  "tips": "Observez les paires. Identifiez les amoureux avant de les remplacer.",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "seduce",
+      "phase": "everyNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "arnacoeurSeduce"
+    }
+  },
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "💔",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "actionStartMessage": "🎭 Arnacoeur agit",
+    "actionCompleteMessage": "✅ Arnacoeur a complété son action"
+  },
+  "winConditions": [
+    {
+      "type": "camp",
+      "condition": "Village",
+      "description": "Gagner avec le camp Village"
+    }
+  ],
+  "specialBehaviors": [],
+  "cardImage": "gamemaster/roles/28-Arnacoeur.png",
+  "pouvoir": "Peut remplacer un des amoureux du Cupidon si découvert.",
+  "notes": "L'amoureux qui vous remplace meurt à votre place s'il est attaqué. Vous gagnez comme un amoureux normal."
+}

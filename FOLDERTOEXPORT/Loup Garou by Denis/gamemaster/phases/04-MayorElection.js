@@ -15,10 +15,11 @@ function renderMayorElection(gameUI) {
       const bgColor = isMayor ? 'rgba(255,215,0,0.2)' : 'rgba(107,76,154,0.1)';
       const borderColor = isMayor ? '#ffd700' : '#9966ff';
       const roleId = p.roleId || '?';
-      const cardFile = gameUI.getCardFile(roleId);
-      const cardImg = `cards/${cardFile}.webp`;
+      const cardImg = gameUI.getCardImagePath(roleId);
 
-      return `<div class="gm-mayor-candidate" data-player-id="${p.id}" style="padding:6px; background:${bgColor}; border:2px solid ${borderColor}; border-radius:3px; cursor:pointer; transition:all 0.2s; display:flex; flex-direction:column; align-items:center; gap:4px;"><img src="${cardImg}" style="width:36px; height:50px; border-radius:2px; object-fit:cover; border:1px solid rgba(199,125,255,0.3);"><div style="text-align:center; min-width:0;"><div style="font-size:9px; font-weight:600; color:#e8e8f0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${isMayor ? '👑' : ''}${p.name}</div></div></div>`;
+      const roleData = gameUI.gm.roles[roleId];
+      const roleEmoji = roleData?.emoji || '❓';
+      return `<div class="gm-mayor-candidate" data-player-id="${p.id}" style="padding:6px; background:${bgColor}; border:2px solid ${borderColor}; border-radius:3px; cursor:pointer; transition:all 0.2s; display:flex; flex-direction:column; align-items:center; gap:4px;"><div style="width:36px; height:50px; display:flex; align-items:center; justify-content:center; background:rgba(107,76,154,0.2); border:1px solid rgba(199,125,255,0.3); border-radius:2px; overflow:hidden; position:relative;"><img class="gm-role-img" src="${cardImg}" alt="${p.name}" data-emoji="${roleEmoji}" style="width:100%; height:100%; object-fit:cover; border-radius:1px;"><span class="gm-role-emoji" style="position:absolute; font-size:16px; display:none; text-align:center; width:100%; height:100%; display:flex; align-items:center; justify-content:center;">${roleEmoji}</span></div><div style="text-align:center; min-width:0;"><div style="font-size:9px; font-weight:600; color:#e8e8f0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${isMayor ? '👑' : ''}${p.name}</div></div></div>`;
     }).join('')}</div></div></div>`;
 }
 

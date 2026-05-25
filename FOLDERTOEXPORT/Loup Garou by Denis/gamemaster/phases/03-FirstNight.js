@@ -94,46 +94,8 @@ const ROLE_ACTIONS = {
 };
 
 // Tips de gameplay pour chaque rôle
-const ROLE_TIPS = {
-  'Cupidon': "💡 Crée un couple fort pour te protéger. Mais attention: les amoureux sont une cible!",
-  'Enfant_Sauvage': "💡 Choisis quelqu'un de confiance comme idole. Sa mort changera tout pour toi.",
-  'Chien_Loup': "💡 Quel camp rejoindras-tu? Pense stratégique: qui te protégera?",
-  'Voyante': "💡 Regarde les rôles-clés: Sorcière, Salvateur, rôles seuls. Ne regarde pas n'importe qui!",
-  'Ancien': "💡 Protège quelqu'un chaque nuit. Varie tes cibles pour survivre.",
-  'Ange': "💡 Protège les rôles importants. Reste discret sur tes choix.",
-  'Servante_Devouee': "💡 Tu protèges, mais tu dois rester discrète. Ne sauve pas toujours la même personne!",
-  'Salvateur': "💡 Sauve quelqu'un d'une infection future. Prédis qui les loups cibleront!",
-  'Sorcière': "💡 Garde tes potions pour les moments critiques. Une résurrection au bon moment = victoire.",
-  'Renard': "💡 Découvre qui sont les loups sans dévoiler ta position. Bluff quand tu dois!",
-  'Gitane': "💡 Sens les connexions émotionnelles. Cherche des couples ou des duos suspects.",
-  'Joueur_Flute': "💡 Charme les gens pour les immuniser. Gagne quand tout le village est enchanté!",
-  'Marionnettiste': "💡 Contrôle les pouvoirs des autres. Fais agir les gens contre leur camp!",
-  'Voleur': "💡 Vole un rôle puissant ou dangereux. Change ton destin cette nuit!",
-  'Pyromane': "💡 Marque discrètement, puis brûle. Crée de la panique quand tu agis!",
-  'Ankou': "💡 Marque quelqu'un 3 fois pour le tuer. Cible quelqu'un qui ne se doute de rien.",
-  'Abominable_Sectaire': "💡 Convertis des gens à ton culte. Gagne avec eux une fois assez nombreux.",
-  'Lapin_Blanc': "💡 Crée le chaos avec un événement aléatoire! Prépare-toi à l'imprévu.",
-  'Juge_Begue': "💡 Jugement hâtif mais puissant. Utilise ton verdict au moment critique.",
-  'Necromancien': "💡 Ressuscite les morts comme fantômes. Reviens plus fort qu'avant!",
-  'Noctambule': "💡 Espionne les échanges de la nuit. Découvre qui chuchote avec qui.",
-  'Corbeau': "💡 Vole 2 votes à quelqu'un. Enlève du poids aux décisions critiques.",
-  'Petite_Fille': "💡 Écoute les loups pour connaître leurs noms et leur stratégie!",
-  'Renard': "💡 Détecte les loups autour de toi. Mais révèle ton pouvoir si tu te trompes.",
-  'Simple_Loup_Garou': "🐺 Chasse avec vos frères. Plus nombreux = plus forts. Restez unis!",
-  'Grand_Mechant_Loup': "🐺 Tu es le boss des loups! Tu peut tuer une deuxième fois tant qu'aucun loup n'est mort.",
-  'Loup_Garou_Blanc': "🐺 Tu chasses seul. Tue les loups si tu es seul, ou les villageois si tu es avec eux.",
-  'Loup_Garou_Voyant': "🐺 Tu vois tous les rôles dès le départ! Use de cette connaissance avec prudence.",
-  'Infect_Pere_Loups': "🐺 Convertis ta victime en loup. Renforce votre clan quand tu peux.",
-  'Chevalier_Epee_Rouille': "💡 Si les loups te tuent, ils paient: pas de victime la nuit suivante + le loup à ta droite meurt!",
-  'Montreur_Ours': "💡 L'ours grogne aléatoirement. Si oui, quelqu'un à côté de toi est un loup!",
-  'Deux_Soeurs': "💡 Communiquez la nuit sans paroles. Coordonnez vos actions en secret!",
-  'Trois_Freres': "💡 Coordonnez-vous la nuit en silence. Vous êtes forts ensemble!",
-  'Chasseur': "💡 Tire sur quelqu'un si tu es voté. Choisis bien ta vengeance!",
-  'Capitaine': "💡 Tu as 2 voix au vote! Tes votes pèsent lourd dans les décisions.",
-  'Bouc_Emissaire': "💡 Si égalité au vote, tu meurs à la place. Attention aux votes serrés!",
-  'Idiot_Village': "💡 Le vote du village te sauve, mais tu perds ton droit de vote après!",
-  'Villageois_Villageois': "💡 Tu n'as aucun pouvoir, tu votes. Mais ta survie protège le village!"
-};
+// Les tips et pouvoirs viennent maintenant directement du JSON des rôles
+// Ne plus utiliser une liste hardcodée !
 
 function getAvailableRolesInOrder(selectedRoles, gm) {
   const result = [];
@@ -185,10 +147,22 @@ function isActionComplete(gm, currentRole) {
       return gm.state.voyanteLook?.playerId !== null && gm.state.voyanteLook?.playerId !== '' &&
              gm.state.voyanteLook?.roleId !== null && gm.state.voyanteLook?.roleId !== '';
     case 'renardSniff':
-      return gm.state.renardSniff?.targetIds &&
-             gm.state.renardSniff.targetIds[0] !== null && gm.state.renardSniff.targetIds[0] !== '' &&
-             gm.state.renardSniff.targetIds[1] !== null && gm.state.renardSniff.targetIds[1] !== '' &&
-             gm.state.renardSniff.targetIds[2] !== null && gm.state.renardSniff.targetIds[2] !== '';
+      // Support both old format (targetIds array) and new format (targetId for manual selection)
+      const renardSniff = gm.state.renardSniff || {};
+
+      // Mode manuel: seulement besoin d'un targetId
+      if (renardSniff.targetId !== null && renardSniff.targetId !== '') {
+        return true;
+      }
+
+      // Mode normal: besoin de 3 targetIds
+      if (renardSniff.targetIds && renardSniff.targetIds.length === 3) {
+        return renardSniff.targetIds[0] !== null && renardSniff.targetIds[0] !== '' &&
+               renardSniff.targetIds[1] !== null && renardSniff.targetIds[1] !== '' &&
+               renardSniff.targetIds[2] !== null && renardSniff.targetIds[2] !== '';
+      }
+
+      return false;
     case 'jugeBeJudgement':
       return gm.state.jugeBeJudgement?.targetId !== null && gm.state.jugeBeJudgement?.targetId !== '' &&
              gm.state.jugeBeJudgement?.verdict !== null;
@@ -238,7 +212,7 @@ function renderFirstNight(gameUI) {
   const playerAssignedToRole = playersAssignedToRole.length > 0 ? playersAssignedToRole[0] : null;
 
   const roleAction = ROLE_ACTIONS[currentRole];
-  const cardFile = gameUI.getCardFile(currentRole);
+  const imagePath = gameUI.getCardImagePath(currentRole);
 
   // Déterminer l'étape effective
   const isActionOnly = ROLES_ACTION_ONLY.has(currentRole);
@@ -374,11 +348,14 @@ function renderFirstNight(gameUI) {
         <div style="padding:10px; border-bottom:1px solid rgba(199,125,255,0.3); background:linear-gradient(135deg, rgba(25,25,45,0.95), rgba(35,30,55,0.95)); flex:0 0 auto;">
           <div style="display:flex; gap:8px; align-items:flex-start; justify-content:space-between;">
             <div style="display:flex; gap:8px; align-items:center; flex:1;">
-              <img src="cards/${cardFile}.webp" alt="${currentRole}" style="width:40px; height:52px; object-fit:cover; border-radius:3px; border:1px solid rgba(199,125,255,0.4);">
+              <div style="width:40px; height:52px; display:flex; align-items:center; justify-content:center; background:rgba(81,116,219,0.1); border:1px solid rgba(199,125,255,0.4); border-radius:3px; overflow:hidden; position:relative;">
+                <img class="gm-role-img" src="${imagePath}" alt="${currentRole}" data-emoji="${role?.emoji || '❓'}" style="width:100%; height:100%; object-fit:cover; border-radius:2px;">
+                <span class="gm-role-emoji" style="position:absolute; font-size:24px; display:none; text-align:center; width:100%; height:100%; display:flex; align-items:center; justify-content:center;">${role?.emoji || '❓'}</span>
+              </div>
               <div style="flex:1; min-width:0;">
                 <div style="font-size:12px; color:#e8e8f0; font-weight:600;">${currentRole}</div>
-                <div style="font-size:8px; color:#aaa; margin-top:2px; max-height:24px; overflow-y:auto; line-height:1.2;">${role ? role.description : ''}</div>
-                <div style="font-size:9px; color:#81dff7; font-weight:600; margin-top:4px; padding:4px; background:rgba(129, 223, 247, 0.1); border-left:2px solid #81dff7; line-height:1.3;">${ROLE_TIPS[currentRole] || '💡 Pas de conseil spécifique.'}</div>
+                <div style="font-size:8px; color:#aaa; margin-top:2px; max-height:24px; overflow-y:auto; line-height:1.2;">${role ? role.pouvoir : ''}</div>
+                <div style="font-size:9px; color:#81dff7; font-weight:600; margin-top:4px; padding:4px; background:rgba(129, 223, 247, 0.1); border-left:2px solid #81dff7; line-height:1.3;">${role ? role.tips : '💡 Pas de conseil spécifique.'}</div>
               </div>
             </div>
             <div style="display:flex; gap:8px; align-items:center; flex-shrink:0;">
@@ -606,6 +583,57 @@ function renderRoleActionUI(gameUI, currentRole, roleAction, players, selectedRo
     const selectedRoles = gameUI.gm.state.selectedRoles || {};
     const renardState = gm.state.renardSniff || { targetIds: [null, null, null] };
 
+    // ===== DÉTECTION: Tous les rôles sont-ils connus? =====
+    const assignedRoles = {};
+    allAlivePlayers.forEach(p => {
+      if (p.roleId) {
+        assignedRoles[p.roleId] = (assignedRoles[p.roleId] || 0) + 1;
+      }
+    });
+
+    let allRolesKnown = true;
+    for (const [roleId, needed] of Object.entries(selectedRoles)) {
+      if (roleId === 'Renard') continue;
+      const assigned = assignedRoles[roleId] || 0;
+      if (assigned < needed) {
+        allRolesKnown = false;
+        break;
+      }
+    }
+
+    // ===== MODE MANUEL (rôles non connus) =====
+    if (!allRolesKnown) {
+      const unassignedPlayers = allAlivePlayers.filter(p => !p.roleId);
+      return `
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div style="padding:10px; background:rgba(255,152,0,0.15); border:1px solid rgba(255,152,0,0.4); border-radius:4px; font-size:9px; color:#ffb84d; line-height:1.4; font-weight:600;">
+            <strong>🦊 Renard,</strong> tous les rôles ne sont pas encore connus. Tu dois choisir quelqu'un manuellement!
+            <div style="margin-top:4px; font-size:8px; color:#ffb84d; opacity:0.8;">→ Sélectionne un joueur parmi ceux qui restent</div>
+          </div>
+
+          <!-- SÉLECTION MANUELLE AVEC COMBOBOX -->
+          <div id="gmRenardManualSelect" style="display:flex; flex-direction:column; gap:6px;">
+            <label style="font-size:9px; color:#ffb84d; font-weight:600;">🎯 Choisis un joueur (${unassignedPlayers.length} non assignés)</label>
+            <select style="padding:6px; background:#000000; border:2px solid rgba(255,152,0,0.6); color:#e8e8f0; border-radius:3px; font-size:9px; font-weight:600;">
+              <option value="" style="background:#000000; color:#e8e8f0;">-- Sélectionner --</option>
+              ${unassignedPlayers.map(p => `<option value="${p.id}" style="background:#000000; color:#e8e8f0;">${p.name}</option>`).join('')}
+            </select>
+          </div>
+
+          <!-- RÉSUMÉ -->
+          <div id="gmRenardManualResult" style="font-size:9px; color:#ffb84d; font-weight:600; padding:8px; background:rgba(0,0,0,0.3); border-radius:3px; min-height:18px;">
+            Sélectionne un joueur
+          </div>
+
+          <!-- BOUTON DE CONFIRMATION -->
+          <button id="gmRenardManualConfirm" style="padding:8px 12px; background:rgba(100,200,100,0.4); border:1px solid rgba(100,200,100,0.6); color:#66d999; border-radius:3px; font-size:9px; font-weight:600; cursor:pointer;">
+            ✓ Confirmer la sélection
+          </button>
+        </div>
+      `;
+    }
+
+    // ===== MODE NORMAL (tous les rôles connus) =====
     return `
       <div style="display:flex; flex-direction:column; gap:12px;">
         <div style="padding:10px; background:rgba(129, 223, 247, 0.15); border:1px solid rgba(129, 223, 247, 0.3); border-radius:4px; font-size:9px; color:#81dff7; line-height:1.4; font-weight:600;">

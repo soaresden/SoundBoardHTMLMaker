@@ -108,11 +108,11 @@ function renderChooseCard(gameUI) {
     .flatMap(([roleId, count]) => {
       const role = rolesList.find(r => r.id === roleId);
       return Array(count).fill(0).map((_, idx) => {
-        const cardFile = gameUI.getCardFile(roleId);
+        const imagePath = gameUI.getCardImagePath(roleId);
         const emojiStr = role?.emoji || '❓';
         return `
           <div class="gm-deck-visual" data-role-id="${roleId}" data-emoji="${emojiStr}">
-            <img src="cards/${cardFile}.webp" alt="${roleId}" class="gm-deck-img" data-role-id="${roleId}">
+            <img src="${imagePath}" alt="${roleId}" class="gm-deck-img" data-role-id="${roleId}">
             <span class="gm-deck-emoji" style="display:none; font-size:14px; line-height:1;">${emojiStr}</span>
           </div>
         `;
@@ -139,10 +139,10 @@ function renderChooseCard(gameUI) {
     }
 
     // Ligne du rôle - clickable
-    const cardFile = gameUI.getCardFile(role.id);
+    const imagePath = gameUI.getCardImagePath(role.id);
     const visualCell = `
       <div style="width:40px; height:50px; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg, rgba(81,116,219,0.15), rgba(199,125,255,0.1)); border:1px solid rgba(199,125,255,0.3); border-radius:3px; overflow:hidden; position:relative;">
-        <img class="gm-role-img" src="cards/${cardFile}.webp" alt="${role.id}" data-emoji="${role.emoji}" style="width:100%; height:100%; object-fit:cover; border-radius:2px;">
+        <img class="gm-role-img" src="${imagePath}" alt="${role.id}" data-emoji="${role.emoji}" style="width:100%; height:100%; object-fit:cover; border-radius:2px;">
         <span class="gm-role-emoji" style="position:absolute; font-size:20px; display:none; text-align:center; width:100%;">${role.emoji}</span>
       </div>
     `;

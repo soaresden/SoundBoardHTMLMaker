@@ -1,0 +1,48 @@
+{
+  "id": "Tueur_Serie",
+  "order": 30,
+  "name": "Tueur Serie",
+  "emoji": "🔪",
+  "camp": "Seul",
+  "origin": "base",
+  "description": "Rôle: Tueur_Serie",
+  "instruction": "Chaque nuit, sélectionnez un joueur à éliminer.",
+  "tips": "Cachez votre rôle. Éliminez les Loups systématiquement. Gagnez seul.",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "kill",
+      "phase": "everyNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "tueurKill"
+    }
+  },
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "🔪",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "actionStartMessage": "🎭 Tueur_Serie agit",
+    "actionCompleteMessage": "✅ Tueur_Serie a complété son action"
+  },
+  "winConditions": [
+    {
+      "type": "camp",
+      "condition": "Seul",
+      "description": "Gagner avec le camp Seul"
+    }
+  ],
+  "specialBehaviors": [],
+  "cardImage": "gamemaster/roles/30-Tueur_Serie.png",
+  "pouvoir": "Chaque nuit, peut éliminer n'importe quel joueur. Immun aux attaques des Loups.",
+  "notes": "C'est un rôle solitaire. Vous êtes immunisé contre les Loups mais pas contre les villageois."
+}

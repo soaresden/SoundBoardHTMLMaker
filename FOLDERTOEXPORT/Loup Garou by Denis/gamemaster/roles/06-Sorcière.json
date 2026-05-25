@@ -1,0 +1,46 @@
+{
+  "id": "Sorcière",
+  "order": 6,
+  "name": "Sorcière",
+  "emoji": "🧙‍♀️",
+  "camp": "Village",
+  "origin": "base",
+  "description": "Rôle: Sorcière",
+  "instruction": "Chaque nuit, vous pouvez utiliser une potion: mort pour tuer, ou vie pour sauver.",
+  "tips": "Gardez vos potions pour les moments critiques. Une seule potion de chaque type.",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "potions",
+      "phase": "everyNight",
+      "targets": {},
+      "stateKey": "sorcierePotions"
+    }
+  },
+  "visual": {
+    "fondColor": "#6b4c9a",
+    "emoji": "🧙‍♀️",
+    "emojiColor": "#ffffff",
+    "targetsBorder": {
+      "color": "#9966ff",
+      "width": "2px",
+      "style": "solid"
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "actionStartMessage": "🎭 Sorcière agit",
+    "actionCompleteMessage": "✅ Sorcière a complété son action"
+  },
+  "winConditions": [
+    {
+      "type": "camp",
+      "condition": "Village",
+      "description": "Gagner avec le camp Village"
+    }
+  ],
+  "specialBehaviors": [],
+  "cardImage": "gamemaster/roles/06-Sorcière.png",
+  "pouvoir": "Peut tuer un joueur (potion de mort) ou sauver un joueur d'une élimination (potion de vie) chaque nuit.",
+  "notes": "Vous apprendre qui allait être éliminé quand vous utilisez la potion de vie. Chaque potion ne peut être utilisée qu'une fois."
+}
