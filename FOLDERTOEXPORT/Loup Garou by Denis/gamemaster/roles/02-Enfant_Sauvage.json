@@ -2,7 +2,7 @@
   "id": "Enfant_Sauvage",
   "order": 2,
   "name": "Enfant Sauvage",
-  "emoji": "👦",
+  "emoji": "🐒",
   "camp": "Village",
   "origin": "base",
   "pouvoir": "Désigne un modèle au début de la partie. Si le modèle meurt, l'enfant devient un loup-garou.",
@@ -16,7 +16,7 @@
       "order": 2,
       "enabled": true,
       "action": {
-        "type": "selectOne",
+        "type": "enfantSauvageIdol",
         "targets": {
           "count": 1,
           "minCount": 1,
@@ -59,11 +59,12 @@
   ],
 
   "visual": {
-    "fondColor": "#8b7355",
-    "emoji": "👦",
-    "emojiColor": "#ffffff",
+    "fondColor": "#BD300A",
+    "borderColor": "#BD300A",
+    "emoji": "🐒",
+    "emojiColor": "#F89361",
     "targetsBorder": {
-      "color": "#d4af37",
+      "color": "#BD300A",
       "width": "2px",
       "style": "solid"
     }

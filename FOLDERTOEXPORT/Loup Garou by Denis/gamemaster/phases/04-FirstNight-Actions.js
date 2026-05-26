@@ -383,6 +383,8 @@ function attachCupidoHandlers(gameUI, players) {
   if (!gm.state.cupidoSelection) gm.state.cupidoSelection = [];
 
   const selectedDisplay = document.getElementById('gmCupidoSelected');
+  const buttons = document.querySelectorAll('.gm-cupido-select');
+  console.log(`[attachCupidoHandlers] Trouvé ${buttons.length} boutons .gm-cupido-select`);
 
   const updateCupidoSelection = () => {
     const selected = gm.state.cupidoSelection || [];
@@ -398,21 +400,27 @@ function attachCupidoHandlers(gameUI, players) {
     }
   };
 
-  document.querySelectorAll('.gm-cupido-select').forEach(elem => {
+  buttons.forEach((elem, idx) => {
     elem.addEventListener('click', () => {
       const playerId = elem.dataset.playerId;
+      const playerName = players.find(p => p.id === playerId)?.name || '?';
+      console.log(`[attachCupidoHandlers] Click sur ${playerName} (${playerId})`);
       const selected = gm.state.cupidoSelection || [];
 
       if (selected.includes(playerId)) {
         gm.state.cupidoSelection = selected.filter(id => id !== playerId);
+        console.log(`[attachCupidoHandlers] Désélectionné, nouvelle liste:`, gm.state.cupidoSelection);
       } else if (selected.length < 2) {
         gm.state.cupidoSelection = [...selected, playerId];
+        console.log(`[attachCupidoHandlers] Sélectionné, nouvelle liste:`, gm.state.cupidoSelection);
+      } else {
+        console.log(`[attachCupidoHandlers] Max 2 atteint, ignoré`);
+        return;
       }
 
       gm.saveState();
       updateCupidoSelection();
-      // Note: Ne pas appeler gameUI.render() ici - c'est fait par 05-RoleActions.js
-      // Appeler render() ici causait des doublons de handlers et perdait la sélection
+      gameUI.render();  // OK maintenant car le code dupliqué de 05-RoleActions.js a été supprimé
     });
   });
   updateCupidoSelection();
@@ -422,40 +430,60 @@ function attachEnfantSauvageHandlers(gameUI, players) {
   const gm = gameUI.gm;
   if (!gm.state.enfantSauvageIdol) gm.state.enfantSauvageIdol = { playerId: null };
 
-  const idolSelect = document.getElementById('gmEnfantSauvageIdol');
-  const resultDisplay = document.getElementById('gmEnfantSauvageResult');
+  const resultDisplay = document.getElementById('gmEnfantSauvageIdolSelected');
+  const buttons = document.querySelectorAll('.gm-enfant-sauvage-idol-select');
+
+  console.log(`[attachEnfantSauvageHandlers] Trouvé ${buttons.length} boutons .gm-enfant-sauvage-idol-select`);
+  console.log(`[attachEnfantSauvageHandlers] resultDisplay:`, resultDisplay ? '✓ Trouvé' : '❌ Pas trouvé');
 
   const updateEnfantResult = () => {
+    if (!resultDisplay) return;
     const playerId = gm.state.enfantSauvageIdol.playerId;
     if (playerId) {
       const target = players.find(p => p.id === playerId);
       resultDisplay.innerHTML = `✓ Ton idole: <strong>${target?.name || ''}</strong>`;
       resultDisplay.style.color = '#66d999';
+      console.log(`[Enfant Sauvage] Idole sélectionnée: ${target?.name}`);
     } else {
       resultDisplay.textContent = 'Aucune sélection';
       resultDisplay.style.color = '#aaa';
     }
   };
 
-  idolSelect?.addEventListener('change', (e) => {
-    const selectedValue = e.target.value;
-    gm.state.enfantSauvageIdol.playerId = selectedValue;
-    gm.saveState();
-    updateEnfantResult();
-    gameUI.render();
+  // Utiliser la délégation d'événements au niveau du conteneur
+  const actionContainer = document.getElementById('gmRoleActionContainer');
+  if (actionContainer) {
+    console.log(`[attachEnfantSauvageHandlers] Installation de la délégation d'événements`);
 
-    // Restaurer la sélection après le render
-    setTimeout(() => {
-      const newSelect = document.getElementById('gmEnfantSauvageIdol');
-      if (newSelect && selectedValue) {
-        newSelect.value = selectedValue;
-      }
-    }, 0);
-  });
+    // Nettoyer les anciens écouteurs en clonant le nœud
+    const newContainer = actionContainer.cloneNode(true);
+    actionContainer.parentNode.replaceChild(newContainer, actionContainer);
 
-  // Restaurer la sélection si elle existe
-  if (gm.state.enfantSauvageIdol?.playerId && idolSelect) {
-    idolSelect.value = gm.state.enfantSauvageIdol.playerId;
+    const newActionContainer = document.getElementById('gmRoleActionContainer');
+    newActionContainer.addEventListener('click', (e) => {
+      const button = e.target.closest('.gm-enfant-sauvage-idol-select');
+      if (!button) return;
+
+      const selectedPlayerId = button.dataset.playerId;
+      const selectedPlayer = players.find(p => p.id === selectedPlayerId);
+      console.log(`[attachEnfantSauvageHandlers] ✓✓✓ CLICK DÉTECTÉ sur ${selectedPlayer?.name} (${selectedPlayerId})`);
+
+      gm.state.enfantSauvageIdol.playerId = selectedPlayerId;
+      gm.saveState();
+
+      // Ajouter un log pour le journal du jeu
+      gm.addLog(`👦 Enfant Sauvage - a choisi ${selectedPlayer?.name} comme idole`, 'action', 1);
+
+      updateEnfantResult();
+      gameUI.render();
+
+      // Ré-attacher après render
+      setTimeout(() => {
+        attachRoleDetailandTipsEvents(gameUI);
+      }, 0);
+    });
+
+    console.log(`[attachEnfantSauvageHandlers] Délégation d'événements installée`);
   }
 
   updateEnfantResult();
@@ -465,11 +493,10 @@ function attachChienLoupHandlers(gameUI, players, playerAssignedToRole) {
   const gm = gameUI.gm;
   if (gm.state.chienLoupChoice === undefined) gm.state.chienLoupChoice = null;
 
-  const villageoisBtn = document.getElementById('gmChienLoupVillageois');
-  const loupBtn = document.getElementById('gmChienLoupLoup');
   const resultDisplay = document.getElementById('gmChienLoupResult');
 
   const updateChienResult = () => {
+    if (!resultDisplay) return;
     const choice = gm.state.chienLoupChoice;
     if (choice === 'villageois') {
       resultDisplay.innerHTML = `✓ Tu restes <strong>Villageois</strong>`;
@@ -483,20 +510,41 @@ function attachChienLoupHandlers(gameUI, players, playerAssignedToRole) {
     }
   };
 
-  villageoisBtn?.addEventListener('click', () => {
-    gm.state.chienLoupChoice = 'villageois';
-    gm.saveState();
-    updateChienResult();
-    gameUI.render();
-  });
+  // Utiliser la délégation d'événements au niveau du conteneur
+  const actionContainer = document.getElementById('gmRoleActionContainer');
+  if (actionContainer) {
+    console.log(`[attachChienLoupHandlers] Installation de la délégation d'événements`);
 
-  loupBtn?.addEventListener('click', () => {
-    gm.state.chienLoupChoice = 'loup';
-    // La transformation en Loup Garou se fera quand on valide le passage au rôle suivant
-    gm.saveState();
-    updateChienResult();
-    gameUI.render();
-  });
+    // Nettoyer les anciens écouteurs en clonant le nœud
+    const newContainer = actionContainer.cloneNode(true);
+    actionContainer.parentNode.replaceChild(newContainer, actionContainer);
+
+    const newActionContainer = document.getElementById('gmRoleActionContainer');
+    newActionContainer.addEventListener('click', (e) => {
+      const button = e.target.closest('.gm-chien-loup-choice');
+      if (!button) return;
+
+      const choice = button.dataset.choice;
+      console.log(`[attachChienLoupHandlers] ✓✓✓ CLICK DÉTECTÉ - Choix: ${choice}`);
+
+      gm.state.chienLoupChoice = choice;
+      gm.saveState();
+
+      // Ajouter un log pour le journal du jeu
+      const choiceLabel = choice === 'villageois' ? 'reste Villageois' : 'devient Loup Garou';
+      gm.addLog(`🐕🐺 Chien Loup - ${choiceLabel}`, 'action', 1);
+
+      updateChienResult();
+      gameUI.render();
+
+      // Ré-attacher après render
+      setTimeout(() => {
+        attachRoleDetailandTipsEvents(gameUI);
+      }, 0);
+    });
+
+    console.log(`[attachChienLoupHandlers] Délégation d'événements installée`);
+  }
 
   updateChienResult();
 }

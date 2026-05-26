@@ -22,6 +22,12 @@ class GameMasterOrchestrator {
       linkedPlayers: {},       // {playerId: linkedPlayerId} pour Cupidon
       infectedPlayers: {},     // {playerId: originalRole} pour Loup Noir
       assignmentMode: null,    // 'tabletPass' ou 'mdj' - sélectionné après choix du mode
+      // Propriétés de gameplay dynamiques
+      currentRoleIdx: 0,        // Index du rôle courant en assignation
+      nightStep: 1,            // Étape actuelle (1 = assignation, 2 = action)
+      cupidoSelection: [],     // IDs des joueurs sélectionnés par Cupidon
+      enfantSauvageIdol: { playerId: null }, // Idole de l'Enfant Sauvage
+      welcomeLogged: false,    // Flag pour le log d'accueil
     };
 
     this.gameRules = null;     // Chargé depuis game-rules.json
@@ -322,51 +328,27 @@ class GameMasterOrchestrator {
   }
 
   /**
-   * Récupère les propriétés visuelles d'un rôle
+   * Ajoute un message au journal du jeu avec formatage
    */
-  getRoleVisual(roleId, visualType) {
-    const role = this.getRoleInfo(roleId);
-    if (!role) return null;
-
-    // Pour les interactions spéciales (lovers, idol, etc.)
-    const specialVisuals = {
-      'Cupidon': {
-        'lovers': { border: '#ff69b4', bg: '#ff1493' }
-      },
-      'Enfant_Sauvage': {
-        'idol': { border: '#ffd700', bg: '#ffed4e' }
-      }
-    };
-
-    // Vérifier d'abord les interactions spéciales
-    if (specialVisuals[roleId]?.[visualType]) {
-      return specialVisuals[roleId][visualType];
-    }
-
-    // Sinon, retourner les propriétés visuelles du rôle depuis le JSON
-    if (role.visual) {
-      return {
-        background: role.visual.fondColor || role.visual.background || '#4a9d6f',
-        border: role.visual.borderColor || '#ffffff',
-        emoji: role.visual.emoji,
-        emojiColor: role.visual.emojiColor || '#fff'
-      };
-    }
-
-    return null;
-  }
-
-  /**
-   * Ajoute un message au journal du jeu
-   */
-  addLog(message, type = 'info') {
+  addLog(message, type = 'info', indent = 0) {
     if (!this.state.gameLog) {
       this.state.gameLog = [];
     }
+
+    // Formater la date/heure
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('fr-FR');
+    const timeStr = now.toLocaleTimeString('fr-FR');
+
+    // Créer l'indentation
+    const indentStr = '   '.repeat(indent);
+
     this.state.gameLog.push({
       timestamp: new Date().toISOString(),
-      message,
-      type
+      message: `${indentStr}${message}`,
+      displayText: `${dateStr} à ${timeStr} : ${indentStr}${message}`,
+      type,
+      indent
     });
   }
 
@@ -385,6 +367,15 @@ class GameMasterOrchestrator {
         assignmentMode: this.state.assignmentMode,
         tableType: this.state.tableType,
         zoneConfig: this.state.zoneConfig,
+        // Sauvegarder les propriétés de gameplay dynamiques
+        currentRoleIdx: this.state.currentRoleIdx,
+        nightStep: this.state.nightStep,
+        cupidoSelection: this.state.cupidoSelection,
+        enfantSauvageIdol: this.state.enfantSauvageIdol,
+        welcomeLogged: this.state.welcomeLogged,
+        gameLog: this.state.gameLog,
+        linkedPlayers: this.state.linkedPlayers,
+        infectedPlayers: this.state.infectedPlayers,
         // Ne pas sauvegarder rolesData - on la recharge depuis les JSON
       };
       localStorage.setItem('LoupsGarous_GameState', JSON.stringify(stateToSave));

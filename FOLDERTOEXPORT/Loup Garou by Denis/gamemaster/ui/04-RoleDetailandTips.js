@@ -63,10 +63,10 @@ function renderRoleDetailandTips(gameUI) {
 
   // Log d'accueil
   if (currentRoleIdx === 0 && !gm.state.welcomeLogged) {
-    gm.addLog('🎮 BIENVENUE AU VILLAGE !', 'welcome');
+    gm.addLog('🎮 BIENVENUE AU VILLAGE !', 'welcome', 0);
     const playerNames = players.map(p => p.name).join(', ');
-    gm.addLog(`Le village accueille ${players.length} habitants: ${playerNames}`, 'info');
-    gm.addLog('Préparez-vous à dormir votre première nuit...', 'info');
+    gm.addLog(`Le village accueille ${players.length} habitants: ${playerNames}`, 'info', 0);
+    gm.addLog('Préparez-vous à dormir votre première nuit...', 'info', 0);
     gm.state.welcomeLogged = true;
   }
 
@@ -136,6 +136,15 @@ function renderRoleDetailandTips(gameUI) {
     ? 'opacity:0.5; cursor:not-allowed;'
     : 'opacity:1; cursor:pointer;';
 
+  // Vérifier si l'action est complète en step 2
+  let actionComplete = true;
+  if (roleAction && window.isActionComplete) {
+    actionComplete = window.isActionComplete(gm, currentRole);
+  }
+  const actionButtonStyle = !actionComplete
+    ? 'opacity:0.5; cursor:not-allowed;'
+    : 'opacity:1; cursor:pointer;';
+
   return `
     <style>${BREATHE_ANIMATION}</style>
     <div class="gm-screen" style="display:flex; flex-direction:column; height:100%; gap:0; padding:0;">
@@ -189,7 +198,7 @@ function renderRoleDetailandTips(gameUI) {
               Suivant
             </button>
           ` : `
-            <button id="gmRoleActionConfirm" style="background:linear-gradient(135deg, #5174db, #c77dff); border:none; padding:6px 12px; border-radius:4px; color:white; font-weight:600; cursor:pointer; font-size:9px; flex:1;">
+            <button id="gmRoleActionConfirm" style="background:linear-gradient(135deg, #5174db, #c77dff); border:none; padding:6px 12px; border-radius:4px; color:white; font-weight:600; font-size:9px; flex:1; ${actionButtonStyle}" ${!actionComplete ? 'disabled' : ''}>
               Terminer
             </button>
           `}
@@ -229,7 +238,19 @@ function attachRoleDetailandTipsEvents(gameUI) {
       const prevPlayersAssigned = players.filter(p => p.roleId === prevRole).length;
       gm.state.nightStep = prevPlayersAssigned < prevRoleCount ? 1 : 2;
     } else {
+      // Step 2: Annuler l'action avant de retourner à step 1
       gm.state.nightStep = 1;
+
+      // Annuler les sélections de l'action en cours
+      if (currentRole === 'Enfant_Sauvage') {
+        gm.state.enfantSauvageIdol = { playerId: null };
+      } else if (currentRole === 'Cupidon') {
+        gm.state.cupidoSelection = [];
+      } else if (currentRole === 'Chien_Loup') {
+        gm.state.chienLoupChoice = null;
+      }
+      // Ajouter d'autres annulations selon les rôles...
+      console.log(`[RoleDetailandTips] Action ${currentRole} annulée`);
     }
     gm.saveState();
     gameUI.render();
@@ -254,6 +275,7 @@ function attachRoleDetailandTipsEvents(gameUI) {
         if (isAlreadyAssigned) {
           console.log(`[RoleDetailandTips] Unassigning ${player.name} from ${currentRole}`);
           player.roleId = null;
+          gm.addLog(`${player.name} - a été désassigné du rôle ${currentRole}`, 'action', 1);
         } else {
           // Vérifier qu'on n'a pas déjà atteint le max
           if (playersAssignedToRole.length >= requiredCount) {
@@ -262,13 +284,30 @@ function attachRoleDetailandTipsEvents(gameUI) {
           }
           console.log(`[RoleDetailandTips] Assigning ${player.name} to ${currentRole}`);
           player.roleId = currentRole;
+          const roleInfo = gm.getRoleInfo(currentRole);
+          gm.addLog(`${roleInfo?.emoji || '?'} ${currentRole} - a été assigné à ${player.name}`, 'action', 0);
         }
 
         gm.saveState();
         console.log(`[RoleDetailandTips] State saved, rendering...`);
         gameUI.render();
 
-        setTimeout(() => attachRoleDetailandTipsEvents(gameUI), 0);
+        setTimeout(() => {
+          attachRoleDetailandTipsEvents(gameUI);
+
+          // RETRIGGER animation breathe sur le joueur assigné
+          // Force une reflow pour redémarrer l'animation CSS
+          setTimeout(() => {
+            const assignedBtn = document.querySelector(`[data-player-id="${playerId}"].gm-player-assign.current`);
+            if (assignedBtn) {
+              console.log(`[RoleDetailandTips] Retriggering breathe animation for ${player.name}`);
+              // Forcer la reflow en supprimant/readjoutant la classe
+              assignedBtn.classList.remove('current');
+              void assignedBtn.offsetWidth; // Force reflow
+              assignedBtn.classList.add('current');
+            }
+          }, 50);
+        }, 0);
       });
     });
 
@@ -310,8 +349,22 @@ function attachRoleDetailandTipsEvents(gameUI) {
     const playerAssignedToRole = playersAssignedToRole.length > 0 ? playersAssignedToRole[0] : null;
     const roleAction = ROLE_ACTIONS[currentRole];
 
+    console.log(`[04-RoleDetailandTips Step 2] Rôle: ${currentRole}, Joueur assigné: ${playerAssignedToRole?.name || 'NONE'}, Action: ${roleAction?.type || 'NONE'}`);
+
     if (playerAssignedToRole && roleAction) {
+      // D'ABORD: Générer et insérer le HTML de l'action
+      const actionContainer = document.getElementById('gmRoleActionContainer');
+      if (actionContainer && window.renderRoleActionsUI) {
+        const actionHtml = renderRoleActionsUI(gameUI, currentRole, roleAction, players, selectedRoles);
+        actionContainer.innerHTML = actionHtml;
+        console.log(`[04-RoleDetailandTips Step 2] HTML inséré dans gmRoleActionContainer`);
+      }
+
+      // ENSUITE: Attacher les event handlers
+      console.log(`[04-RoleDetailandTips Step 2] Appel de attachRoleActionHandlers()`);
       attachRoleActionHandlers(gameUI, currentRole, players, selectedRoles, playerAssignedToRole);
+    } else {
+      console.log(`[04-RoleDetailandTips Step 2] ❌ Condition non remplie: playerAssignedToRole=${!!playerAssignedToRole}, roleAction=${!!roleAction}`);
     }
   }
 }

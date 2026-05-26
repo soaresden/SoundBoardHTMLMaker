@@ -18,11 +18,11 @@
     }
   },
   "visual": {
-    "fondColor": "#6b4c9a",
+    "fondColor": "#782125",
     "emoji": "🐕",
-    "emojiColor": "#ffffff",
+    "emojiColor": "#467733",
     "targetsBorder": {
-      "color": "#9966ff",
+      "color": "#782125",
       "width": "2px",
       "style": "solid"
     }

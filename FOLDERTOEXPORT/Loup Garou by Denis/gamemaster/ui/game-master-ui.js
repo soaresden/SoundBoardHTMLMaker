@@ -923,12 +923,20 @@ class GameMasterUI {
           <div style="flex:1; background:rgba(150,100,255,0.1); border:1px solid rgba(150,100,255,0.3); border-radius:6px; padding:12px; display:flex; flex-direction:column; min-width:0;">
             <h3 style="margin:0 0 12px 0; color:#c77dff; font-size:11px; font-weight:600; flex:0 0 auto;">⚔️ ÉVÉNEMENTS</h3>
             <div id="gmLogScroll" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:6px; user-select:text;">
-              ${gameLog.length > 0 ? gameLog.map((event, idx) => `
-                <div style="font-size:9px; color:#ddd; padding:8px; background:rgba(0,0,0,0.3); border-left:2px solid #c77dff; border-radius:2px; flex:0 0 auto; user-select:text;">
-                  <div style="color:#aaa; font-size:8px; margin-bottom:2px; user-select:text;">${event.timestamp}</div>
-                  <strong style="color:#e8e8f0; user-select:text;">${event.turn || 'Nuit 1'}</strong> - <span style="user-select:text;">${event.text}</span>
-                </div>
-              `).join('') : `
+              ${gameLog.length > 0 ? gameLog.map((event, idx) => {
+                // Support ancien et nouveau format de logs
+                const displayText = event.displayText || event.text || `${event.turn || 'Nuit 1'} - ${event.message || ''}`;
+                const timestamp = event.timestamp ? new Date(event.timestamp).toLocaleTimeString('fr-FR') : '';
+                const bgColor = event.type === 'welcome' ? 'rgba(102, 217, 153, 0.1)' : 'rgba(0,0,0,0.3)';
+                const borderColor = event.type === 'welcome' ? '#66d999' : '#c77dff';
+
+                return `
+                  <div style="font-size:9px; color:#ddd; padding:8px; background:${bgColor}; border-left:2px solid ${borderColor}; border-radius:2px; flex:0 0 auto; user-select:text;">
+                    <div style="color:#aaa; font-size:8px; margin-bottom:2px; user-select:text;">${timestamp}</div>
+                    <span style="color:#e8e8f0; user-select:text;">${displayText}</span>
+                  </div>
+                `;
+              }).join('') : `
                 <div style="font-size:11px; color:#aaa; text-align:center; padding:16px;">
                   📝 Aucun événement enregistré pour le moment
                 </div>

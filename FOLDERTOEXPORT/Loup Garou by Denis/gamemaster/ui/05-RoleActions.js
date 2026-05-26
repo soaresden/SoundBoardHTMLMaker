@@ -6,6 +6,8 @@
 function renderRoleActionsUI(gameUI, currentRole, roleAction, players, selectedRoles) {
   const gm = gameUI.gm;
 
+  console.log(`[renderRoleActionsUI] Rôle: ${currentRole}, Type: ${roleAction.type}`);
+
   // Filtrer les joueurs selon le rôle
   let availablePlayers;
   if (currentRole === 'Corbeau' || currentRole === 'Salvateur' || currentRole === 'Enfant_Sauvage') {
@@ -14,10 +16,14 @@ function renderRoleActionsUI(gameUI, currentRole, roleAction, players, selectedR
     availablePlayers = players.filter(p => !p.roleId);
   }
 
-  // Pour Enfant_Sauvage: exclure les autres Enfant_Sauvage
+  // Pour Enfant_Sauvage: exclure SEULEMENT le joueur Enfant_Sauvage lui-même (pour éviter auto-sélection)
+  // Tous les autres joueurs restent visibles pour permettre le re-clic et changement de sélection
   if (currentRole === 'Enfant_Sauvage') {
     const playerAssignedToRole = players.find(p => p.roleId === 'Enfant_Sauvage');
-    availablePlayers = availablePlayers.filter(p => p.id !== playerAssignedToRole?.id);
+    if (playerAssignedToRole) {
+      availablePlayers = availablePlayers.filter(p => p.id !== playerAssignedToRole.id);
+    }
+    console.log(`[renderRoleActionsUI Enfant_Sauvage] ${availablePlayers.length} joueurs disponibles pour sélection`);
   }
 
   if (roleAction.type === 'selectPair') {
@@ -63,23 +69,20 @@ function renderRoleActionsUI(gameUI, currentRole, roleAction, players, selectedR
       <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:3px;">
         ${availablePlayers.map(p => {
           const isSelected = gm.state.enfantSauvageIdol?.playerId === p.id;
-          const enfantVisual = gameUI.gm.getRoleVisual('Enfant_Sauvage', 'idol');
-          let bgColor, borderColor, borderWidth = '2px';
+          const enfantRole = gameUI.gm.getRoleInfo('Enfant_Sauvage');
+          const enfantVisual = enfantRole?.visual || {};
+          const roleBgColor = enfantVisual.fondColor || '#66d999';
+          const roleBorderColor = enfantVisual.borderColor || '#66d999';
 
-          if (isSelected) {
-            bgColor = enfantVisual?.background || 'rgba(167, 29, 8, 0.3)';
-            borderColor = enfantVisual?.border || '#A71D08';
-            borderWidth = enfantVisual?.borderWidth || '2px';
-          } else {
-            bgColor = '#6b4c9a';
-            borderColor = '#9966ff';
-          }
+          const bgColor = isSelected ? roleBgColor : 'rgba(81, 116, 219, 0.15)';
+          const borderColor = isSelected ? roleBorderColor : 'rgba(199,125,255,0.3)';
+          const borderWidth = isSelected ? '2px' : '1px';
 
           return `
             <div class="gm-enfant-sauvage-idol-select" data-player-id="${p.id}" style="
               padding:6px 4px; margin:2px; border:${borderWidth} solid ${borderColor}; border-radius:3px;
               background:${bgColor}; color:#e8e8f0; cursor:pointer; text-align:center;
-              font-size:10px; font-weight:600; user-select:none; transition:all 0.2s;
+              font-size:10px; font-weight:600; user-select:none; transition:all 0.2s; box-shadow:0 2px 6px ${borderColor}40;
             ">
               ${p.name}
             </div>
@@ -222,105 +225,16 @@ function attachRoleActionsEvents(gameUI) {
     attachSelectOneHandlers(gameUI, currentRole, players);
   }
 
-  if (window.attachSelectPairHandlers && roleAction.type === 'selectPair') {
-    attachSelectPairHandlers(gameUI, currentRole, players);
+  if (roleAction.type === 'selectPair') {
+    if (currentRole === 'Cupidon' && window.attachCupidoHandlers) {
+      attachCupidoHandlers(gameUI, players);
+    } else if (window.attachSelectPairHandlers) {
+      attachSelectPairHandlers(gameUI, currentRole, players);
+    }
   }
 
-  // Handlers Enfant Sauvage (sélection de l'idole)
-  if (roleAction.type === 'enfantSauvageIdol') {
-    const gm = gameUI.gm;
-    if (!gm.state.enfantSauvageIdol) gm.state.enfantSauvageIdol = { playerId: null };
-
-    const updateEnfantResult = () => {
-      const resultDisplay = document.getElementById('gmEnfantSauvageIdolSelected');
-      if (!resultDisplay) return;
-
-      const playerId = gm.state.enfantSauvageIdol.playerId;
-      if (playerId) {
-        const target = players.find(p => p.id === playerId);
-        resultDisplay.innerHTML = `✓ Ton idole: <strong>${target?.name || ''}</strong>`;
-        resultDisplay.style.color = '#66d999';
-      } else {
-        resultDisplay.textContent = 'Aucune sélection';
-        resultDisplay.style.color = '#aaa';
-      }
-    };
-
-    document.querySelectorAll('.gm-enfant-sauvage-idol-select').forEach(button => {
-      button.addEventListener('click', (e) => {
-        const selectedPlayerId = button.getAttribute('data-player-id');
-        gm.state.enfantSauvageIdol.playerId = selectedPlayerId;
-        gm.saveState();
-        updateEnfantResult();
-        gameUI.render();
-      });
-    });
-    updateEnfantResult();
-  }
-
-  if (window.attachEnfantSauvageHandlers && roleAction.type === 'enfantSauvageIdol') {
-    attachEnfantSauvageHandlers(gameUI, players);
-  }
-
-  // Handlers Cupidon (sélection des amoureux)
-  if (currentRole === 'Cupidon') {
-    const gm = gameUI.gm;
-    if (!gm.state.cupidoSelection) gm.state.cupidoSelection = [];
-
-    const selectedDisplay = document.getElementById('gmCupidoSelected');
-
-    const updateCupidoSelection = () => {
-      const selected = gm.state.cupidoSelection || [];
-      const selectedNames = selected.map(id => {
-        const p = players.find(pl => pl.id === id);
-        return p ? p.name : '';
-      }).filter(n => n);
-
-      if (selectedDisplay) {
-        selectedDisplay.textContent = selectedNames.length > 0
-          ? `💘 ${selectedNames.join(' ❤️ ')}`
-          : 'Aucun sélectionné';
-      }
-    };
-
-    document.querySelectorAll('.gm-cupido-select').forEach(elem => {
-      elem.addEventListener('click', () => {
-        const playerId = elem.dataset.playerId;
-        const player = players.find(p => p.id === playerId);
-        console.log(`[05-RoleActions] Cupidon select clicked: ${player?.name} (${playerId})`);
-        console.log(`[05-RoleActions] gm.state.cupidoSelection VALUE AT CLICK:`, gm.state.cupidoSelection);
-        const selected = gm.state.cupidoSelection || [];
-
-        console.log(`[05-RoleActions] Cupidon select clicked: ${player?.name} (${playerId})`);
-        console.log(`[05-RoleActions] Current selection before:`, selected);
-
-        if (selected.includes(playerId)) {
-          gm.state.cupidoSelection = selected.filter(id => id !== playerId);
-          console.log(`[05-RoleActions] Removed ${player?.name} from selection`);
-        } else if (selected.length < 2) {
-          gm.state.cupidoSelection = [...selected, playerId];
-          console.log(`[05-RoleActions] Added ${player?.name} to selection`);
-        } else {
-          console.log(`[05-RoleActions] Selection full (2/2), ignoring`);
-          return;
-        }
-
-        console.log(`[05-RoleActions] New selection:`, gm.state.cupidoSelection);
-        console.log(`[05-RoleActions] cupidoSelection BEFORE saveState:`, gm.state.cupidoSelection);
-        gm.saveState();
-        console.log(`[05-RoleActions] cupidoSelection AFTER saveState:`, gm.state.cupidoSelection);
-        updateCupidoSelection();
-        console.log(`[05-RoleActions] About to render...`);
-        gameUI.render();
-        console.log(`[05-RoleActions] cupidoSelection AFTER render:`, gm.state.cupidoSelection);
-      });
-    });
-    updateCupidoSelection();
-  }
-
-  if (window.attachCupidoHandlers && currentRole === 'Cupidon') {
-    attachCupidoHandlers(gameUI, players);
-  }
+  // Enfant Sauvage est géré par attachRoleActionHandlers() -> attachEnfantSauvageHandlers() dans 04-FirstNight-Actions.js
+  // N'ajouter aucun code ici pour éviter les doublons de handlers
 
   if (window.attachVoyanteHandlers && roleAction.type === 'voyanteLookRoles') {
     attachVoyanteHandlers(gameUI, players, selectedRoles);
@@ -338,69 +252,8 @@ function attachRoleActionsEvents(gameUI) {
     attachRenardHandlers(gameUI, players);
   }
 
-  // Handlers Chien Loup (choix villageois ou loup)
-  if (currentRole === 'Chien_Loup' && roleAction.type === 'chienLoupChoice') {
-    const gm = gameUI.gm;
-    const wolfEmoji = roleAction.chooseWolfEmoji || '🐺';
-    const villageoisEmoji = roleAction.chooseVillageoisEmoji || '🪏';
-    const playersAssignedToRole = players.filter(p => p.roleId === 'Chien_Loup');
-    const playerAssignedToRole = playersAssignedToRole.length > 0 ? playersAssignedToRole[0] : null;
-
-    if (!gm.state.chienLoupChoice) {
-      gm.state.chienLoupChoice = null;
-    }
-
-    const updateChienLoupResult = () => {
-      const resultDisplay = document.getElementById('gmChienLoupResult');
-      if (!resultDisplay) return;
-
-      const choice = gm.state.chienLoupChoice;
-      if (choice === 'villageois') {
-        resultDisplay.innerHTML = `✓ Tu restes Villageois ${villageoisEmoji}`;
-        resultDisplay.style.color = '#66d999';
-      } else if (choice === 'loup') {
-        resultDisplay.innerHTML = `✓ Tu deviens Loup-Garou ${wolfEmoji}`;
-        resultDisplay.style.color = '#d46666';
-      } else {
-        resultDisplay.textContent = 'Aucune sélection';
-        resultDisplay.style.color = '#aaa';
-      }
-    };
-
-    document.querySelectorAll('.gm-chien-loup-choice').forEach(button => {
-      button.addEventListener('click', () => {
-        const choice = button.dataset.choice;
-        gm.state.chienLoupChoice = choice;
-
-        // Mettre à jour l'emoji et les flags du joueur
-        if (playerAssignedToRole) {
-          if (choice === 'loup') {
-            // Le Chien Loup devient un Loup-Garou
-            playerAssignedToRole.transformedFromChienLoup = true;
-            playerAssignedToRole.visualEmoji = wolfEmoji;
-            console.log(`🐕→${wolfEmoji} ${playerAssignedToRole.name} devient Loup-Garou!`);
-          } else {
-            // Le Chien Loup reste Villageois
-            playerAssignedToRole.transformedFromChienLoup = false;
-            playerAssignedToRole.visualEmoji = villageoisEmoji;
-            console.log(`🐕→${villageoisEmoji} ${playerAssignedToRole.name} reste Villageois!`);
-          }
-        }
-
-        gm.saveState();
-        updateChienLoupResult();
-        gameUI.render();
-      });
-    });
-
-    updateChienLoupResult();
-  }
-
-  if (window.attachChienLoupHandlers && currentRole === 'Chien_Loup') {
-    const playersAssignedToRole = players.filter(p => p.roleId === currentRole);
-    const playerAssignedToRole = playersAssignedToRole.length > 0 ? playersAssignedToRole[0] : null;
-    attachChienLoupHandlers(gameUI, players, playerAssignedToRole);
-  }
+  // Chien Loup est géré par attachRoleActionHandlers() -> attachChienLoupHandlers() dans 04-FirstNight-Actions.js
+  // N'ajouter aucun code ici pour éviter les doublons de handlers
 
   if (window.attachJugeBegueHandlers && currentRole === 'Juge_Begue') {
     attachJugeBegueHandlers(gameUI, players);

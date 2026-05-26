@@ -65,7 +65,12 @@ const ROLES_ACTION_ONLY = new Set([]);
 const ROLE_ACTIONS = {
   'Cupidon': { instruction: '💘 Sélectionnez 2 joueurs pour les rendre amoureux', type: 'selectPair' },
   'Enfant_Sauvage': { instruction: '👦 Enfant Sauvage, qui est ton idole ?', type: 'enfantSauvageIdol' },
-  'Chien_Loup': { instruction: '🐕🐺 Chien Loup, tu restes Villageois ou tu deviens Loup Garou ?', type: 'chienLoupChoice' },
+  'Chien_Loup': {
+    instruction: '🐕🐺 Chien Loup, tu restes Villageois ou tu deviens Loup Garou ?',
+    type: 'chienLoupChoice',
+    chooseVillageoisEmoji: '🔱',
+    chooseWolfEmoji: '🐺'
+  },
   'Voyante': { instruction: '👁️ Voyante, tu veux voir l\'identité de qui ?', type: 'voyanteLook' },
   'Sorcière': { instruction: '🧙‍♀️ Sorcière, choisis qui ressusciter (VIE) ou empoisonner (MORT)', type: 'sorcierePotions' },
   'Ancien': { instruction: '👴 Ancien, qui protèges-tu cette nuit ?', type: 'selectOne' },
