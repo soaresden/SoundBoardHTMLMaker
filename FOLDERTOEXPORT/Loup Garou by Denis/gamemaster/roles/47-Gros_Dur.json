@@ -1,0 +1,29 @@
+{
+  "id": "Gros_Dur",
+  "name": "Gros Dur",
+  "emoji": "🗿",
+  "camp": "Village",
+  "description": "Rôle: Gros_Dur",
+  "actions": {
+    "SpecialDeath": {
+      "enabled": true,
+      "type": "tankProtection",
+      "phase": "gameProgress",
+      "targets": {},
+      "stateKey": "grosDurShield"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "A une santé augmentée et survive aux attaques mineures.",
+  "actionType": "DayActive",
+  "tips": "Soyez dur comme pierre - rien ne peut vous blesser."
+}

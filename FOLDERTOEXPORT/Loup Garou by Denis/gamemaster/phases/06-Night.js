@@ -5,19 +5,9 @@
 // Pas d'assignation - juste exécution des actions
 // Les rôles sont déjà assignés depuis la Nuit 1
 
-const NIGHT_ROLE_ORDER = [
-  'Cupidon', 'Enfant_Sauvage', 'Chien_Loup', 'Abominable_Sectaire',
-  'Voyante', 'Sorcière', 'Ancien', 'Ange', 'Salvateur', 'Voleur', 'Petite_Fille', 'Renard', 'Corbeau',
-  'Servante_Devouee', 'Joueur_Flute', 'Ankou', 'Marionnettiste', 'Chaman', 'Garde_Du_Corps', 'Pretre',
-  'Gitane', 'Noctambule', 'Mystique', 'Mamie_Grincheuse', 'Fille_Joie', 'Comedien', 'Necromancien',
-  'Arnacoeur', 'Lapin_Blanc', 'Tueur_Serie', 'Pyromane', 'Infect_Pere_Loups', 'Grand_Mechant_Loup',
-  'Simple_Loup_Garou', 'Loup_Garou_Voyant',
-  'Loup_Garou_Blanc', 'Tireur', 'Juge_Begue',
-  'Chasseur', 'Chevalier_Epee_Rouille', 'Fils_Lune', 'Louveteau', 'Lepreux', 'Savant_Fou',
-  'Ange_Dechu', 'Gros_Dur', 'Humain_Maudit', 'Porteur_Amulette',
-  'Villageois_Villageois', 'Bouc_Emissaire', 'Idiot_Village', 'Cultiste', 'Capitaine', 'President',
-  'Deux_Soeurs', 'Trois_Freres', 'Montreur_Ours'
-];
+// 🎯 IMPORTANT: Role ordering is now DYNAMICALLY loaded from JSON role configurations
+// See: gamemaster/utils/get-ordered-roles.js for the dynamic ordering function
+// NO HARDCODED NIGHT_ROLE_ORDER array anymore
 
 const NIGHT_ROLES_WITH_ACTION = new Set([
   'Voyante', 'Sorcière', 'Ancien', 'Ange', 'Servante_Devouee', 'Salvateur',
@@ -70,7 +60,14 @@ function renderNight(gameUI) {
 
   // Filtrer les rôles assignés à des joueurs vivants
   const assignedRoles = [];
-  NIGHT_ROLE_ORDER.forEach(roleId => {
+  const orderedRoles = window.getOrderedRoleIds && window.getOrderedRoleIds();
+
+  if (!orderedRoles || orderedRoles.length === 0) {
+    console.warn('⚠️ Could not load ordered roles. Make sure role JSON files are loaded.');
+    return '<div style="color:#999; padding:20px;">Erreur: Données des rôles non chargées</div>';
+  }
+
+  orderedRoles.forEach(roleId => {
     const playersWithRole = getPlayersWithRole(players, roleId);
     if (playersWithRole.length > 0) {
       assignedRoles.push(roleId);
@@ -351,7 +348,14 @@ function attachNightEvents(gameUI) {
 
   // Déterminer le rôle courant
   const assignedRoles = [];
-  NIGHT_ROLE_ORDER.forEach(roleId => {
+  const orderedRoles = window.getOrderedRoleIds && window.getOrderedRoleIds();
+
+  if (!orderedRoles || orderedRoles.length === 0) {
+    console.warn('⚠️ Could not load ordered roles. Make sure role JSON files are loaded.');
+    return;
+  }
+
+  orderedRoles.forEach(roleId => {
     const playersWithRole = getPlayersWithRole(players, roleId);
     if (playersWithRole.length > 0) {
       assignedRoles.push(roleId);

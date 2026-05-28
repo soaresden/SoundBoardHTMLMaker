@@ -1,13 +1,9 @@
 {
   "id": "Mystique",
-  "order": 23,
   "name": "Mystique",
   "emoji": "🔮",
   "camp": "Village",
-  "origin": "base",
   "description": "Rôle: Mystique",
-  "instruction": "Chaque nuit, le Meneur vous donne un indice cryptique sur un rôle.",
-  "tips": "Décryptez les messages. Utilisez-les pour guider le village.",
   "actions": {
     "ToutesNuits": {
       "enabled": true,
@@ -18,29 +14,16 @@
     }
   },
   "visual": {
-    "fondColor": "#6b4c9a",
-    "emoji": "🔮",
-    "emojiColor": "#ffffff",
-    "targetsBorder": {
-      "color": "#9966ff",
-      "width": "2px",
-      "style": "solid"
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
     }
   },
-  "logging": {
-    "enabled": true,
-    "actionStartMessage": "🎭 Mystique agit",
-    "actionCompleteMessage": "✅ Mystique a complété son action"
-  },
-  "winConditions": [
-    {
-      "type": "camp",
-      "condition": "Village",
-      "description": "Gagner avec le camp Village"
-    }
-  ],
-  "specialBehaviors": [],
-  "cardImage": "gamemaster/roles/23-Mystique.png",
   "pouvoir": "Reçoit des messages cryptiques du Meneur sur les rôles des joueurs.",
-  "notes": "C'est un rôle de voyance avec des indices imprécis. Vous gagnez avec le village."
+  "actionType": "NightActive",
+  "tips": "Cachez votre véritable nature - le secret est votre plus grande arme."
 }

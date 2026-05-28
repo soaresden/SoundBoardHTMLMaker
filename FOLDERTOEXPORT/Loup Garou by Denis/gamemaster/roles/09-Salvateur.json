@@ -1,13 +1,9 @@
 {
   "id": "Salvateur",
-  "order": 9,
   "name": "Salvateur",
   "emoji": "🖖",
   "camp": "Village",
-  "origin": "base",
   "description": "Rôle: Salvateur",
-  "instruction": "Chaque nuit, sélectionnez un joueur pour le protéger des Loups.",
-  "tips": "Protégez les rôles clés. Variez vos choix pour être imprévisible.",
   "actions": {
     "ToutesNuits": {
       "enabled": true,
@@ -17,32 +13,25 @@
         "count": 1
       },
       "stateKey": "salvatorProtection"
-    }
+    },
+    "mdj_night_actions": [
+      {
+        "id": "protect",
+        "icon": "🛡️",
+        "label": "Protéger un joueur"
+      }
+    ]
   },
   "visual": {
-    "fondColor": "#6b4c9a",
-    "emoji": "🖖",
-    "emojiColor": "#ffffff",
-    "targetsBorder": {
-      "color": "#9966ff",
-      "width": "2px",
-      "style": "solid"
+    "roleColor": {
+      "fondColor": "#EBCF10",
+      "borderColor": "#D27E82"
+    },
+    "affectedColor": {
+      "borderColor": "#C2BA2D"
     }
   },
-  "logging": {
-    "enabled": true,
-    "actionStartMessage": "🎭 Salvateur agit",
-    "actionCompleteMessage": "✅ Salvateur a complété son action"
-  },
-  "winConditions": [
-    {
-      "type": "camp",
-      "condition": "Village",
-      "description": "Gagner avec le camp Village"
-    }
-  ],
-  "specialBehaviors": [],
-  "cardImage": "gamemaster/roles/09-Salvateur.png",
   "pouvoir": "Protège un joueur de l'élimination par les Loups chaque nuit.",
-  "notes": "Vous ne pouvez pas protéger le même joueur deux nuits de suite. Vous apprendre immédiatement si vous avez sauvé quelqu'un."
+  "actionType": "NightActive",
+  "tips": "Défendez les faibles la nuit - vous êtes leur dernière protection."
 }

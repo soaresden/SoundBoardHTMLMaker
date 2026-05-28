@@ -1,0 +1,29 @@
+{
+  "id": "Humain_Maudit",
+  "name": "Humain Maudit",
+  "emoji": "👻",
+  "camp": "Village",
+  "description": "Rôle: Humain_Maudit",
+  "actions": {
+    "SpecialDeath": {
+      "enabled": true,
+      "type": "turnOnWolfKill",
+      "phase": "gameProgress",
+      "targets": {},
+      "stateKey": "mauditTurn"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Est un Simple Villageois sauf s'il est attaqué par les Loups.",
+  "actionType": "DayActive",
+  "tips": "Portez votre malédiction fièrement - même maudit, vous survivez."
+}

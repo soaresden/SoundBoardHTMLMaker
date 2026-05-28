@@ -23,18 +23,18 @@ class RolesLoader {
     try {
       // Liste de tous les rôles (57 total)
       const roleFiles = [
-        '01-Cupidon', '02-Enfant_Sauvage', '03-Chien_Loup', '04-Petite_Fille', '05-Sorciere',
-        '06-Voyante', '07-Corbeau', '08-Voleur', '09-Salvateur', '10-Ancien',
-        '11-Juge_Begue', '12-Montreur_Ours', '13-Renard', '14-Servante_Devouee', '15-Loup_Noir',
-        '16-Grand_Mechant_Loup', '17-Louveteau', '18-Enfant_Lune', '19-Voyant_Loup', '20-Loup_Blanc',
-        '21-Abominable_Sectaire', '22-Joueur_Flute', '23-Chevalier', '24-Enfant_Lune_Chaman', '25-Prophete',
-        '26-Dames_Blanches', '27-Fille_Loup', '28-Garcon_Loup', '29-Infecteur', '30-Noctambule',
-        '31-Savant_Fou', '32-Infect_Pere_Loups', '33-Grand_Mechant_Loup', '34-Simple_Loup_Garou', '35-Loup_Garou_Voyant',
-        '36-Loup_Garou_Blanc', '37-Ermite', '38-Lepreux', '39-Heroe', '40-Sorciere_Blanche',
-        '41-Pyromane', '42-Ankou', '43-Berger', '44-Maitre_Jeu', '45-Donneur_Conseil',
-        '46-Gitane', '47-Joueur_Flute', '48-Chaman', '49-Villageois_Villageois', '50-Croque_Mort',
-        '51-Acrobate', '52-Tete_Brule', '53-Apprenti_Loup', '54-Enfant_Sorciere', '55-Fou_du_Village',
-        '56-Marionnettiste', '57-Montreur_Ours'
+        '01-Cupidon', '02-Enfant_Sauvage', '03-Chien_Loup', '04-Abominable_Sectaire', '05-Voyante',
+        '06-Sorcière', '07-Ancien', '08-Ange', '09-Salvateur', '10-Voleur',
+        '11-Petite_Fille', '12-Renard', '13-Corbeau', '14-Servante_Devouee', '15-Joueur_Flute',
+        '16-Ankou', '17-Marionnettiste', '18-Chaman', '19-Garde_Du_Corps', '20-Pretre',
+        '21-Gitane', '22-Noctambule', '23-Mystique', '24-Mamie_Grincheuse', '25-Fille_Joie',
+        '26-Comedien', '27-Necromancien', '28-Arnacoeur', '29-Lapin_Blanc', '30-Tueur_Serie',
+        '31-Pyromane', '32-Infect_Pere_Loups', '33-Grand_Mechant_Loup', '34-Simple_Loup_Garou', '35-Loup_Garou_Voyant',
+        '36-Loup_Garou_Blanc', '37-Tireur', '38-Juge_Begue', '39-Chasseur', '40-Chevalier_Epee_Rouille',
+        '41-Fils_Lune', '42-Louveteau', '43-Lepreux', '44-Savant_Fou', '45-Ange_Dechu',
+        '46-Gros_Dur', '47-Humain_Maudit', '48-Porteur_Amulette', '49-Villageois_Villageois', '50-Bouc_Emissaire',
+        '51-Idiot_Village', '52-Cultiste', '53-Capitaine', '54-President', '55-Deux_Soeurs',
+        '56-Trois_Freres', '57-Montreur_Ours'
       ];
 
       // Charger chaque rôle
@@ -115,23 +115,48 @@ class RolesLoader {
   getRolesByCamp(camp) {
     return Object.values(this.roles).filter(r => r.camp === camp);
   }
+
+  /**
+   * Retourne les rôles ordonnés par leur champ "order" depuis les JSONs
+   * @returns {Array} Array of role IDs sorted by their order field
+   */
+  getOrderedRoleIds() {
+    return Object.values(this.roles)
+      .sort((a, b) => (a.order || Infinity) - (b.order || Infinity))
+      .map(role => role.id);
+  }
 }
 
 // Créer une instance globale
-const rolesLoader = new RolesLoader();
+let rolesLoader = null;
 
-// Charger automatiquement au chargement du document
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
+try {
+  console.log('[RolesLoader] Creating instance...');
+  rolesLoader = new RolesLoader();
+  console.log('[RolesLoader] Instance created successfully');
+
+  // Charger automatiquement au chargement du document
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('[RolesLoader] Loading roles on DOMContentLoaded...');
+      rolesLoader.loadAllRoles();
+    });
+  } else {
+    // Document déjà chargé
+    console.log('[RolesLoader] Document already loaded, loading roles immediately...');
     rolesLoader.loadAllRoles();
-  });
-} else {
-  // Document déjà chargé
-  rolesLoader.loadAllRoles();
+  }
+} catch (e) {
+  console.error('[RolesLoader] ❌ Error during initialization:', e);
 }
 
 // Export
 if (typeof window !== 'undefined') {
   window.RolesLoader = RolesLoader;
-  window.rolesLoader = rolesLoader;
+  if (rolesLoader) {
+    window.rolesLoader = rolesLoader;
+    console.log('[RolesLoader] ✓ Exposed to window');
+  } else {
+    console.error('[RolesLoader] ❌ rolesLoader is null, cannot expose to window');
+  }
 }

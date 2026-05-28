@@ -1,0 +1,25 @@
+{
+  "id": "Montreur_Ours",
+  "name": "Montreur d'Ours",
+  "emoji": "🐻",
+  "camp": "Village",
+  "description": "Rôle: Montreur_Ours",
+  "actions": {
+    "NoAction": {
+      "enabled": true,
+      "type": "noAction",
+      "phase": "none",
+      "targets": {},
+      "stateKey": "montreurOursStandard"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#BA1F09",
+      "emojiColor": "#0F0506"
+    }
+  },
+  "pouvoir": "Votre ours grogne au matin lorsque vous êtes assis à côté d'un ou plusieurs Loups.",
+  "actionType": "DayActive",
+  "tips": "Contrôlez votre ours - il obéit à vos ordres et protège le village."
+}

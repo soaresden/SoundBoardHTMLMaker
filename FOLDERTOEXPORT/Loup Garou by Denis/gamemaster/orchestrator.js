@@ -28,9 +28,16 @@ class GameMasterOrchestrator {
       cupidoSelection: [],     // IDs des joueurs sélectionnés par Cupidon
       enfantSauvageIdol: { playerId: null }, // Idole de l'Enfant Sauvage
       welcomeLogged: false,    // Flag pour le log d'accueil
+      // Tracking des nuits
+      wolvesKilledThisNight: 0, // Counter des loups tués cette nuit (pour Grand_Mechant_Loup)
+      nightKills: [],          // [{playerId, killedBy}] - victimes de la nuit
+      // NEW: Mode selection (Phase 1)
+      tirageMode: null,        // 'manuel' ou 'web' - Mode de tirage
+      gameMode: null,          // 'assiste' ou 'mdj' - Mode de jeu (MDJ only for now)
     };
 
     this.gameRules = null;     // Chargé depuis game-rules.json
+    this.phaseInstance = null; // Instance of current phase (TirageMode, FirstNightMDJ, etc.)
   }
 
   /**
@@ -109,6 +116,16 @@ class GameMasterOrchestrator {
   }
 
   /**
+   * Initialise une nuit (réinitialise les counters)
+   */
+  initializeNight(nightNumber) {
+    this.state.currentNightNumber = nightNumber;
+    this.state.wolvesKilledThisNight = 0;
+    this.state.nightKills = [];
+    this.logAction(`🌙 Nuit ${nightNumber} - Initialisation`);
+  }
+
+  /**
    * Passe à la première nuit avec les actions spéciales
    */
   startFirstNightActions() {
@@ -118,8 +135,7 @@ class GameMasterOrchestrator {
     }
 
     this.state.gamePhase = 'firstNightActions';
-    this.state.currentNightNumber = 1;
-    this.logAction(`🌙 Première nuit - Actions spéciales`);
+    this.initializeNight(1);
 
     // Retourner la liste des rôles qui ont des actions cette nuit
     return this.getRolesWithActionsForPhase('FirstNightActions');
@@ -137,6 +153,11 @@ class GameMasterOrchestrator {
       const role = this.state.rolesData[player.roleId];
       if (!role || !role.gamePhases) continue;
 
+      // Appliquer les conditions de réveil spéciales
+      if (!this.shouldRoleWakeUp(player.roleId, phase)) {
+        continue;
+      }
+
       const phaseConfig = role.gamePhases.find(p => p.phase === phase && p.enabled);
       if (phaseConfig) {
         actingRoles.push({
@@ -148,6 +169,25 @@ class GameMasterOrchestrator {
     }
 
     return actingRoles;
+  }
+
+  /**
+   * Détermine si un rôle doit se réveiller selon les conditions
+   */
+  shouldRoleWakeUp(roleId, phase) {
+    // Grand_Mechant_Loup: ne se réveille que si aucun loup n'a été tué cette nuit
+    if (roleId === 'Grand_Mechant_Loup' && this.state.wolvesKilledThisNight > 0) {
+      console.log(`[Wake] Grand_Mechant_Loup skip - ${this.state.wolvesKilledThisNight} loup(s) déjà tué(s)`);
+      return false;
+    }
+
+    // Loup_Garou_Blanc: ne se réveille que sur les nuits IMPAIRES (1, 3, 5...)
+    if (roleId === 'Loup_Garou_Blanc' && this.state.currentNightNumber % 2 === 0) {
+      console.log(`[Wake] Loup_Garou_Blanc skip - nuit paire (${this.state.currentNightNumber})`);
+      return false;
+    }
+
+    return true;
   }
 
   /**
@@ -199,6 +239,30 @@ class GameMasterOrchestrator {
 
       // Ajouter d'autres types d'effets selon les besoins
     }
+  }
+
+  /**
+   * Enregistre qu'un loup a tué quelqu'un cette nuit
+   */
+  recordWolfKill(playerId, killerRole = 'Simple_Loup_Garou') {
+    const player = this.state.players.find(p => p.id === playerId);
+    if (!player) return false;
+
+    // Ajouter à la liste des kills de la nuit
+    this.state.nightKills.push({
+      playerId,
+      killedBy: killerRole,
+      nightNumber: this.state.currentNightNumber,
+    });
+
+    // Incrémenter le counter SEULEMENT si c'est un loup qui est tué
+    const wolfRoles = ['Simple_Loup_Garou', 'Grand_Mechant_Loup', 'Loup_Garou_Blanc', 'Loup_Garou_Voyant', 'Infect_Pere_Loups'];
+    if (player.roleId && wolfRoles.includes(player.roleId)) {
+      this.state.wolvesKilledThisNight++;
+      console.log(`[Night] Un loup a été tué! Compteur: ${this.state.wolvesKilledThisNight}`);
+    }
+
+    return true;
   }
 
   /**
@@ -376,6 +440,9 @@ class GameMasterOrchestrator {
         gameLog: this.state.gameLog,
         linkedPlayers: this.state.linkedPlayers,
         infectedPlayers: this.state.infectedPlayers,
+        // Tracking des nuits
+        wolvesKilledThisNight: this.state.wolvesKilledThisNight,
+        nightKills: this.state.nightKills,
         // Ne pas sauvegarder rolesData - on la recharge depuis les JSON
       };
       localStorage.setItem('LoupsGarous_GameState', JSON.stringify(stateToSave));
@@ -417,8 +484,30 @@ class GameMasterOrchestrator {
     this.state.gameLog = [];
     this.state.tableType = 'circle';
     this.state.zoneConfig = { top: 0, left: 0, right: 0, bottom: 0 };
+    this.state.tirageMode = null;
+    this.state.gameMode = null;
     localStorage.removeItem('LoupsGarous_GameState');
     console.log('[GameMaster] ✓ État réinitialisé');
+  }
+
+  /**
+   * Change the current phase and initializes the phase handler
+   * Used by phase classes to transition between phases
+   * @param {string} phaseName - Name of the phase to change to
+   */
+  changePhase(phaseName) {
+    console.log(`[Orchestrator] Changing phase to: ${phaseName}`);
+    this.state.mode = phaseName;
+    this.saveState();
+
+    // Trigger UI update if available
+    console.log(`[Orchestrator] window.gameMasterUI exists? ${window.gameMasterUI ? 'YES' : 'NO'}`);
+    if (window.gameMasterUI) {
+      console.log(`[Orchestrator] ✓ Calling gameMasterUI.render()`);
+      window.gameMasterUI.render();
+    } else {
+      console.error(`[Orchestrator] ✗ gameMasterUI NOT available - cannot render!`);
+    }
   }
 }
 

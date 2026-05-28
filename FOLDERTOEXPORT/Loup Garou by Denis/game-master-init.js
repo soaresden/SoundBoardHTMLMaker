@@ -32,6 +32,7 @@
       // Exposer globalement pour la console (debug)
       window.gm = gameMaster;
       window.gameUI = gameMasterUI;
+      window.gameMasterUI = gameMasterUI; // For orchestrator
 
       // Initialiser le système de logging
       if (typeof initializeGameLogger !== 'undefined') {

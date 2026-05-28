@@ -1,0 +1,15 @@
+{
+  "id": "Villageois",
+  "name": "Villageois",
+  "emoji": "👨‍🌾",
+  "camp": "Village",
+  "pouvoir": "Aucun pouvoir spécial",
+  "visual": {
+    "roleColor": {
+      "fondColor": "#E9CF9C",
+      "emojiColor": "#54333A"
+    }
+  },
+  "actionType": "NoActions",
+  "tips": "Soyez vigilant - ensemble, vous pouvez vaincre les loups."
+}

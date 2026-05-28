@@ -1,13 +1,9 @@
 {
   "id": "Comedien",
-  "order": 26,
   "name": "Comedien",
   "emoji": "🎪",
   "camp": "Village",
-  "origin": "base",
   "description": "Rôle: Comedien",
-  "instruction": "Chaque nuit, sélectionnez une des 3 cartes disponibles pour obtenir un pouvoir.",
-  "tips": "Adaptez-vous aux besoins du jeu. Variez vos choix pour rester imprévisible.",
   "actions": {
     "ToutesNuits": {
       "enabled": true,
@@ -20,29 +16,16 @@
     }
   },
   "visual": {
-    "fondColor": "#6b4c9a",
-    "emoji": "🎪",
-    "emojiColor": "#ffffff",
-    "targetsBorder": {
-      "color": "#9966ff",
-      "width": "2px",
-      "style": "solid"
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
     }
   },
-  "logging": {
-    "enabled": true,
-    "actionStartMessage": "🎭 Comedien agit",
-    "actionCompleteMessage": "✅ Comedien a complété son action"
-  },
-  "winConditions": [
-    {
-      "type": "camp",
-      "condition": "Village",
-      "description": "Gagner avec le camp Village"
-    }
-  ],
-  "specialBehaviors": [],
-  "cardImage": "gamemaster/roles/26-Comedien.png",
   "pouvoir": "Chaque nuit, choisit parmi 3 cartes pour avoir un pouvoir temporaire.",
-  "notes": "Une fois que vous avez choisi une carte, elle disparaît du jeu. Vous changez de rôle chaque nuit."
+  "actionType": "NightActive",
+  "tips": "Jouez la comédie - faites croire à n'importe quel mensonge."
 }

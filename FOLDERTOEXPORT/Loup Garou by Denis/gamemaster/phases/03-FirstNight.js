@@ -8,33 +8,11 @@
 // Pour les Nuits 2+, un nouveau fichier 06-Night.js sera créé qui ne fera que les actions
 // (sans réassignation des rôles)
 
-// Ordre exact de la première nuit - 57 rôles complets
-// Format: Nuit01, DebutPartie, ToutesNuits, ToutesNuits1sur2, TousLesJours, UneFoisPartie, PostMortem, SpecialDeath, NoAction
-const ROLE_ORDER = [
-  // 1. Nuit01
-  'Cupidon',
-  // 2-4. DebutPartie
-  'Enfant_Sauvage', 'Chien_Loup', 'Abominable_Sectaire',
-  // 5-35. ToutesNuits (33 rôles)
-  'Voyante', 'Sorcière', 'Ancien', 'Ange', 'Salvateur', 'Voleur', 'Petite_Fille', 'Renard', 'Corbeau',
-  'Servante_Devouee', 'Joueur_Flute', 'Ankou', 'Marionnettiste', 'Chaman', 'Garde_Du_Corps', 'Pretre',
-  'Gitane', 'Noctambule', 'Mystique', 'Mamie_Grincheuse', 'Fille_Joie', 'Comedien', 'Necromancien',
-  'Arnacoeur', 'Lapin_Blanc', 'Tueur_Serie', 'Pyromane', 'Infect_Pere_Loups', 'Grand_Mechant_Loup',
-  'Simple_Loup_Garou', 'Loup_Garou_Voyant',
-  // 36. ToutesNuits1sur2
-  'Loup_Garou_Blanc',
-  // 37. TousLesJours
-  'Tireur',
-  // 38. UneFoisPartie
-  'Juge_Begue',
-  // 39-44. PostMortem (6 rôles)
-  'Chasseur', 'Chevalier_Epee_Rouille', 'Fils_Lune', 'Louveteau', 'Lepreux', 'Savant_Fou',
-  // 45-48. SpecialDeath (4 rôles)
-  'Ange_Dechu', 'Gros_Dur', 'Humain_Maudit', 'Porteur_Amulette',
-  // 49-56. NoAction (8 rôles)
-  'Villageois_Villageois', 'Bouc_Emissaire', 'Idiot_Village', 'Cultiste', 'Capitaine', 'President',
-  'Deux_Soeurs', 'Trois_Freres', 'Montreur_Ours'
-];
+// 🎯 IMPORTANT: Role ordering is now DYNAMICALLY loaded from JSON role configurations
+// Each role JSON file contains an "order" field that determines its position
+// NO HARDCODED ROLE_ORDER array anymore - read from gamemaster/roles/*.json files
+// See: gamemaster/utils/get-ordered-roles.js for the dynamic ordering function
+
 
 // Rôles qui ont une action la première nuit
 const ROLES_WITH_NIGHT_ACTION = new Set([
@@ -102,9 +80,25 @@ const ROLE_ACTIONS = {
 // Les tips et pouvoirs viennent maintenant directement du JSON des rôles
 // Ne plus utiliser une liste hardcodée !
 
+/**
+ * Get available roles in their order (from JSON role configs)
+ * Only returns roles that are selected in the game (count > 0)
+ *
+ * @param {Object} selectedRoles - Map of roleId -> count
+ * @param {Object} gm - GameMaster instance (for Renard special logic)
+ * @returns {Array} Role IDs sorted by their JSON "order" field
+ */
 function getAvailableRolesInOrder(selectedRoles, gm) {
+  // Get all roles ordered by their JSON "order" field
+  const orderedRoles = window.getOrderedRoleIds && window.getOrderedRoleIds();
+
+  if (!orderedRoles || orderedRoles.length === 0) {
+    console.warn('⚠️ Could not load ordered roles. Make sure role JSON files are loaded.');
+    return [];
+  }
+
   const result = [];
-  ROLE_ORDER.forEach(role => {
+  orderedRoles.forEach(role => {
     // Exclure le Renard s'il a perdu son pouvoir
     // (seulement après la première nuit - le Renard doit au moins faire son action une fois)
     if (role === 'Renard' && gm && gm.state.renardLostPower && gm.state.currentTurn > 0) {
@@ -1038,7 +1032,40 @@ function attachFirstNightEvents(gameUI) {
   if (btnFinishGame && !btnFinishGame.hasAttribute('data-listener-attached')) {
     btnFinishGame.onclick = () => {
       // Log end of first night assignations
-      gm.addGameLog('🌙 Fin de la première nuit - assignation complète', '[Nuit01]');
+      gm.addLog('🌙 Fin de la première nuit - assignation complète', 'night');
+
+      // ===== ENREGISTRER LES KILLS DE CETTE NUIT =====
+      // Les victimes sont enregistrées dans gm.state (wolvesVictim, MechanLoupVictim, LoupBlancVictim)
+      const victimsList = [];
+
+      if (gm.state.wolvesVictim) {
+        const victim = players.find(p => p.id === gm.state.wolvesVictim);
+        if (victim) {
+          gm.recordWolfKill(victim.id, 'Simple_Loup_Garou');
+          victimsList.push(`${victim.name} (tué par les loups)`);
+        }
+      }
+
+      if (gm.state.MechanLoupVictim) {
+        const victim = players.find(p => p.id === gm.state.MechanLoupVictim);
+        if (victim) {
+          gm.recordWolfKill(victim.id, 'Grand_Mechant_Loup');
+          victimsList.push(`${victim.name} (tué par le Grand Méchant Loup)`);
+        }
+      }
+
+      if (gm.state.LoupBlancVictim) {
+        const victim = players.find(p => p.id === gm.state.LoupBlancVictim);
+        if (victim) {
+          gm.recordWolfKill(victim.id, 'Loup_Garou_Blanc');
+          victimsList.push(`${victim.name} (tué par le Loup Blanc)`);
+        }
+      }
+
+      if (victimsList.length > 0) {
+        gm.addLog(`☠️ Victimes cette nuit: ${victimsList.join(', ')}`, 'night');
+        gm.addLog(`🔢 Loups tués cette nuit: ${gm.state.wolvesKilledThisNight}`, 'night');
+      }
 
       // Transition to MayorElection phase
       gm.state.mode = 'mayorElection';

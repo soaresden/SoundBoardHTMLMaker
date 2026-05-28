@@ -430,6 +430,7 @@ function attachCardSelectionEvents(gameUI) {
     for (let i = 0; i < playerCount; i++) {
       gameUI.gm.state.players.push({ id: `p${i}`, name: playerNames[i] || `J${i+1}`, tableX: null, tableY: null, roleId: null });
     }
+    // Route to TableSetup to organize players at table
     gameUI.gm.state.mode = 'tableSetup';
     gameUI.gm.state.tableType = 'circle';
     gameUI.gm.saveState();

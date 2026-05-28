@@ -1,0 +1,29 @@
+{
+  "id": "Idiot_Village",
+  "name": "Idiot Village",
+  "emoji": "🤡",
+  "camp": "Village",
+  "description": "Rôle: Idiot_Village",
+  "actions": {
+    "NoAction": {
+      "enabled": true,
+      "type": "surviveDayKill",
+      "phase": "dayVote",
+      "targets": {},
+      "stateKey": "idiotVote"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Survit à l'élimination par vote mais perd son droit de vote.",
+  "actionType": "NoActions",
+  "tips": "Faites le fou - parfois l'idiot dit la vérité."
+}

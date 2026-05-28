@@ -1,13 +1,9 @@
 {
   "id": "Voleur",
-  "order": 10,
   "name": "Voleur",
   "emoji": "🎩",
   "camp": "Village",
-  "origin": "base",
   "description": "Rôle: Voleur",
-  "instruction": "Chaque nuit, sélectionnez un joueur pour échanger votre rôle.",
-  "tips": "Volez les rôles puissants. Échangez avec les Loups pour les identifier.",
   "actions": {
     "ToutesNuits": {
       "enabled": true,
@@ -20,29 +16,16 @@
     }
   },
   "visual": {
-    "fondColor": "#6b4c9a",
-    "emoji": "🎩",
-    "emojiColor": "#ffffff",
-    "targetsBorder": {
-      "color": "#9966ff",
-      "width": "2px",
-      "style": "solid"
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
     }
   },
-  "logging": {
-    "enabled": true,
-    "actionStartMessage": "🎭 Voleur agit",
-    "actionCompleteMessage": "✅ Voleur a complété son action"
-  },
-  "winConditions": [
-    {
-      "type": "camp",
-      "condition": "Village",
-      "description": "Gagner avec le camp Village"
-    }
-  ],
-  "specialBehaviors": [],
-  "cardImage": "gamemaster/roles/10-Voleur.png",
   "pouvoir": "Échange son rôle avec un autre joueur chaque nuit.",
-  "notes": "Vous acquérez les pouvoirs ET les objectifs du nouveau rôle. L'autre joueur devient Voleur."
+  "actionType": "NightActive",
+  "tips": "Subtilisez les secrets des autres - l'information est votre arme."
 }

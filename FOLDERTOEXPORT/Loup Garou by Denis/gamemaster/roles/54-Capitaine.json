@@ -1,0 +1,29 @@
+{
+  "id": "Capitaine",
+  "name": "Capitaine",
+  "emoji": "🎖️",
+  "camp": "Village",
+  "description": "Rôle: Capitaine",
+  "actions": {
+    "NoAction": {
+      "enabled": true,
+      "type": "doubleVote",
+      "phase": "dayVote",
+      "targets": {},
+      "stateKey": "capitaine"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Son vote compte double. En cas d'égalité, son vote désigne la victime.",
+  "actionType": "NoActions",
+  "tips": "Commandez avec autorité - les villageois vous suivront."
+}

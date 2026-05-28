@@ -1,0 +1,29 @@
+{
+  "id": "Lepreux",
+  "name": "Lepreux",
+  "emoji": "⚠️",
+  "camp": "Village",
+  "description": "Rôle: Lepreux",
+  "actions": {
+    "PostMortem": {
+      "enabled": true,
+      "type": "killVoters",
+      "phase": "onDeath",
+      "targets": {},
+      "stateKey": "lepreux Effect"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Sa mort rend les 3 joueurs qui ont voté pour lui lépreux.",
+  "actionType": "DayActive",
+  "tips": "Restez isolé - votre présence décide qui vivra ou mourra."
+}

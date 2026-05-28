@@ -1,74 +1,28 @@
 {
   "id": "Enfant_Sauvage",
-  "order": 2,
   "name": "Enfant Sauvage",
   "emoji": "🐒",
   "camp": "Village",
-  "origin": "base",
-  "pouvoir": "Désigne un modèle au début de la partie. Si le modèle meurt, l'enfant devient un loup-garou.",
-  "instruction": "Lors de la première nuit, sélectionnez 1 joueur qui sera votre modèle. Tant qu'il vit, vous restez au village. Si votre modèle meurt, vous rejoignez les loups-garous.",
-  "tips": "Choisissez quelqu'un en qui vous avez confiance. Si vous aimez les challenges, choisissez quelqu'un qui a l'air d'un loup.",
-  "notes": "L'enfant sauvage gagne d'abord avec le village. S'il devient loup-garou, il gagne ensuite avec les loups. Il faut être tactique sur le choix du modèle.",
-
-  "gamePhases": [
-    {
-      "phase": "FirstNightActions",
-      "order": 2,
-      "enabled": true,
-      "action": {
-        "type": "enfantSauvageIdol",
-        "targets": {
-          "count": 1,
-          "minCount": 1,
-          "maxCount": 1,
-          "canTargetDead": false,
-          "canTargetSelf": false
-        },
-        "message": "👦 Enfant Sauvage, sélectionnez votre modèle",
-        "effect": {
-          "type": "createLink",
-          "linkType": "idole",
-          "description": "Si votre modèle meurt, vous devenez loup-garou"
-        }
-      }
-    }
-  ],
-
-  "winConditions": [
-    {
-      "type": "camp",
-      "value": "Village",
-      "condition": "modelAlive",
-      "description": "Gagne avec le village tant que le modèle est vivant"
-    },
-    {
-      "type": "camp",
-      "value": "Loups-Garous",
-      "condition": "modelDead",
-      "description": "Gagne avec les loups-garous si le modèle meurt"
-    }
-  ],
-
-  "specialBehaviors": [
-    {
-      "type": "roleChange",
-      "trigger": "linkedPlayerDeath",
-      "action": "becomeWolf",
-      "description": "Quand le modèle meurt, l'enfant devient loup-garou et se réveille avec eux"
-    }
-  ],
-
+  "pouvoir": "Désigne son idole au début de la partie. Si elle meurt, l'enfant devient un loup-garou.",
   "visual": {
-    "fondColor": "#BD300A",
-    "borderColor": "#BD300A",
-    "emoji": "🐒",
-    "emojiColor": "#F89361",
-    "targetsBorder": {
-      "color": "#BD300A",
-      "width": "2px",
-      "style": "solid"
+    "roleColor": {
+      "fondColor": "#AA220E",
+      "emojiColor": "#F98C4E"
+    },
+    "affectedColor": {
+      "borderColor": "#AA220E"
     }
   },
-
-  "cardImage": "gamemaster/roles/02-Enfant_Sauvage.png"
+  "actionType": "NightActive",
+  "borderLifetime": "until_death",
+  "tips": "Suivez votre idole de près - leur destin est lié au vôtre.",
+  "actions": {
+    "mdj_night_actions": [
+      {
+        "id": "idol",
+        "icon": "🎯",
+        "label": "Désigner l'idole (1)"
+      }
+    ]
+  }
 }

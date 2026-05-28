@@ -1,13 +1,9 @@
 {
   "id": "Fille_Joie",
-  "order": 25,
   "name": "Fille Joie",
   "emoji": "💃",
   "camp": "Village",
-  "origin": "base",
   "description": "Rôle: Fille_Joie",
-  "instruction": "Chaque nuit, choisissez un joueur pour avoir une alliance.",
-  "tips": "Formez des alliances avec les joueurs importants. Gardez vos alliances secrètes.",
   "actions": {
     "ToutesNuits": {
       "enabled": true,
@@ -20,29 +16,16 @@
     }
   },
   "visual": {
-    "fondColor": "#6b4c9a",
-    "emoji": "💃",
-    "emojiColor": "#ffffff",
-    "targetsBorder": {
-      "color": "#9966ff",
-      "width": "2px",
-      "style": "solid"
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
     }
   },
-  "logging": {
-    "enabled": true,
-    "actionStartMessage": "🎭 Fille_Joie agit",
-    "actionCompleteMessage": "✅ Fille_Joie a complété son action"
-  },
-  "winConditions": [
-    {
-      "type": "camp",
-      "condition": "Village",
-      "description": "Gagner avec le camp Village"
-    }
-  ],
-  "specialBehaviors": [],
-  "cardImage": "gamemaster/roles/25-Fille_Joie.png",
   "pouvoir": "Gagne des amis en dormant avec eux, formant une alliance secrète.",
-  "notes": "Vous pouvez avoir plusieurs alliances. Vos alliés vous aident sans le savoir publiquement."
+  "actionType": "NightActive",
+  "tips": "Séduisez et manipulez - le charme est plus puissant que la force."
 }

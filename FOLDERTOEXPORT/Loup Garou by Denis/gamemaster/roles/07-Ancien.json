@@ -1,13 +1,9 @@
 {
   "id": "Ancien",
-  "order": 7,
   "name": "Ancien",
   "emoji": "👴",
   "camp": "Village",
-  "origin": "base",
   "description": "Rôle: Ancien",
-  "instruction": "Si vous êtes éliminé la nuit, vous survivez et continuez à jouer.",
-  "tips": "Gardez votre rôle secret. Révélez-le stratégiquement pour obtenir la confiance.",
   "actions": {
     "ToutesNuits": {
       "enabled": true,
@@ -20,29 +16,16 @@
     }
   },
   "visual": {
-    "fondColor": "#6b4c9a",
-    "emoji": "👴",
-    "emojiColor": "#ffffff",
-    "targetsBorder": {
-      "color": "#9966ff",
-      "width": "2px",
-      "style": "solid"
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
     }
   },
-  "logging": {
-    "enabled": true,
-    "actionStartMessage": "🎭 Ancien agit",
-    "actionCompleteMessage": "✅ Ancien a complété son action"
-  },
-  "winConditions": [
-    {
-      "type": "camp",
-      "condition": "Village",
-      "description": "Gagner avec le camp Village"
-    }
-  ],
-  "specialBehaviors": [],
-  "cardImage": "gamemaster/roles/07-Ancien.png",
   "pouvoir": "Survit à une première élimination la nuit.",
-  "notes": "Vous ne survivrez qu'à une élimination. Après, vous devenez un Simple Villageois. Les Loups le découvrent généralement."
+  "actionType": "NightActive",
+  "tips": "Protégez les innocents de vos connaissances - votre vote peut sauver le village."
 }

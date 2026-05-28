@@ -1,13 +1,9 @@
 {
   "id": "Chevalier_Epee_Rouille",
-  "order": 40,
   "name": "Chevalier Epee Rouille",
   "emoji": "⚔️",
   "camp": "Village",
-  "origin": "base",
   "description": "Rôle: Chevalier_Epee_Rouille",
-  "instruction": "Si un Loup vous dévore, il reçoit le tétanos et meurt la nuit suivante.",
-  "tips": "Agissez normalement pour être une cible attrayante. Piégez les Loups.",
   "actions": {
     "PostMortem": {
       "enabled": true,
@@ -18,29 +14,12 @@
     }
   },
   "visual": {
-    "fondColor": "#6b4c9a",
-    "emoji": "⚔️",
-    "emojiColor": "#ffffff",
-    "targetsBorder": {
-      "color": "#9966ff",
-      "width": "2px",
-      "style": "solid"
+    "roleColor": {
+      "fondColor": "#CE4308",
+      "emojiColor": "#AA9E80"
     }
   },
-  "logging": {
-    "enabled": true,
-    "actionStartMessage": "🎭 Chevalier_Epee_Rouille agit",
-    "actionCompleteMessage": "✅ Chevalier_Epee_Rouille a complété son action"
-  },
-  "winConditions": [
-    {
-      "type": "camp",
-      "condition": "Village",
-      "description": "Gagner avec le camp Village"
-    }
-  ],
-  "specialBehaviors": [],
-  "cardImage": "gamemaster/roles/40-Chevalier_Epee_Rouille.png",
-  "pouvoir": "Donne le tétanos au premier Loup qui le mange. Ce Loup meurt sans manger.",
-  "notes": "Le Loup qui vous mange meurt la nuit suivante sans pouvoir éliminer personne. C'est une protection passive."
+  "pouvoir": "A sa mort, il tuera automatiquement le premier loup à sa gauche. Innocentant au passage des villageois",
+  "actionType": "DayActive",
+  "tips": "Combattez jusqu'au bout - votre courage inspire les autres."
 }

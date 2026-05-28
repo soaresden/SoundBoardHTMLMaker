@@ -1,0 +1,31 @@
+{
+  "id": "Deux_Soeurs",
+  "name": "Deux Soeurs",
+  "emoji": "👯‍♀️",
+  "camp": "Village",
+  "description": "Rôle: Deux_Soeurs",
+  "actions": {
+    "NoAction": {
+      "enabled": true,
+      "type": "twinCommunication",
+      "phase": "everyNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "soeursTalk"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Les deux sœurs se reconnaissent la première nuit et peuvent communiquer.",
+  "actionType": "NoActions",
+  "tips": "Restez solidaires - votre lien est votre force."
+}

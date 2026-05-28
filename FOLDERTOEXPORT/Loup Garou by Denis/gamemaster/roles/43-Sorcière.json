@@ -1,0 +1,38 @@
+{
+  "id": "Sorcière",
+  "name": "Sorcière",
+  "emoji": "🧙‍♀️",
+  "camp": "Village",
+  "description": "Rôle: Sorcière",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "potions",
+      "phase": "everyNight",
+      "targets": {},
+      "stateKey": "sorcierePotions"
+    },
+    "mdj_night_actions": [
+      {
+        "id": "resurrect",
+        "icon": "💚",
+        "label": "Ressusciter"
+      },
+      {
+        "id": "poison",
+        "icon": "💜",
+        "label": "Empoisonner"
+      }
+    ]
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#DD5923",
+      "emojiColor": "#F2CF4D"
+    }
+  },
+  "pouvoir": "Peut tuer un joueur (potion de mort) ou sauver un joueur d'une élimination (potion de vie) chaque nuit.",
+  "actionType": "NightActive",
+  "borderLifetime": "current_night",
+  "tips": "Gardez vos potions pour les moments critiques - ne les gaspillez pas."
+}

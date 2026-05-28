@@ -12,7 +12,7 @@ const ROLE_FILE_MAPPING = {
   'Chien_Loup': '03-Chien_Loup',
   'Abominable_Sectaire': '04-Abominable_Sectaire',
   'Voyante': '05-Voyante',
-  'Sorciere': '06-Sorcière',
+  'Sorcière': '06-Sorcière',
   'Ancien': '07-Ancien',
   'Ange': '08-Ange',
   'Salvateur': '09-Salvateur',
@@ -49,21 +49,22 @@ const ROLE_FILE_MAPPING = {
   'Chevalier_Epee_Rouille': '40-Chevalier_Epee_Rouille',
   'Fils_Lune': '41-Fils_Lune',
   'Louveteau': '42-Louveteau',
-  'Lepreux': '43-Lepreux',
-  'Savant_Fou': '44-Savant_Fou',
-  'Ange_Dechu': '45-Ange_Dechu',
-  'Gros_Dur': '46-Gros_Dur',
-  'Humain_Maudit': '47-Humain_Maudit',
-  'Porteur_Amulette': '48-Porteur_Amulette',
-  'Villageois_Villageois': '49-Villageois_Villageois',
-  'Bouc_Emissaire': '50-Bouc_Emissaire',
-  'Idiot_Village': '51-Idiot_Village',
-  'Cultiste': '52-Cultiste',
-  'Capitaine': '53-Capitaine',
-  'President': '54-President',
-  'Deux_Soeurs': '55-Deux_Soeurs',
-  'Trois_Freres': '56-Trois_Freres',
-  'Montreur_Ours': '57-Montreur_Ours'
+  'Sorcière': '43-Sorcière',
+  'Lepreux': '44-Lepreux',
+  'Savant_Fou': '45-Savant_Fou',
+  'Ange_Dechu': '46-Ange_Dechu',
+  'Gros_Dur': '47-Gros_Dur',
+  'Humain_Maudit': '48-Humain_Maudit',
+  'Porteur_Amulette': '49-Porteur_Amulette',
+  'Villageois': '50-Villageois_Villageois',
+  'Bouc_Emissaire': '51-Bouc_Emissaire',
+  'Idiot_Village': '52-Idiot_Village',
+  'Cultiste': '53-Cultiste',
+  'Capitaine': '54-Capitaine',
+  'President': '55-President',
+  'Deux_Soeurs': '56-Deux_Soeurs',
+  'Trois_Freres': '57-Trois_Freres',
+  'Montreur_Ours': '58-Montreur_Ours'
 };
 
 const CACHE_KEY = 'LoupsGarous_RolesJSON_Cache';
@@ -98,9 +99,17 @@ function reloadJsonCache() {
   location.reload();
 }
 
+// Fonction helper: obtenir le chemin de l'image d'un rôle
+function getRoleImagePath(roleId) {
+  const fileName = ROLE_FILE_MAPPING[roleId] || roleId;
+  return `gamemaster/roles/${fileName}.png`;
+}
+
 // Exposer globalement pour accès console
 if (typeof window !== 'undefined') {
   window.reloadJsonCache = reloadJsonCache;
+  window.getRoleImagePath = getRoleImagePath;
+  window.ROLE_FILE_MAPPING = ROLE_FILE_MAPPING;
 }
 
 // ========== CHARGER TOUS LES RÔLES AU DÉMARRAGE ==========
@@ -179,6 +188,11 @@ async function loadSelectedRolesFromJSON(selectedRoleIds) {
         const roleData = await response.json();
 
         if (roleData.id) {
+          // Extraire le numéro du nom du fichier (01-Cupidon → 01)
+          const fileMatch = fileName.match(/^(\d+)-/);
+          const fileNumber = fileMatch ? parseInt(fileMatch[1], 10) : 999;
+          roleData._fileNumber = fileNumber;
+
           // Fusionner avec window.ROLES_DATA
           if (window.ROLES_DATA && window.ROLES_DATA.roles) {
             window.ROLES_DATA.roles[roleData.id] = {
@@ -188,7 +202,7 @@ async function loadSelectedRolesFromJSON(selectedRoleIds) {
           }
           rolesData[roleData.id] = roleData;
           loadedCount++;
-          console.log(`✓ ${roleData.id} chargé depuis JSON`);
+          console.log(`✓ ${roleData.id} chargé depuis JSON (file #${fileNumber})`);
         }
       } catch (error) {
         console.error(`Erreur lors du chargement de ${fileName}:`, error);

@@ -105,7 +105,11 @@ function renderRoleDetailandTips(gameUI) {
       availablePlayers = existingWolves;
     }
   } else {
-    availablePlayers = players.filter(p => !p.roleId);
+    // Pour les rôles non-loups: montrer les joueurs SANS rôle ET ceux déjà assignés au rôle courant
+    // Cela permet de reclicker pour désassigner (toggle behavior)
+    const unassignedPlayers = players.filter(p => !p.roleId);
+    const assignedToCurrentRole = players.filter(p => p.roleId === currentRole);
+    availablePlayers = [...assignedToCurrentRole, ...unassignedPlayers];
   }
 
   // Récupérer les couleurs du rôle

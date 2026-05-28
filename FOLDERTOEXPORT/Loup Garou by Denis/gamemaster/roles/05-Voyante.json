@@ -1,13 +1,9 @@
 {
   "id": "Voyante",
-  "order": 5,
   "name": "Voyante",
   "emoji": "👁️",
   "camp": "Village",
-  "origin": "base",
   "description": "Rôle: Voyante",
-  "instruction": "Chaque nuit, sélectionnez un joueur pour découvrir son rôle.",
-  "tips": "Commencez par les comportements suspects. Gardez vos découvertes secrètes pour rester en vie.",
   "actions": {
     "ToutesNuits": {
       "enabled": true,
@@ -17,32 +13,26 @@
         "count": 1
       },
       "stateKey": "voyantSelection"
-    }
+    },
+    "mdj_night_actions": [
+      {
+        "id": "see_role",
+        "icon": "👁️",
+        "label": "Voir le rôle d'un joueur"
+      }
+    ]
   },
   "visual": {
-    "fondColor": "#6b4c9a",
-    "emoji": "👁️",
-    "emojiColor": "#ffffff",
-    "targetsBorder": {
-      "color": "#9966ff",
-      "width": "2px",
-      "style": "solid"
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
     }
   },
-  "logging": {
-    "enabled": true,
-    "actionStartMessage": "🎭 Voyante agit",
-    "actionCompleteMessage": "✅ Voyante a complété son action"
-  },
-  "winConditions": [
-    {
-      "type": "camp",
-      "condition": "Village",
-      "description": "Gagner avec le camp Village"
-    }
-  ],
-  "specialBehaviors": [],
-  "cardImage": "gamemaster/roles/05-Voyante.png",
   "pouvoir": "Découvre le rôle exact d'un joueur chaque nuit.",
-  "notes": "Vous découvrez le rôle EXACT, pas juste le camp. Vous pouvez vous vérifier vous-même."
+  "actionType": "NightActive",
+  "tips": "Cherchez la vérité chaque nuit - mais prudence à qui vous la révélez."
 }

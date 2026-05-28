@@ -1,0 +1,29 @@
+{
+  "id": "Bouc_Emissaire",
+  "name": "Bouc Emissaire",
+  "emoji": "🐐",
+  "camp": "Village",
+  "description": "Rôle: Bouc_Emissaire",
+  "actions": {
+    "NoAction": {
+      "enabled": true,
+      "type": "dieOnTie",
+      "phase": "dayVote",
+      "targets": {},
+      "stateKey": "boucEmissaire"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Si le vote est égal, c'est lui qui est éliminé à la place des autres.",
+  "actionType": "NoActions",
+  "tips": "Acceptez votre destin - votre sacrifice peut sauver le village."
+}

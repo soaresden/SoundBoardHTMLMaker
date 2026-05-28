@@ -1,0 +1,31 @@
+{
+  "id": "Trois_Freres",
+  "name": "Trois Freres",
+  "emoji": "👬",
+  "camp": "Village",
+  "description": "Rôle: Trois_Freres",
+  "actions": {
+    "NoAction": {
+      "enabled": true,
+      "type": "twinCommunication",
+      "phase": "everyNight",
+      "targets": {
+        "count": 2
+      },
+      "stateKey": "freresTalk"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Les trois frères se reconnaissent et peuvent se concerter silencieusement.",
+  "actionType": "NoActions",
+  "tips": "Unissez-vous - trois cœurs battent comme un seul."
+}

@@ -1,13 +1,9 @@
 {
   "id": "Louveteau",
-  "order": 42,
   "name": "Louveteau",
   "emoji": "🐶",
   "camp": "Loups",
-  "origin": "base",
   "description": "Rôle: Louveteau",
-  "instruction": "Une seule fois dans le jeu, vous pouvez mordre un villageois pour le transformer en Loup.",
-  "tips": "Ciblez les joueurs forts ou ceux qui influencent le village. Réfléchissez bien avant de mordre.",
   "actions": {
     "PostMortem": {
       "enabled": true,
@@ -18,29 +14,16 @@
     }
   },
   "visual": {
-    "fondColor": "#6b4c9a",
-    "emoji": "🐶",
-    "emojiColor": "#ffffff",
-    "targetsBorder": {
-      "color": "#9966ff",
-      "width": "2px",
-      "style": "solid"
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
     }
   },
-  "logging": {
-    "enabled": true,
-    "actionStartMessage": "🎭 Louveteau agit",
-    "actionCompleteMessage": "✅ Louveteau a complété son action"
-  },
-  "winConditions": [
-    {
-      "type": "camp",
-      "condition": "Loups",
-      "description": "Gagner avec le camp Loups"
-    }
-  ],
-  "specialBehaviors": [],
-  "cardImage": "gamemaster/roles/42-Louveteau.png",
   "pouvoir": "Peut mordre une personne pour la transformer en Simple Loup-Garou.",
-  "notes": "Une fois que vous avez mordu quelqu'un, vous devenez un Simple Loup-Garou. La cible devient un vrai Loup."
+  "actionType": "DayActive",
+  "tips": "Aidez les loups à grandir - leur puissance est votre fierté."
 }

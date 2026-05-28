@@ -1,0 +1,29 @@
+{
+  "id": "Savant_Fou",
+  "name": "Savant Fou",
+  "emoji": "🧪",
+  "camp": "Village",
+  "description": "Rôle: Savant_Fou",
+  "actions": {
+    "PostMortem": {
+      "enabled": true,
+      "type": "killNeighbors",
+      "phase": "onDeath",
+      "targets": {},
+      "stateKey": "savantEffect"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Doit reconnaître la position exacte de joueurs importants chaque nuit.",
+  "actionType": "DayActive",
+  "tips": "Cumulez les savoirs - le savoir est le pouvoir suprême."
+}

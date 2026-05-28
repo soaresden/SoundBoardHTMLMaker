@@ -1,0 +1,29 @@
+{
+  "id": "President",
+  "name": "President",
+  "emoji": "🎩",
+  "camp": "Village",
+  "description": "Rôle: President",
+  "actions": {
+    "NoAction": {
+      "enabled": true,
+      "type": "vultureCondition",
+      "phase": "gameProgress",
+      "targets": {},
+      "stateKey": "president"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "A un pouvoir politique spécial au moment du vote.",
+  "actionType": "NoActions",
+  "tips": "Menez le vote - votre pouvoir est immense mais précaire."
+}

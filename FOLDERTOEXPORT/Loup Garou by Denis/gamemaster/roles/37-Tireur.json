@@ -1,13 +1,9 @@
 {
   "id": "Tireur",
-  "order": 37,
   "name": "Tireur",
   "emoji": "🔫",
   "camp": "Village",
-  "origin": "base",
   "description": "Rôle: Tireur",
-  "instruction": "Pendant le jour, vous pouvez utiliser une de vos balles pour éliminer quelqu'un.",
-  "tips": "Cachez-vous jusqu'au moment optimal. Une fois révélé, vous êtes en danger.",
   "actions": {
     "TousLesJours": {
       "enabled": true,
@@ -20,29 +16,16 @@
     }
   },
   "visual": {
-    "fondColor": "#6b4c9a",
-    "emoji": "🔫",
-    "emojiColor": "#ffffff",
-    "targetsBorder": {
-      "color": "#9966ff",
-      "width": "2px",
-      "style": "solid"
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
     }
   },
-  "logging": {
-    "enabled": true,
-    "actionStartMessage": "🎭 Tireur agit",
-    "actionCompleteMessage": "✅ Tireur a complété son action"
-  },
-  "winConditions": [
-    {
-      "type": "camp",
-      "condition": "Village",
-      "description": "Gagner avec le camp Village"
-    }
-  ],
-  "specialBehaviors": [],
-  "cardImage": "gamemaster/roles/37-Tireur.png",
   "pouvoir": "Possède deux balles pour éliminer des joueurs pendant le jour.",
-  "notes": "Après avoir tiré une fois, votre rôle est dévoilé à tous. Vous avez 2 balles au total."
+  "actionType": "DayActive",
+  "tips": "Tirez juste et sans merci - visez toujours le bon cible."
 }

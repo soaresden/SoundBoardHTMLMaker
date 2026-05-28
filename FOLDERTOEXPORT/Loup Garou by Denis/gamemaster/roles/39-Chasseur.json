@@ -1,13 +1,9 @@
 {
   "id": "Chasseur",
-  "order": 39,
   "name": "Chasseur",
   "emoji": "🏹",
   "camp": "Village",
-  "origin": "base",
   "description": "Rôle: Chasseur",
-  "instruction": "Lors de votre mort, désignez un joueur pour être éliminé avec vous.",
-  "tips": "Gardez votre identité secrète. Décidez d'avance qui vous ciblerez.",
   "actions": {
     "PostMortem": {
       "enabled": true,
@@ -20,29 +16,12 @@
     }
   },
   "visual": {
-    "fondColor": "#6b4c9a",
-    "emoji": "🏹",
-    "emojiColor": "#ffffff",
-    "targetsBorder": {
-      "color": "#9966ff",
-      "width": "2px",
-      "style": "solid"
+    "roleColor": {
+      "fondColor": "#6B785C",
+      "emojiColor": "#E9C55A"
     }
   },
-  "logging": {
-    "enabled": true,
-    "actionStartMessage": "🎭 Chasseur agit",
-    "actionCompleteMessage": "✅ Chasseur a complété son action"
-  },
-  "winConditions": [
-    {
-      "type": "camp",
-      "condition": "Village",
-      "description": "Gagner avec le camp Village"
-    }
-  ],
-  "specialBehaviors": [],
-  "cardImage": "gamemaster/roles/39-Chasseur.png",
   "pouvoir": "Peut éliminer un dernier joueur avant de mourir.",
-  "notes": "Vous pouvez refuser de tirer (viser personne). Votre tir est prioritaire. Vous pouvez viser n'importe quel joueur."
+  "actionType": "DayActive",
+  "tips": "Défendez le village avec honneur - emportez vos ennemis avec vous."
 }

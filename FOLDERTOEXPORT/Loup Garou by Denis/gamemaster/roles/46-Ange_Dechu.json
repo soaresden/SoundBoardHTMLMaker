@@ -1,0 +1,29 @@
+{
+  "id": "Ange_Dechu",
+  "name": "Ange Dechu",
+  "emoji": "😈",
+  "camp": "Seul",
+  "description": "Rôle: Ange_Dechu",
+  "actions": {
+    "SpecialDeath": {
+      "enabled": true,
+      "type": "winOnFirstDeath",
+      "phase": "gameProgress",
+      "targets": {},
+      "stateKey": "angeDechuWin"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Doit éliminer sa cible pour progresser. Gagne seul avec 15 vies.",
+  "actionType": "DayActive",
+  "tips": "Jouez des deux côtés - personne ne connaît vos vrais motifs."
+}

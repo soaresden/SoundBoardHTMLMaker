@@ -1,87 +1,15 @@
 {
   "id": "Simple_Loup_Garou",
-  "order": 34,
   "name": "Simple Loup Garou",
   "emoji": "🐺",
   "camp": "Loups-Garous",
-  "origin": "base",
   "pouvoir": "Connaît les autres loups-garous. La nuit, tuez ensemble un villageois.",
-  "instruction": "Chaque nuit, réunissez-vous avec les autres loups-garous et décidez qui vous allez tuer. Tous les loups doivent être d'accord.",
-  "tips": "Unissez-vous avec les autres loups-garous. Éliminez les rôles puissants en priorité (Voyante, Sorcière, etc).",
-  "notes": "Vous gagnez quand il y a autant ou plus de loups-garous que de villageois. Vous perdez quand tous les loups-garous sont morts.",
-
-  "gamePhases": [
-    {
-      "phase": "FirstNightActions",
-      "order": 10,
-      "enabled": true,
-      "action": {
-        "type": "collective",
-        "targets": {
-          "count": 1,
-          "minCount": 1,
-          "maxCount": 1,
-          "canTargetDead": false,
-          "canTargetSelf": false,
-          "mustAgree": true
-        },
-        "message": "🐺 Loups-Garous, choisissez votre victime",
-        "effect": {
-          "type": "kill",
-          "description": "La victime meurt le matin"
-        }
-      }
-    },
-    {
-      "phase": "Night",
-      "order": 10,
-      "enabled": true,
-      "action": {
-        "type": "collective",
-        "targets": {
-          "count": 1,
-          "minCount": 1,
-          "maxCount": 1,
-          "canTargetDead": false,
-          "canTargetSelf": false,
-          "mustAgree": true
-        },
-        "message": "🐺 Loups-Garous, choisissez votre victime",
-        "effect": {
-          "type": "kill",
-          "description": "La victime meurt le matin"
-        }
-      }
-    }
-  ],
-
-  "winConditions": [
-    {
-      "type": "camp",
-      "value": "Loups-Garous",
-      "description": "Gagne avec les loups-garous quand il y a autant ou plus de loups que de villageois"
-    }
-  ],
-
-  "specialBehaviors": [
-    {
-      "type": "discoverOtherWolves",
-      "trigger": "onGameStart",
-      "action": "showOtherWolves",
-      "description": "Connaît l'identité des autres loups-garous"
-    }
-  ],
-
   "visual": {
-    "fondColor": "#8b3a3a",
-    "emoji": "🐺",
-    "emojiColor": "#ffffff",
-    "targetsBorder": {
-      "color": "#d46666",
-      "width": "2px",
-      "style": "solid"
+    "roleColor": {
+      "fondColor": "#872E30",
+      "emojiColor": "#E2C998"
     }
   },
-
-  "cardImage": "gamemaster/roles/34-Simple_Loup_Garou.png"
+  "actionType": "NightActive",
+  "tips": "Travaillez avec vos frères - l'union fait la force."
 }

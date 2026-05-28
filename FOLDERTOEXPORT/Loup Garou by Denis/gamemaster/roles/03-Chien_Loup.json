@@ -1,13 +1,9 @@
 {
   "id": "Chien_Loup",
-  "order": 3,
   "name": "Chien Loup",
   "emoji": "🐕",
   "camp": "Village",
-  "origin": "base",
   "description": "Rôle: Chien_Loup",
-  "instruction": "Au début du jeu, choisissez le camp Village ou le camp des Loups-Garous. Vous gagnerez avec ce camp.",
-  "tips": "Évaluez les forces de chaque camp avant de choisir. Votre choix est définitif.",
   "actions": {
     "DebutPartie": {
       "enabled": true,
@@ -15,32 +11,27 @@
       "phase": "gameStart",
       "targets": {},
       "stateKey": "chienChoice"
-    }
+    },
+    "mdj_night_actions": [
+      {
+        "id": "join_wolves",
+        "icon": "🐺",
+        "label": "Devenir Loup"
+      },
+      {
+        "id": "stay_villager",
+        "icon": "👤",
+        "label": "Rester Villageois"
+      }
+    ]
   },
   "visual": {
-    "fondColor": "#782125",
-    "emoji": "🐕",
-    "emojiColor": "#467733",
-    "targetsBorder": {
-      "color": "#782125",
-      "width": "2px",
-      "style": "solid"
+    "roleColor": {
+      "fondColor": "#4F7A37",
+      "emojiColor": "#85262D"
     }
   },
-  "logging": {
-    "enabled": true,
-    "actionStartMessage": "🎭 Chien_Loup agit",
-    "actionCompleteMessage": "✅ Chien_Loup a complété son action"
-  },
-  "winConditions": [
-    {
-      "type": "camp",
-      "condition": "Village",
-      "description": "Gagner avec le camp Village"
-    }
-  ],
-  "specialBehaviors": [],
-  "cardImage": "gamemaster/roles/03-Chien_Loup.png",
-  "pouvoir": "Choisit un camp (Village ou Loups) et doit gagner avec ce camp.",
-  "notes": "Le Chien-Loup doit annoncer son choix après la première nuit. Les autres joueurs découvrent alors votre affiliation."
+  "pouvoir": "La premiere nuit, choisit un camp (Village ou Loups) et doit gagner avec ce camp.",
+  "actionType": "NightActive",
+  "tips": "Choisissez bien votre camp - vous détenez l'équilibre du jeu."
 }

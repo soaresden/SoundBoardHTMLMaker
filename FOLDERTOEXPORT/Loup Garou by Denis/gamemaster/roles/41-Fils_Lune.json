@@ -1,15 +1,10 @@
 {
   "id": "Fils_Lune",
-  "order": 41,
   "name": "Fils Lune",
   "emoji": "🌙",
   "camp": "Village",
-  "origin": "base",
   "pouvoir": "Si tué la nuit, les Loups-Garous ne peuvent pas tuer quelqu'un d'autre cette nuit.",
   "description": "Le Fils de la Lune est un villageois spécial dont la mort affecte le pouvoir des Loups-Garous.",
-  "instruction": "Si vous êtes tué par les Loups-Garous la nuit, ils ne peuvent pas faire d'autre victime cette même nuit.",
-  "tips": "Restez vivant si possible. Si vous êtes attaqué, vous sauvez un autre villageois.",
-  "notes": "C'est une protection posthume pour le village. Les Loups doivent le cibler s'ils veulent une double mise à mort.",
   "actions": {
     "PostMortem": {
       "enabled": true,
@@ -20,27 +15,15 @@
     }
   },
   "visual": {
-    "fondColor": "#6b4c9a",
-    "emoji": "🌙",
-    "emojiColor": "#ffffff",
-    "targetsBorder": {
-      "color": "#9966ff",
-      "width": "2px",
-      "style": "solid"
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
     }
   },
-  "logging": {
-    "enabled": true,
-    "actionStartMessage": "🎭 Fils_Lune agit",
-    "actionCompleteMessage": "✅ Fils_Lune a complété son action"
-  },
-  "winConditions": [
-    {
-      "type": "camp",
-      "condition": "Village",
-      "description": "Gagner avec le camp Village"
-    }
-  ],
-  "specialBehaviors": [],
-  "cardImage": "gamemaster/roles/41-Fils_Lune.png"
+  "actionType": "DayActive",
+  "tips": "Soyez fort chaque nuit - les loups tremblent devant vous."
 }

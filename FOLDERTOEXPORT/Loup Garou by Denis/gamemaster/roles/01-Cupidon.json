@@ -1,71 +1,28 @@
 {
   "id": "Cupidon",
-  "order": 1,
   "name": "Cupidon",
   "emoji": "💘",
   "camp": "Village",
-  "origin": "base",
   "pouvoir": "Désigne deux amoureux lors de la première nuit. Si l'un meurt, l'autre meurt également.",
-  "instruction": "Lors de la première nuit, sélectionnez 2 joueurs pour les rendre amoureux. Ces deux personnes seront liées à vie - si l'un meurt, l'autre meurt aussi.",
-  "tips": "Ne mettez JAMAIS 2 excellents joueurs ensemble. Choisissez des joueurs que vous connaissez.",
-  "notes": "Le Cupidon peut se mettre en couple. Les amoureux peuvent être de différents camps. S'ils découvrent qu'ils sont d'un Loup et un Villageois, ils doivent éliminer tous les autres joueurs.",
-
-  "gamePhases": [
-    {
-      "phase": "FirstNightActions",
-      "order": 1,
-      "enabled": true,
-      "action": {
-        "type": "selectPair",
-        "targets": {
-          "count": 2,
-          "minCount": 2,
-          "maxCount": 2,
-          "canTargetDead": false,
-          "canTargetSelf": false
-        },
-        "message": "🎭 Cupidon, sélectionnez 2 joueurs à rendre amoureux",
-        "effect": {
-          "type": "createLink",
-          "linkType": "lover",
-          "description": "Si l'un meurt, l'autre meurt aussi"
-        }
-      }
-    }
-  ],
-
-  "winConditions": [
-    {
-      "type": "camp",
-      "value": "Village",
-      "description": "Gagne avec le camp Village"
-    },
-    {
-      "type": "linkedDeath",
-      "linkedRole": "any",
-      "description": "Si lié à quelqu'un d'un autre camp par Cupidon, doit éliminer tous les autres"
-    }
-  ],
-
-  "specialBehaviors": [
-    {
-      "type": "linkedDeath",
-      "trigger": "onPlayerDeath",
-      "action": "killLinkedPlayer",
-      "description": "Quand un amoureux meurt, l'autre meurt aussi"
-    }
-  ],
-
   "visual": {
-    "fondColor": "#DA90A7",
-    "emoji": "💘",
-    "emojiColor": "#1281B2",
-    "targetsBorder": {
-      "color": "#DA90A7",
-      "width": "2px",
-      "style": "solid"
+    "roleColor": {
+      "fondColor": "#D6899E",
+      "emojiColor": "#0C87B8"
+    },
+    "affectedColor": {
+      "borderColor": "#D6899E"
     }
   },
-
-  "cardImage": "gamemaster/roles/01-Cupidon.png"
+  "actionType": "NightActive",
+  "borderLifetime": "game",
+  "tips": "Vous ne gagnez que si vos deux amoureux survivent jusqu'à la fin - aidez-les à éliminer tous les autres, quel que soit leur camp.",
+  "actions": {
+    "mdj_night_actions": [
+      {
+        "id": "lover",
+        "icon": "🏹",
+        "label": "Colorer les amoureux (2)"
+      }
+    ]
+  }
 }

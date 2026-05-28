@@ -1,0 +1,10 @@
+fr 200px;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+}
+
+// Expose to window for use in game-master-ui.js
+window.NightMDJ = NightMDJ;

@@ -1,0 +1,29 @@
+{
+  "id": "Cultiste",
+  "name": "Cultiste",
+  "emoji": "🕷️",
+  "camp": "Loups",
+  "description": "Rôle: Cultiste",
+  "actions": {
+    "NoAction": {
+      "enabled": true,
+      "type": "disguisedWolf",
+      "phase": "none",
+      "targets": {},
+      "stateKey": "cultiste"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Peut enrôler d'autres joueurs à son culte.",
+  "actionType": "NoActions",
+  "tips": "Convertissez les mécréants - votre culte grandira dans l'ombre."
+}

@@ -56,22 +56,13 @@ class GameMasterUI {
   }
 
   getCardFile(roleId) {
-    // Load image path from JSON (preferring cardImage, then image)
-    if (window.ROLES_DATA && window.ROLES_DATA.roles && window.ROLES_DATA.roles[roleId]) {
-      const roleData = window.ROLES_DATA.roles[roleId];
-      // Try cardImage first (gamemaster/roles/*)
-      if (roleData.cardImage) {
-        return roleData.cardImage; // Full path like "gamemaster/roles/01-Cupidon.png"
-      }
-      // Fall back to image field
-      if (roleData.image) {
-        return roleData.image; // Return full path like "gamemaster/cards/Cupidon.webp"
-      }
+    // Use helper function to get image path based on ROLE_FILE_MAPPING
+    if (window.getRoleImagePath) {
+      return window.getRoleImagePath(roleId);
     }
 
-    // Fallback: construct path if not in JSON (default to gamemaster/roles/)
-    const filename = this.roleToCardFile[roleId] || roleId;
-    return `gamemaster/roles/${filename}.png`;
+    // Fallback: construct path if helper not available
+    return `gamemaster/roles/${roleId}.png`;
   }
 
   init() {
@@ -163,7 +154,12 @@ class GameMasterUI {
     const mode = this.gm.state.mode;
     const gmContent = document.getElementById('gmContent');
 
-    if (!gmContent) return;
+    console.log(`[GameMasterUI.render] mode=${mode}, gameMode=${this.gm.state.gameMode}, gmContent=${gmContent ? 'exists' : 'MISSING'}`);
+
+    if (!gmContent) {
+      console.error('[GameMasterUI.render] gmContent NOT FOUND - cannot render');
+      return;
+    }
 
     // Afficher le journal si l'onglet journal est actif
     if (this.activeTab === 'journal') {
@@ -187,6 +183,43 @@ class GameMasterUI {
       gmContent.style.overflow = 'auto';
       gmContent.style.padding = '0';
       gmContent.innerHTML = renderModeSelection(this);
+    } else if (mode === 'tirageMode') {
+      // NEW: Mode sélection du tirage (Aléatoire vs Réel)
+      gmContent.style.display = 'block !important';
+      gmContent.style.flexDirection = 'column';
+      gmContent.style.overflow = 'auto';
+      gmContent.style.padding = '0';
+      this.handlePhaseRendering('tirageMode', gmContent);
+    } else if (mode === 'revealSequential') {
+      // NEW: Mode Aléatoire - Sequential tablet-based role reveal
+      gmContent.style.display = 'block !important';
+      gmContent.style.flexDirection = 'column';
+      gmContent.style.overflow = 'auto';
+      gmContent.style.padding = '0';
+      this.handlePhaseRendering('revealSequential', gmContent);
+    } else if (mode === 'modeAssiste') {
+      // NEW: Mode Réel - Mode Assisté placeholder (En développement)
+      gmContent.style.display = 'block !important';
+      gmContent.style.flexDirection = 'column';
+      gmContent.style.overflow = 'auto';
+      gmContent.style.padding = '0';
+      this.handlePhaseRendering('modeAssiste', gmContent);
+    } else if (mode === 'firstNightMdj' || mode === 'firstNight') {
+      // NEW: Mode MDJ pour la première nuit
+      console.log(`[GameMasterUI] FirstNight - mode: ${mode}, gameMode: ${this.gm.state.gameMode}, gameInterface: ${this.gm.state.gameInterface}`);
+      // Check if we should use MDJ interface (from Mode Aléatoire)
+      if (this.gm.state.gameInterface === 'mdj' || this.gm.state.mdjMode === true) {
+        console.log('[GameMasterUI] ✓ Rendering FirstNight-MDJ');
+        gmContent.style.display = 'block !important';
+        gmContent.style.flexDirection = 'column';
+        gmContent.style.overflow = 'auto';
+        gmContent.style.padding = '0';
+        this.handlePhaseRendering('firstNightMdj', gmContent);
+      } else {
+        console.log('[GameMasterUI] ✗ GameInterface is not MDJ, showing default');
+        // Assisté mode - use old rendering (commented out for now)
+        gmContent.innerHTML = '<div style="padding:20px; color:#e8e8f0;">Mode Assisté - À implémenter</div>';
+      }
     } else {
       // Mode jeu normal - layout deux colonnes
       // Recréer les colonnes si elles n'existent pas (elles sont supprimées en mode selectRoles)
@@ -368,6 +401,15 @@ class GameMasterUI {
       } else if (mode === 'assignRoles') {
         rightHtml = renderRoleDetailandTips(this);
       } else if (mode === 'night') {
+        // Check if MDJ mode (from Mode Aléatoire)
+        if (this.gm.state.gameInterface === 'mdj' || this.gm.state.mdjMode === true) {
+          gmContent.style.display = 'block !important';
+          gmContent.style.flexDirection = 'column';
+          gmContent.style.overflow = 'auto';
+          gmContent.style.padding = '0';
+          this.handlePhaseRendering('nightMdj', gmContent);
+          return; // Don't use rightHtml, MDJ renders full screen
+        }
         rightHtml = renderNightPhase(this);
       } else if (mode === 'mayorElection') {
         rightHtml = renderMayorElectionPhase(this);
@@ -823,10 +865,10 @@ class GameMasterUI {
   attachTableSetupFooterEvents() {
     const gm = this.gm;
 
-    // Bouton "Suivant" - Aller au mode selection
+    // Bouton "Suivant" - Aller à la sélection du mode de jeu (Aléatoire vs Réel)
     document.getElementById('gmBtnNextTableSetup')?.addEventListener('click', () => {
-      console.log('[TableSetup] Proceeding to mode selection');
-      gm.state.mode = 'modeSelection';
+      console.log('[TableSetup] Proceeding to TirageMode (Aléatoire vs Réel selection)');
+      gm.state.mode = 'tirageMode';
       gm.saveState();
       this.render();
     });
@@ -1224,6 +1266,74 @@ class GameMasterUI {
     const overlay = document.getElementById('gameMasterOverlay');
     if (overlay) {
       overlay.style.display = 'block';
+    }
+  }
+
+  /**
+   * Handle phase rendering for new MDJ mode phases
+   * @param {string} phaseName - Name of the phase
+   * @param {HTMLElement} container - Container to render into
+   */
+  handlePhaseRendering(phaseName, container) {
+    switch (phaseName) {
+      case 'tirageMode':
+        if (!window.TirageMode) {
+          console.error('[GameMasterUI] TirageMode class not loaded');
+          container.innerHTML = '<div style="padding:20px; color:red;">Erreur: TirageMode non chargé</div>';
+          return;
+        }
+        // Create TirageMode instance - pass container
+        const tiragePhase = new TirageMode(this.gm, container);
+        tiragePhase.init();
+        break;
+
+      case 'firstNightMdj':
+        if (!window.FirstNightMDJ) {
+          console.error('[GameMasterUI] FirstNightMDJ class not loaded');
+          container.innerHTML = '<div style="padding:20px; color:red;">Erreur: FirstNightMDJ non chargé</div>';
+          return;
+        }
+        // Create FirstNightMDJ instance - pass container
+        const mdjPhase = new FirstNightMDJ(this.gm, container);
+        mdjPhase.init();
+        break;
+
+      case 'nightMdj':
+        if (!window.NightMDJ) {
+          console.error('[GameMasterUI] NightMDJ class not loaded');
+          container.innerHTML = '<div style="padding:20px; color:red;">Erreur: NightMDJ non chargé</div>';
+          return;
+        }
+        // Create NightMDJ instance - pass container
+        const nightMdjPhase = new NightMDJ(this.gm, container);
+        nightMdjPhase.init();
+        break;
+
+      case 'revealSequential':
+        if (!window.RevealSequential) {
+          console.error('[GameMasterUI] RevealSequential class not loaded');
+          container.innerHTML = '<div style="padding:20px; color:red;">Erreur: RevealSequential non chargé</div>';
+          return;
+        }
+        // Create RevealSequential instance - Mode Aléatoire tablet reveal
+        const revealPhase = new RevealSequential(this.gm, container);
+        revealPhase.init();
+        break;
+
+      case 'modeAssiste':
+        if (!window.ModeAssiste) {
+          console.error('[GameMasterUI] ModeAssiste class not loaded');
+          container.innerHTML = '<div style="padding:20px; color:red;">Erreur: ModeAssiste non chargé</div>';
+          return;
+        }
+        // Create ModeAssiste instance - placeholder for Mode Réel
+        const assistePhase = new ModeAssiste(this.gm, container);
+        assistePhase.init();
+        break;
+
+      default:
+        console.warn(`[GameMasterUI] Unknown phase: ${phaseName}`);
+        container.innerHTML = `<div style="padding:20px; color:#aaa;">Phase inconnue: ${phaseName}</div>`;
     }
   }
 }
