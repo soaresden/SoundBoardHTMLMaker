@@ -14,7 +14,7 @@ class GameMasterUI {
       'Villageois_Villageois': 'Villageois_Villageois',
       'Voyante': 'Voyante',
       'Chasseur': 'Chasseur',
-      'Sorcière': 'Sorciere',
+      'Sorciere': 'Sorciere',
       'Cupidon': 'Cupidon',
       'Petite_Fille': 'Petite_Fille',
       'Ancien': 'Ancien',

@@ -1292,14 +1292,14 @@ function attachFirstNightEvents(gameUI) {
             gm.addGameLog(`${nightTag} 👁️ Voyante (${assignedPlayer.name}) regarde <strong>${target.name}</strong> → ${role}`);
           }
         }
-        else if (currentRole === 'Sorcière' && gm.state.sorcierePotions) {
+        else if (currentRole === 'Sorciere' && gm.state.sorcierePotions) {
           if (assignedPlayer) {
             const choice = gm.state.sorcierePotions.choice;
             if (choice === 'save') {
-              gm.addGameLog(`${nightTag} 🧪 Sorcière (${assignedPlayer.name}) garde sa potion de VIE`);
+              gm.addGameLog(`${nightTag} 🧪 Sorciere (${assignedPlayer.name}) garde sa potion de VIE`);
             } else if (choice === 'kill' && gm.state.sorcierePotions.mortTarget) {
               const target = players.find(p => p.id === gm.state.sorcierePotions.mortTarget);
-              if (target) gm.addGameLog(`${nightTag} ☠️ Sorcière (${assignedPlayer.name}) empoisonne <strong>${target.name}</strong>`);
+              if (target) gm.addGameLog(`${nightTag} ☠️ Sorciere (${assignedPlayer.name}) empoisonne <strong>${target.name}</strong>`);
             }
           }
         }

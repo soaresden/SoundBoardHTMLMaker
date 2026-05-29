@@ -24,12 +24,11 @@
   },
   "visual": {
     "roleColor": {
-      "fondColor": "#6b4c9a",
-      "borderColor": "#ffffff"
+      "fondColor": "#7B357A",
+      "emojiColor": "#F5DA66"
     },
     "affectedColor": {
-      "fondColor": "#6b4c9a",
-      "borderColor": "#ffffff"
+      "borderColor": "#7B357A"
     }
   },
   "pouvoir": "Découvre le rôle exact d'un joueur chaque nuit.",

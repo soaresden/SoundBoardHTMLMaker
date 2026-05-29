@@ -115,7 +115,7 @@ function renderCardSelection(gameUI) {
 
   // Rôles favoris
   const favoriteRoles = new Set([
-    'Simple_Loup_Garou', 'Sorcière', 'Salvateur', 'Petite_Fille',
+    'Simple_Loup_Garou', 'Sorciere', 'Salvateur', 'Petite_Fille',
     'Chasseur', 'Cupidon', 'Enfant_Sauvage', 'Chevalier_Epee_Rouille',
     'Montreur_Ours', 'Renard', 'Chien_Loup', 'Corbeau',
     'Loup_Garou_Blanc', 'Voyante', 'Grand_Mechant_Loup'
@@ -371,7 +371,7 @@ function attachCardSelectionEvents(gameUI) {
       'Renard': 1,
       'Salvateur': 1,
       'Simple_Loup_Garou': 2,
-      'Sorcière': 1,
+      'Sorciere': 1,
       'Voyante': 1,
       'Villageois': 1
     };

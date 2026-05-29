@@ -213,7 +213,7 @@
     console.log('Salvateur history:', state.salvateurHistory);
     console.log('Voyante look:', state.voyanteLook);
     console.log('Renard sniff:', state.renardSniff);
-    console.log('Sorcière potions:', state.sorcierePotions);
+    console.log('Sorciere potions:', state.sorcierePotions);
     console.log('Wolves victim:', state.wolvesVictim);
     console.groupEnd();
 

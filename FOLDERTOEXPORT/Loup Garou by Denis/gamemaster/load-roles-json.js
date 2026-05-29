@@ -24,7 +24,7 @@ class RolesLoader {
       // Liste de tous les rôles (57 total)
       const roleFiles = [
         '01-Cupidon', '02-Enfant_Sauvage', '03-Chien_Loup', '04-Abominable_Sectaire', '05-Voyante',
-        '06-Sorcière', '07-Ancien', '08-Ange', '09-Salvateur', '10-Voleur',
+        '06-Sorciere', '07-Ancien', '08-Ange', '09-Salvateur', '10-Voleur',
         '11-Petite_Fille', '12-Renard', '13-Corbeau', '14-Servante_Devouee', '15-Joueur_Flute',
         '16-Ankou', '17-Marionnettiste', '18-Chaman', '19-Garde_Du_Corps', '20-Pretre',
         '21-Gitane', '22-Noctambule', '23-Mystique', '24-Mamie_Grincheuse', '25-Fille_Joie',

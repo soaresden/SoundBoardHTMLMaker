@@ -17,7 +17,7 @@
 // Rôles qui ont une action la première nuit
 const ROLES_WITH_NIGHT_ACTION = new Set([
   'Cupidon', 'Enfant_Sauvage', 'Chien_Loup',
-  'Voyante', 'Sorcière', 'Ancien', 'Ange', 'Servante_Devouee', 'Salvateur',
+  'Voyante', 'Sorciere', 'Ancien', 'Ange', 'Servante_Devouee', 'Salvateur',
   'Renard', 'Gitane', 'Joueur_Flute', 'Marionnettiste', 'Voleur',
   'Pyromane', 'Ankou', 'Abominable_Sectaire', 'Lapin_Blanc', 'Juge_Begue',
   'Necromancien', 'Noctambule', 'Corbeau', 'Petite_Fille',
@@ -50,7 +50,7 @@ const ROLE_ACTIONS = {
     chooseWolfEmoji: '🐺'
   },
   'Voyante': { instruction: '👁️ Voyante, tu veux voir l\'identité de qui ?', type: 'voyanteLook' },
-  'Sorcière': { instruction: '🧙‍♀️ Sorcière, choisis qui ressusciter (VIE) ou empoisonner (MORT)', type: 'sorcierePotions' },
+  'Sorciere': { instruction: '🧙‍♀️ Sorciere, choisis qui ressusciter (VIE) ou empoisonner (MORT)', type: 'sorcierePotions' },
   'Ancien': { instruction: '👴 Ancien, qui protèges-tu cette nuit ?', type: 'selectOne' },
   'Ange': { instruction: '😇 Ange, qui protèges-tu cette nuit ?', type: 'selectOne' },
   'Servante_Devouee': { instruction: '👸 Servante, qui protèges-tu cette nuit ?', type: 'selectOne' },
@@ -523,9 +523,9 @@ function renderRoleActionUI(gameUI, currentRole, roleAction, players, selectedRo
     const wolvesVictim = wolvesVictimId ? players.find(p => p.id === wolvesVictimId) : null;
     const isSaved = wolvesVictim && gm.state.salvateurSavedThisNight === wolvesVictim.id;
 
-    // Pour la Sorcière: tous les joueurs vivants sauf elle-même
+    // Pour la Sorciere: tous les joueurs vivants sauf elle-même
     // (elle ne peut pas s'empoisonner elle-même)
-    const sorciere = players.find(p => p.roleId === 'Sorcière');
+    const sorciere = players.find(p => p.roleId === 'Sorciere');
     const availablePoisonTargets = players.filter(p => p.id !== sorciere?.id);
 
     return `
@@ -541,7 +541,7 @@ function renderRoleActionUI(gameUI, currentRole, roleAction, players, selectedRo
 
         <!-- INSTRUCTIONS -->
         <div style="padding:10px; background:rgba(129, 223, 247, 0.15); border:1px solid rgba(129, 223, 247, 0.3); border-radius:4px; font-size:10px; color:#81dff7; line-height:1.4; font-weight:600;">
-          <div style="margin-bottom:6px;"><strong>Sorcière,</strong> les loups-garous ont mangé un bout de cette personne.</div>
+          <div style="margin-bottom:6px;"><strong>Sorciere,</strong> les loups-garous ont mangé un bout de cette personne.</div>
           <div style="margin-bottom:6px;"><strong>Si tu la sauves:</strong> Fais moi 👍 (pouce en l'air)</div>
           <div style="margin-bottom:6px;"><strong>Si tu l'abandonnes:</strong> Sélectionne quelqu'un à empoisonner et fais moi 👎 (pouce en bas)</div>
           <div><strong>Sinon:</strong> Tu peux te rendormir</div>
@@ -959,18 +959,18 @@ function attachFirstNightEvents(gameUI) {
             const target = players.find(p => p.id === gm.state.voyanteLook.playerId);
             if (voyante && target) gm.addGameLog(`👁️ ${voyante.name} (Voyante) regarde ${target.name} et découvre: ${gm.state.voyanteLook.roleId}`, nightTag);
           }
-          else if (currentRole === 'Sorcière' && gm.state.sorcierePotions) {
-            const sorciere = players.find(p => p.roleId === 'Sorcière');
+          else if (currentRole === 'Sorciere' && gm.state.sorcierePotions) {
+            const sorciere = players.find(p => p.roleId === 'Sorciere');
             if (sorciere) {
               const choice = gm.state.sorcierePotions.choice;
               if (choice === 'save') {
                 const victim = players.find(p => p.id === gm.state.wolvesVictim);
-                if (victim) gm.addGameLog(`🧪 ${sorciere.name} (Sorcière) ressuscite ${victim.name}`, nightTag);
+                if (victim) gm.addGameLog(`🧪 ${sorciere.name} (Sorciere) ressuscite ${victim.name}`, nightTag);
               } else if (choice === 'kill' && gm.state.sorcierePotions.mortTarget) {
                 const target = players.find(p => p.id === gm.state.sorcierePotions.mortTarget);
-                if (target) gm.addGameLog(`☠️ ${sorciere.name} (Sorcière) empoisonne ${target.name}`, nightTag);
+                if (target) gm.addGameLog(`☠️ ${sorciere.name} (Sorciere) empoisonne ${target.name}`, nightTag);
               } else if (choice === 'nothing') {
-                gm.addGameLog(`🧙‍♀️ ${sorciere.name} (Sorcière) ne fait rien cette nuit`, nightTag);
+                gm.addGameLog(`🧙‍♀️ ${sorciere.name} (Sorciere) ne fait rien cette nuit`, nightTag);
               }
             }
             gm.state.wolvesVictim = '';

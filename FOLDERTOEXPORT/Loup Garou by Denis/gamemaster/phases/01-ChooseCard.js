@@ -42,7 +42,7 @@ function renderChooseCard(gameUI) {
 
   // Emojis pour tous les rôles
   const roleEmojis = {
-    'Villageois_Villageois': '👨', 'Simple_Loup_Garou': '🐺', 'Sorcière': '🧙‍♀️', 'Voyante': '🔮',
+    'Villageois_Villageois': '👨', 'Simple_Loup_Garou': '🐺', 'Sorciere': '🧙‍♀️', 'Voyante': '🔮',
     'Cupidon': '💘', 'Ancien': '👴', 'Petite_Fille': '👧', 'Chasseur': '🏹', 'Voleur': '🏴‍☠️',
     'Idiot_Village': '🤡', 'Bouc_Emissaire': '🐐', 'Salvateur': '💪', 'Joueur_Flute': '🪕', 'Corbeau': '🐦',
     'Renard': '🦊', 'Enfant_Sauvage': '🧒', 'Deux_Soeurs': '👭', 'Trois_Freres': '👬', 'Pyromane': '🔥',
@@ -59,7 +59,7 @@ function renderChooseCard(gameUI) {
 
   // Rôles favoris
   const favoriteRoles = new Set([
-    'Simple_Loup_Garou', 'Sorcière', 'Salvateur', 'Petite_Fille',
+    'Simple_Loup_Garou', 'Sorciere', 'Salvateur', 'Petite_Fille',
     'Chasseur', 'Cupidon', 'Enfant_Sauvage', 'Chevalier_Epee_Rouille',
     'Montreur_Ours', 'Renard', 'Chien_Loup', 'Corbeau',
     'Loup_Garou_Blanc', 'Voyante', 'Grand_Mechant_Loup'

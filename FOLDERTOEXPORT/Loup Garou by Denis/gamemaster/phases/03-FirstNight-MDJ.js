@@ -3,6 +3,8 @@
  *
  * Mode Maître du Jeu Animé (MDJ) - First Night
  *
+ * VERSION: 26
+ *
  * Layout:
  * - Left: Full-height listbox with role list
  * - Right: Interactive player table with action buttons
@@ -14,6 +16,75 @@
  * 4. Clicks on players to apply actions (color lovers, designate idol, etc.)
  * 5. Logs all actions
  */
+
+/**
+ * PlayerRegistry - Centralized player data management
+ * Handles all player filtering and state queries
+ */
+class PlayerRegistry {
+  constructor(players, deadPlayerIds = new Set()) {
+    this.players = players || [];
+    this.deadPlayerIds = deadPlayerIds;
+  }
+
+  // Get all alive players
+  getAlive() {
+    return this.players.filter(p => !this.deadPlayerIds.has(p.id));
+  }
+
+  // Get all dead players
+  getDead() {
+    return this.players.filter(p => this.deadPlayerIds.has(p.id));
+  }
+
+  // Get all wolf players (alive)
+  getWolves(aliveOnly = true) {
+    const wolves = this.players.filter(p =>
+      p.role && (p.role.includes('Loup') || p.role.includes('Wolf'))
+    );
+    return aliveOnly ? wolves.filter(p => !this.deadPlayerIds.has(p.id)) : wolves;
+  }
+
+  // Get all villagers (alive)
+  getVillagers(aliveOnly = true) {
+    const villagers = this.players.filter(p =>
+      !p.role || (!p.role.includes('Loup') && !p.role.includes('Wolf'))
+    );
+    return aliveOnly ? villagers.filter(p => !this.deadPlayerIds.has(p.id)) : villagers;
+  }
+
+  // Get non-wolves (for wolf kill targets)
+  getNonWolves(aliveOnly = true) {
+    const nonWolves = this.players.filter(p =>
+      !p.role || (!p.role.includes('Loup') && !p.role.includes('Wolf'))
+    );
+    return aliveOnly ? nonWolves.filter(p => !this.deadPlayerIds.has(p.id)) : nonWolves;
+  }
+
+  // Get other wolves (for Loup_Garou_Blanc killing targets)
+  getOtherWolves(aliveOnly = true) {
+    const wolves = this.players.filter(p =>
+      p.role && (p.role.includes('Loup') || p.role.includes('Wolf'))
+    );
+    return aliveOnly ? wolves.filter(p => !this.deadPlayerIds.has(p.id)) : wolves;
+  }
+
+  // Check if player is dead
+  isDead(playerId) {
+    return this.deadPlayerIds.has(playerId);
+  }
+
+  // Check if player is wolf
+  isWolf(playerId) {
+    const player = this.players.find(p => p.id === playerId);
+    return player && (player.role.includes('Loup') || player.role.includes('Wolf'));
+  }
+
+  // Get player by ID
+  getPlayer(playerId) {
+    return this.players.find(p => p.id === playerId);
+  }
+}
 
 class FirstNightMDJ {
   constructor(gm, container) {
@@ -33,6 +104,10 @@ class FirstNightMDJ {
       console.log('[FirstNightMDJ] ✓ Created rolesLoader wrapper from window functions');
     }
 
+    // Version message
+    console.log('VERSION 26');
+    console.log('v26: PlayerRegistry | Independent wolf breathing | Dead player filtering | Green resurrection border | Night summary persistence');
+
     // Debug logging
     console.log('[FirstNightMDJ] Constructor:', {
       gm: !!gm,
@@ -46,6 +121,10 @@ class FirstNightMDJ {
     this.selectedPlayers = [];
     this.actionState = {};
     this.roleStates = {}; // Track which roles are completed
+    this.deadPlayerIds = new Set(); // Track players who have been killed
+
+    // Initialize PlayerRegistry for centralized player data management
+    this.playerRegistry = new PlayerRegistry(this.gm?.state?.players || [], this.deadPlayerIds);
 
     // Timer state
     this.timerDuration = 5 * 60; // 5 minutes in seconds
@@ -54,6 +133,17 @@ class FirstNightMDJ {
 
     // Initialize role states
     this.initializeRoleStates();
+  }
+
+  /**
+   * Helper: Get player name from ID
+   * Used to display player names instead of IDs in all logs and UI
+   */
+  getPlayerName(playerId) {
+    if (!playerId) return '???';
+    const players = this.gm?.state?.players || [];
+    const player = players.find(p => p.id === playerId);
+    return player?.name || playerId; // Fallback to ID if not found
   }
 
   /**
@@ -140,9 +230,7 @@ class FirstNightMDJ {
         <!-- RIGHT: Pink Action Zone -->
         <div class="mdj-right-panel">
           <div class="mdj-action-zone" id="action-zone">
-            <div class="action-title-big" id="action-title-big">
-              <div id="mdj-night-timer" class="mdj-night-timer">5:00</div>
-            </div>
+            <div class="action-title-big" id="action-title-big"></div>
             <div class="action-controls" id="action-controls"></div>
             <div class="action-info" id="action-info"></div>
           </div>
@@ -156,7 +244,6 @@ class FirstNightMDJ {
     this.renderRoleListbox();
     this.attachResizeHandlers();
     this.logDimensions();
-    this.startTimer();
   }
 
   /**
@@ -315,14 +402,22 @@ class FirstNightMDJ {
 
 
       // Check if this player has the currently selected role (for breathing effect)
-      const isCurrentRole = this.selectedRoleId && p.role === this.selectedRoleId;
+      // EACH ROLE BREATHES INDEPENDENTLY - no pack breathing!
+      const isCurrentRole = p.role === this.selectedRoleId;
+
+      if (isCurrentRole) {
+        console.log(`[MDJ] 🫁 Breathing for: ${p.name} (${p.role}) - selectedRoleId: ${this.selectedRoleId}`);
+      }
+
+      const isDead = this.deadPlayerIds.has(p.id);
+      const deadStyle = isDead ? 'filter: grayscale(100%) brightness(0.5); opacity: 0.6;' : '';
 
       return `
-        <div class="mdj-player-point ${isCurrentRole ? 'breathing' : ''}" data-player-id="${p.id}" data-player-name="${p.name}"
-             style="left: ${x}px; top: ${y}px; position: absolute;">
+        <div class="mdj-player-point ${isCurrentRole ? 'breathing' : ''}" data-player-id="${p.id}" data-player-name="${p.name}" data-original-emoji="${emoji}"
+             style="left: ${x}px; top: ${y}px; position: absolute; ${deadStyle}">
           <div class="mdj-point-dot" style="background: ${bgColor}; --affected-border: ${affectedBorderColor};">
-            <span class="mdj-point-emoji" style="color: ${emojiColor};">${emoji}</span>
-            <span class="mdj-point-name" style="top: ${nameTop}; left: ${nameLeft}; text-align: ${p.textAlign};">${p.name}</span>
+            <span class="mdj-point-emoji" style="color: ${emojiColor};">${isDead ? '💀' : emoji}</span>
+            <span class="mdj-point-name" style="top: ${nameTop}; left: ${nameLeft}; text-align: ${p.textAlign};">${isDead ? '💀' : ''} ${p.name}</span>
           </div>
         </div>
       `;
@@ -380,9 +475,130 @@ class FirstNightMDJ {
    * Render the role listbox with breathing animation on current role
    * IMPORTANT: Shows all night-active roles in order (01, 02, 03, ...)
    */
+  /**
+   * Render Night Summary - Shows completed actions and deaths
+   * Replaces the role listbox once all roles are done
+   */
+  renderNightSummary() {
+    const listbox = document.getElementById('role-listbox');
+    if (!listbox) return;
+
+    const players = this.gm.state.players || [];
+    const actions = [];
+    const deaths = [];
+
+    // Collect all completed actions
+    Object.entries(this.roleStates).forEach(([roleId, state]) => {
+      if (state.completed && state.result?.targets?.length > 0) {
+        const roleData = this.rolesLoader.getRole(roleId);
+        const roleName = roleData?.name || roleId;
+        const emoji = roleData?.emoji || '❓';
+        const action = state.result.action;
+
+        const targets = state.result.targets
+          .filter(t => !t.startsWith('potion-'))
+          .map(id => this.getPlayerName(id))
+          .join(' et ');
+
+        if (action === 'lover' && targets) {
+          actions.push(`${emoji} ${roleName} a touché ${targets}`);
+        } else if (action === 'idol' && targets) {
+          actions.push(`${emoji} ${roleName} a désigné ${targets}`);
+        } else if (action === 'see_role' && targets) {
+          actions.push(`${emoji} ${roleName} a vu ${targets}`);
+        } else if (action === 'protect' && targets) {
+          actions.push(`${emoji} ${roleName} a protégé ${targets}`);
+        } else if (action === 'sniff' && targets) {
+          actions.push(`${emoji} ${roleName} a reniflé ${targets}`);
+        }
+      }
+    });
+
+    // Collect all deaths
+    const deadPlayers = players.filter(p => this.deadPlayerIds.has(p.id));
+    deadPlayers.forEach(p => {
+      const roleData = this.rolesLoader.getRole(p.role);
+      const emoji = roleData?.emoji || '❓';
+
+      let cause = 'Cause inconnue';
+      if (this.roleStates['Grand_Mechant_Loup']?.result?.targets?.includes(p.id)) {
+        cause = 'Dévoré par le Grand Méchant Loup';
+      } else if (this.roleStates['Sorciere']?.result?.targets?.includes(p.id)) {
+        cause = 'Tué par la potion de la Sorcière';
+      } else {
+        cause = 'Dévoré par les Loups';
+      }
+
+      deaths.push({
+        name: p.name,
+        emoji: emoji,
+        cause: cause
+      });
+    });
+
+    const actionsHtml = actions.length > 0
+      ? actions.map(action => `<div style="padding:8px; background:rgba(100,150,200,0.2); border-left:3px solid #81dff7; margin-bottom:6px; font-size:11px; border-radius:2px;">${action}</div>`).join('')
+      : '<div style="padding:12px; text-align:center; color:#aaa; font-size:11px;">Aucune action spéciale</div>';
+
+    const deathsHtml = deaths.length > 0
+      ? deaths.map(d => `
+          <div style="padding:8px; background:rgba(212,102,102,0.2); border-left:3px solid #ff9999; margin-bottom:6px; font-size:11px; border-radius:2px;">
+            <strong>${d.emoji} ${d.name}</strong><br>
+            <span style="color:#ff9999; font-size:10px;">${d.cause}</span>
+          </div>
+        `).join('')
+      : '<div style="padding:12px; text-align:center; color:#aaa; font-size:11px;">Aucune mort cette nuit</div>';
+
+    const html = `
+      <div style="display:flex; flex-direction:column; height:100%; background:rgba(0,0,0,0.3); border-radius:6px; overflow:hidden;">
+        <div style="flex:1; overflow-y:auto; padding:12px;">
+          <div style="margin-bottom:12px;">
+            <h3 style="margin:0 0 8px 0; color:#81dff7; font-size:12px; font-weight:600; border-bottom:2px solid #81dff7; padding-bottom:6px;">
+              📋 Actions de la Nuit
+            </h3>
+            ${actionsHtml}
+          </div>
+
+          <div>
+            <h3 style="margin:0 0 8px 0; color:#ff9999; font-size:12px; font-weight:600; border-bottom:2px solid #ff9999; padding-bottom:6px;">
+              ☠️ Décès
+            </h3>
+            ${deathsHtml}
+          </div>
+        </div>
+
+        <div style="padding:12px; border-top:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.5);">
+          <button id="night-summary-btn-next" class="btn-night-complete"
+                  style="width:100%; padding:12px; background:#4CAF50; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600; font-size:12px;">
+            ✓ Débat et Vote
+          </button>
+        </div>
+      </div>
+    `;
+
+    listbox.innerHTML = html;
+
+    // Attach click handler to proceed to next phase
+    const nextBtn = listbox.querySelector('#night-summary-btn-next');
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => {
+        console.log('[MDJ] Moving to Day phase from night summary');
+        this.gm.changePhase('day');
+      });
+    }
+  }
+
   renderRoleListbox() {
     const listbox = document.getElementById('role-listbox');
     if (!listbox) return;
+
+    // Check if all roles are completed - if so, show summary instead
+    const completedRoleIds = Object.keys(this.roleStates);
+    const allCompleted = completedRoleIds.length > 0 && completedRoleIds.every(roleId => this.roleStates[roleId].completed);
+
+    if (allCompleted) {
+      return this.renderNightSummary();
+    }
 
     // Get ASSIGNED roles from players in THIS game
     const players = this.gm.state.players || [];
@@ -412,24 +628,40 @@ class FirstNightMDJ {
       return false;
     });
 
-    // CRITICAL: Re-sort by file number extracted from filename (01-Cupidon.json → 01)
-    // Dynamically extract order from all roles data
-    const getFileNumber = (roleId) => {
-      // Get all roles and find the one matching this roleId
+    // CRITICAL: Re-sort by file number extracted from filename
+    // Supports format: "98-Name.json", "98a-Name.json", "98b-Name.json", etc.
+    const parseFileNumber = (roleId) => {
       const allRoles = window.ROLES_DATA?.roles || {};
       const roleData = allRoles[roleId];
-      if (!roleData?._fileNumber) {
-        // If not cached, try to find it from ordered list
-        const orderedRoles = this.rolesLoader.getOrderedRoleIds();
-        return orderedRoles.indexOf(roleId) + 1 || 999;
+
+      // Try to get filename from roleData (fallback to roleId)
+      let filename = roleData?._filename || roleId;
+
+      // Extract number and optional letter: "98" or "98a" or "98b"
+      const match = filename.match(/^(\d+)([a-z])?/i);
+      if (!match) {
+        return { num: 999, letter: '' };
       }
-      return roleData._fileNumber;
+
+      return {
+        num: parseInt(match[1]),
+        letter: match[2] ? match[2].toLowerCase() : ''
+      };
     };
 
     nightRoles.sort((a, b) => {
-      const aNum = getFileNumber(a);
-      const bNum = getFileNumber(b);
-      return aNum - bNum;
+      const aFile = parseFileNumber(a);
+      const bFile = parseFileNumber(b);
+
+      // Compare numbers first
+      if (aFile.num !== bFile.num) {
+        return aFile.num - bFile.num;
+      }
+
+      // If numbers are equal, compare letters (empty letter comes first)
+      if (aFile.letter === '' && bFile.letter !== '') return -1;
+      if (aFile.letter !== '' && bFile.letter === '') return 1;
+      return aFile.letter.localeCompare(bFile.letter);
     });
 
 
@@ -441,6 +673,11 @@ class FirstNightMDJ {
       if (firstRole) {
         this.selectedRoleId = firstRole;
         console.log('[FirstNightMDJ] Auto-selected first role:', firstRole);
+        // Apply breathing effect ONCE when auto-selecting
+        this.renderLiveMap();
+        this.updateMapForRole();
+        // CRITICAL: Restore effects from previously completed roles to make borders persistent
+        this.restoreCompletedRoleEffects();
       }
     }
 
@@ -565,7 +802,7 @@ class FirstNightMDJ {
       case 'Loup_Garou_Blanc':
         this.renderWolfKillSelection(actionControls, actionInfo, bgColor, textColor, state);
         break;
-      case 'Sorcière':
+      case 'Sorciere':
         this.renderSorciereSelection(actionControls, actionInfo, bgColor, textColor, state);
         break;
       case 'Corbeau':
@@ -598,8 +835,11 @@ class FirstNightMDJ {
     const players = this.gm.state.players || [];
     const selectedLovers = this.selectedPlayers || [];
 
+    // Filter out dead players
+    const alivePlayers = this.playerRegistry.getAlive();
+
     // Create clickable player list
-    const playerListHtml = players
+    const playerListHtml = alivePlayers
       .map((player, idx) => {
         const playerId = player.id; // Use actual player ID from orchestrator
         const isSelected = selectedLovers.includes(playerId);
@@ -689,6 +929,228 @@ class FirstNightMDJ {
   /**
    * Restore map to original state (no effects)
    */
+  /**
+   * Restore effects from completed roles
+   */
+  restoreCompletedRoleEffects() {
+    const mdjMap = document.getElementById('mdj-live-map');
+    if (!mdjMap) return;
+
+    const players = this.gm.state.players || [];
+
+    // Check each completed role and restore its effects
+    Object.entries(this.roleStates).forEach(([roleId, state]) => {
+      if (!state.completed || !state.result) return;
+
+      const roleData = this.rolesLoader.getRole(roleId);
+      if (!roleData) return;
+
+      // Re-apply effects based on role type and result
+      if (roleId === 'Cupidon' && state.result.targets && state.result.targets.length >= 2) {
+        // Restore lover bordures (pink/red)
+        const borderColor = roleData?.visual?.affectedColor?.borderColor;
+        console.log(`[MDJ] Cupidon - detection de visual affected colors: border color ${borderColor ? '✓ ' + borderColor : '✗ NOT FOUND'}`);
+
+        const lovers = players.filter(p =>
+          state.result.targets.includes(p.id)
+        );
+        lovers.forEach(lover => {
+          const point = mdjMap.querySelector(`[data-player-id="${lover.id}"]`);
+          if (point && borderColor) {
+            point.classList.add('affected');
+            const dot = point.querySelector('.mdj-point-dot');
+            if (dot) {
+              dot.style.setProperty('--affected-border', borderColor);
+            }
+          }
+        });
+      }
+
+      if (roleId === 'Enfant_Sauvage' && state.result.targets && state.result.targets.length > 0) {
+        // Restore idol bordure
+        const borderColor = roleData?.visual?.affectedColor?.borderColor;
+        const emojiColor = roleData?.visual?.roleColor?.emojiColor;
+        const bgColor = roleData?.visual?.roleColor?.fondColor;
+        console.log(`[MDJ] Enfant_Sauvage - detection de visual affected colors: border color ${borderColor ? '✓ ' + borderColor : '✗ NOT FOUND'}, emoji: ${roleData?.emoji || 'N/A'}, bg: ${bgColor || 'N/A'}, emoji-color: ${emojiColor || 'N/A'}`);
+
+        const idol = players.find(p =>
+          state.result.targets.includes(p.id)
+        );
+        if (idol && borderColor) {
+          const point = mdjMap.querySelector(`[data-player-id="${idol.id}"]`);
+          if (point) {
+            point.classList.add('affected');
+            const dot = point.querySelector('.mdj-point-dot');
+            if (dot) {
+              dot.style.setProperty('--affected-border', borderColor);
+            }
+          }
+        }
+      }
+
+      if (roleId === 'Salvateur' && state.result.targets && state.result.targets.length > 0) {
+        // Restore protected player bordure
+        const borderColor = roleData?.visual?.affectedColor?.borderColor;
+        const emojiColor = roleData?.visual?.roleColor?.emojiColor;
+        const bgColor = roleData?.visual?.roleColor?.fondColor;
+        console.log(`[MDJ] Salvateur - detection de visual affected colors: border color ${borderColor ? '✓ ' + borderColor : '✗ NOT FOUND'}, emoji: ${roleData?.emoji || 'N/A'}, bg: ${bgColor || 'N/A'}, emoji-color: ${emojiColor || 'N/A'}`);
+
+        const protected_player = players.find(p =>
+          state.result.targets.includes(p.id)
+        );
+        if (protected_player && borderColor) {
+          const point = mdjMap.querySelector(`[data-player-id="${protected_player.id}"]`);
+          if (point) {
+            point.classList.add('affected');
+            const dot = point.querySelector('.mdj-point-dot');
+            if (dot) {
+              dot.style.setProperty('--affected-border', borderColor);
+            }
+          }
+        }
+      }
+
+      if (roleId === 'Corbeau' && state.result.targets && state.result.targets.length > 0) {
+        // Restore Corbeau's victim bordure
+        const borderColor = roleData?.visual?.affectedColor?.borderColor;
+        const emojiColor = roleData?.visual?.roleColor?.emojiColor;
+        const bgColor = roleData?.visual?.roleColor?.fondColor;
+        console.log(`[MDJ] Corbeau - detection de visual affected colors: border color ${borderColor ? '✓ ' + borderColor : '✗ NOT FOUND'}, emoji: ${roleData?.emoji || 'N/A'}, bg: ${bgColor || 'N/A'}, emoji-color: ${emojiColor || 'N/A'}`);
+
+        const victim = players.find(p =>
+          state.result.targets.includes(p.id)
+        );
+        if (victim && borderColor) {
+          const point = mdjMap.querySelector(`[data-player-id="${victim.id}"]`);
+          if (point) {
+            point.classList.add('affected');
+            const dot = point.querySelector('.mdj-point-dot');
+            if (dot) {
+              dot.style.setProperty('--affected-border', borderColor);
+            }
+          }
+        }
+      }
+
+      // Handle Voyante target bordure
+      if (roleId === 'Voyante' && state.result.targets && state.result.targets.length > 0) {
+        // Restore Voyante's target bordure
+        const borderColor = roleData?.visual?.affectedColor?.borderColor;
+        const emojiColor = roleData?.visual?.roleColor?.emojiColor;
+        const bgColor = roleData?.visual?.roleColor?.fondColor;
+        console.log(`[MDJ] Voyante - detection de visual affected colors: border color ${borderColor ? '✓ ' + borderColor : '✗ NOT FOUND'}, emoji: ${roleData?.emoji || 'N/A'}, bg: ${bgColor || 'N/A'}, emoji-color: ${emojiColor || 'N/A'}`);
+
+        const target = players.find(p =>
+          state.result.targets.includes(p.id)
+        );
+        console.log('[MDJ] Voyante restore - target:', target?.name || 'NOT FOUND', 'targets array:', state.result.targets);
+
+        if (target && borderColor) {
+          const point = mdjMap.querySelector(`[data-player-id="${target.id}"]`);
+          console.log('[MDJ] Voyante restore - querySelector for', target.id, ':', point ? '✓ FOUND' : '✗ NOT FOUND');
+
+          if (point) {
+            point.classList.add('affected');
+            const dot = point.querySelector('.mdj-point-dot');
+            if (dot) {
+              dot.style.setProperty('--affected-border', borderColor);
+              console.log('[MDJ] Voyante restore - applied border color:', borderColor);
+            }
+          }
+        } else {
+          console.log('[MDJ] Voyante restore - SKIPPED: target=' + (target?.name || 'null'), 'borderColor=' + borderColor);
+        }
+      }
+
+      // Handle Chien_Loup emoji change (join_wolves)
+      if (roleId === 'Chien_Loup' && state.result.targets && state.result.targets.includes('join_wolves')) {
+        const chienLoup = players.find(p => p.role === 'Chien_Loup');
+        if (chienLoup) {
+          const point = mdjMap.querySelector(`[data-player-id="${chienLoup.id}"]`);
+          if (point) {
+            const emoji = point.querySelector('.mdj-point-emoji');
+            if (emoji) {
+              emoji.textContent = '🐺';
+              console.log('[MDJ] Restored Chien_Loup emoji to 🐺');
+            }
+          }
+        }
+      }
+
+      // Handle Renard's inspection (3 neighbors)
+      if (roleId === 'Renard' && state.result.targets && state.result.targets.length > 0) {
+        // The center player is stored in targets[0] as player ID
+        const centerPlayerId = state.result.targets[0];
+        const centerPlayer = players.find(p => p.id === centerPlayerId);
+        console.log('[MDJ] Renard restore - centerPlayerId:', centerPlayerId, 'centerPlayer:', centerPlayer?.name || 'NOT FOUND');
+
+        if (centerPlayer) {
+          const renardRole = this.rolesLoader.getRole('Renard');
+          const borderColor = renardRole?.visual?.affectedColor?.borderColor;
+          console.log(`[MDJ] Renard - detection de visual affected colors: border color ${borderColor ? '✓ ' + borderColor : '✗ NOT FOUND'}`);
+
+          const centerIdx = players.indexOf(centerPlayer);
+          const leftIdx = (centerIdx - 1 + players.length) % players.length;
+          const rightIdx = (centerIdx + 1) % players.length;
+
+          const neighborIds = [
+            centerPlayer.id,
+            players[leftIdx].id,
+            players[rightIdx].id
+          ];
+
+          console.log('[MDJ] Renard restore - applying to 3 neighbors:', neighborIds, 'borderColor:', borderColor);
+
+          neighborIds.forEach(neighborId => {
+            const point = mdjMap.querySelector(`[data-player-id="${neighborId}"]`);
+            console.log('[MDJ] Renard restore - querySelector for', neighborId, ':', point ? '✓ FOUND' : '✗ NOT FOUND');
+
+            if (point && borderColor) {
+              point.classList.add('affected');
+              const dot = point.querySelector('.mdj-point-dot');
+              if (dot) {
+                dot.style.setProperty('--affected-border', borderColor);
+                console.log('[MDJ] Renard restore - applied border to', neighborId);
+              }
+            }
+          });
+        }
+      }
+
+      // Handle Wolf kills (Simple_Loup_Garou, Grand_Mechant_Loup, Loup_Garou_Blanc)
+      if ((roleId === 'Simple_Loup_Garou' || roleId === 'Grand_Mechant_Loup' || roleId === 'Loup_Garou_Blanc')
+          && state.result.targets && state.result.targets.length > 0) {
+        console.log(`[MDJ] ${roleId} restore - killed players:`, state.result.targets);
+
+        state.result.targets.forEach(victimName => {
+          const victim = players.find(p => p.name === victimName);
+          if (victim) {
+            const point = mdjMap.querySelector(`[data-player-id="${victim.id}"]`);
+            console.log(`[MDJ] ${roleId} restore - querySelector for killed ${victim.id}:`, point ? '✓ FOUND' : '✗ NOT FOUND');
+
+            if (point) {
+              point.classList.add('killed');
+              const emoji = point.querySelector('.mdj-point-emoji');
+              if (emoji && !point.dataset.originalEmoji) {
+                point.dataset.originalEmoji = emoji.textContent;
+              }
+              if (emoji) {
+                emoji.textContent = '💀';
+                emoji.style.opacity = '0.6';
+                console.log(`[MDJ] ${roleId} restore - applied skull to ${victim.id}`);
+              }
+              const dot = point.querySelector('.mdj-point-dot');
+              if (dot) {
+                dot.style.filter = 'grayscale(100%)';
+                dot.style.opacity = '0.6';
+              }
+            }
+          }
+        });
+      }
+    });
+  }
+
   restoreMapState() {
     const mdjMap = document.getElementById('mdj-live-map');
     if (!mdjMap) return;
@@ -732,57 +1194,243 @@ class FirstNightMDJ {
    * Handles visual feedback for various roles
    */
   updateMapForRole() {
-    // Don't restore state on role change - keep previous effects visible
-    if (!this.selectedRoleId || this.selectedPlayers.length === 0) {
+    // Need to restore visuals even if selectedPlayers is empty (for preview deselection)
+    // But skip entirely if no role selected
+    if (!this.selectedRoleId) {
       return;
     }
 
     const mdjMap = document.getElementById('mdj-live-map');
     if (!mdjMap) return;
 
-    // Clear all affected states first
+    // Get list of players affected by completed roles - DON'T CLEAR THEM
+    const playersWithCompletedEffects = new Set();
+    const players = this.gm.state.players || [];
+
+    Object.entries(this.roleStates).forEach(([roleId, state]) => {
+      if (!state.completed || !state.result) return;
+
+      if (roleId === 'Cupidon' && state.result.targets) {
+        // Add Cupidon's lovers to protected list
+        // targets are stored as IDs, not names!
+        state.result.targets.forEach(targetId => {
+          if (targetId && !targetId.startsWith('potion-')) {
+            playersWithCompletedEffects.add(targetId);
+          }
+        });
+      }
+
+      if (roleId === 'Enfant_Sauvage' && state.result.targets) {
+        // Add Enfant_Sauvage's idol to protected list
+        // targets are stored as IDs, not names!
+        state.result.targets.forEach(targetId => {
+          if (targetId && !targetId.startsWith('potion-')) {
+            playersWithCompletedEffects.add(targetId);
+          }
+        });
+      }
+
+      if (roleId === 'Salvateur' && state.result.targets) {
+        // Add Salvateur's protected player to protected list
+        // targets are stored as IDs, not names!
+        state.result.targets.forEach(targetId => {
+          if (targetId && !targetId.startsWith('potion-')) {
+            playersWithCompletedEffects.add(targetId);
+          }
+        });
+      }
+
+      if (roleId === 'Corbeau' && state.result.targets) {
+        // Add Corbeau's victim to protected list
+        // targets are stored as IDs, not names!
+        state.result.targets.forEach(targetId => {
+          if (targetId && !targetId.startsWith('potion-')) {
+            playersWithCompletedEffects.add(targetId);
+          }
+        });
+      }
+
+      if (roleId === 'Voyante' && state.result.targets) {
+        // Add Voyante's target to protected list
+        // targets are stored as IDs, not names!
+        state.result.targets.forEach(targetId => {
+          if (targetId && !targetId.startsWith('potion-')) {
+            playersWithCompletedEffects.add(targetId);
+          }
+        });
+      }
+
+      if (roleId === 'Renard' && state.result.targets && state.result.targets.length > 0) {
+        // Add Renard's 3 neighbors to protected list
+        // targets are stored as IDs, not names!
+        const centerPlayerId = state.result.targets[0];
+        const centerPlayer = players.find(p => p.id === centerPlayerId);
+        if (centerPlayer) {
+          const centerIdx = players.indexOf(centerPlayer);
+          const leftIdx = (centerIdx - 1 + players.length) % players.length;
+          const rightIdx = (centerIdx + 1) % players.length;
+
+          playersWithCompletedEffects.add(centerPlayer.id);
+          playersWithCompletedEffects.add(players[leftIdx].id);
+          playersWithCompletedEffects.add(players[rightIdx].id);
+        }
+      }
+    });
+
+    // Only clear states from players who don't have completed role effects
+    // AND are not part of current selection
+    const roleData = this.rolesLoader.getRole(this.selectedRoleId);
     mdjMap.querySelectorAll('.mdj-player-point').forEach(point => {
-      point.classList.remove('affected', 'killed', 'darkened');
-      const dot = point.querySelector('.mdj-point-dot');
-      if (dot) {
-        dot.style.setProperty('--affected-border', 'transparent');
+      const pointPlayerId = point.dataset.playerId;
+
+      // Don't touch if has completed role effect OR is selected for current role
+      const hasCompletedEffect = playersWithCompletedEffects.has(pointPlayerId);
+      const isSelectedForCurrentRole = this.selectedPlayers.includes(pointPlayerId);
+
+      if (!hasCompletedEffect && !isSelectedForCurrentRole) {
+        point.classList.remove('affected', 'killed', 'darkened');
+        const dot = point.querySelector('.mdj-point-dot');
+        if (dot) {
+          dot.style.setProperty('--affected-border', 'transparent');
+        }
       }
     });
 
     // Apply role-specific visual effects
-    const players = this.gm.state.players || [];
-
     switch(this.selectedRoleId) {
       case 'Cupidon':
       case 'Enfant_Sauvage':
       case 'Salvateur':
-        // Border color effect
+        // Border color effect - use the CURRENT ROLE's affectedColor, not the player's role
+        const currentRoleData = this.rolesLoader.getRole(this.selectedRoleId);
+        const borderColor = currentRoleData?.visual?.affectedColor?.borderColor || 'inherit';
+
         this.selectedPlayers.forEach(playerId => {
           const point = mdjMap.querySelector(`[data-player-id="${playerId}"]`);
           if (point) {
             point.classList.add('affected');
-            const player = players.find(p => p.id === playerId);
-            if (player) {
-              const roleData = this.rolesLoader.getRole(player.role);
-              const borderColor = roleData?.visual?.affectedColor?.borderColor || 'inherit';
-              const dot = point.querySelector('.mdj-point-dot');
-              if (dot) {
-                dot.style.setProperty('--affected-border', borderColor);
-              }
+            const dot = point.querySelector('.mdj-point-dot');
+            if (dot) {
+              dot.style.setProperty('--affected-border', borderColor);
             }
           }
         });
         break;
 
+      case 'Voyante':
+        // Apply border color from Voyante's affectedColor to selected target
+        const voyanteRole = this.rolesLoader.getRole('Voyante');
+        const voyanteBorderColor = voyanteRole?.visual?.affectedColor?.borderColor;
+        console.log(`[MDJ] Voyante preview - detection de visual affected colors: border color ${voyanteBorderColor ? '✓ ' + voyanteBorderColor : '✗ NOT FOUND'}`);
+
+        // Restore borders for non-selected players
+        mdjMap.querySelectorAll('.mdj-player-point').forEach(point => {
+          const playerId = point.dataset.playerId;
+          if (!this.selectedPlayers.includes(playerId)) {
+            const dot = point.querySelector('.mdj-point-dot');
+            if (dot) {
+              dot.style.setProperty('--affected-border', 'transparent');
+            }
+          }
+        });
+
+        // Apply border to selected players
+        this.selectedPlayers.forEach(playerId => {
+          const point = mdjMap.querySelector(`[data-player-id="${playerId}"]`);
+          if (point && voyanteBorderColor) {
+            point.classList.add('affected');
+            const dot = point.querySelector('.mdj-point-dot');
+            if (dot) {
+              dot.style.setProperty('--affected-border', voyanteBorderColor);
+            }
+          }
+        });
+        break;
+
+      case 'Renard':
+        // Apply borders to selected player + left and right neighbors (3 total)
+        const renardRole = this.rolesLoader.getRole('Renard');
+        const renardBorderColor = renardRole?.visual?.affectedColor?.borderColor;
+        console.log(`[MDJ] Renard preview - detection de visual affected colors: border color ${renardBorderColor ? '✓ ' + renardBorderColor : '✗ NOT FOUND'}`);
+
+        if (this.selectedPlayers.length > 0 && renardBorderColor) {
+          const selectedPlayerId = this.selectedPlayers[0];
+          const selectedPlayerObj = players.find(p => p.id === selectedPlayerId);
+
+          if (selectedPlayerObj) {
+            const selectedIdx = players.indexOf(selectedPlayerObj);
+            const leftIdx = (selectedIdx - 1 + players.length) % players.length;
+            const rightIdx = (selectedIdx + 1) % players.length;
+
+            const neighborIds = [
+              selectedPlayerId, // center
+              players[leftIdx].id, // left
+              players[rightIdx].id  // right
+            ];
+
+            console.log(`[MDJ] Renard preview - applying border to 3 neighbors: center=${selectedPlayerId}, left=${players[leftIdx].id}, right=${players[rightIdx].id}`);
+
+            // Clear all first
+            mdjMap.querySelectorAll('.mdj-player-point').forEach(point => {
+              const dot = point.querySelector('.mdj-point-dot');
+              if (dot && !point.classList.contains('killed')) {
+                dot.style.setProperty('--affected-border', 'transparent');
+              }
+            });
+
+            // Apply to neighbors
+            neighborIds.forEach(neighborId => {
+              const point = mdjMap.querySelector(`[data-player-id="${neighborId}"]`);
+              if (point) {
+                point.classList.add('affected');
+                const dot = point.querySelector('.mdj-point-dot');
+                if (dot) {
+                  dot.style.setProperty('--affected-border', renardBorderColor);
+                }
+              }
+            });
+          }
+        }
+        break;
+
       case 'Simple_Loup_Garou':
       case 'Grand_Mechant_Loup':
       case 'Loup_Garou_Blanc':
+        const selectedNames = this.selectedPlayers.map(id => this.getPlayerName(id)).join(', ');
+        console.log(`[MDJ] 🐺 Selected to kill: ${selectedNames || '(none)'}`);
+
+        // Restore emojis for non-selected players
+        mdjMap.querySelectorAll('.mdj-player-point.killed').forEach(point => {
+          const playerId = point.dataset.playerId;
+          const isSelected = this.selectedPlayers.includes(playerId);
+
+          if (!isSelected) {
+            point.classList.remove('killed');
+            const emoji = point.querySelector('.mdj-point-emoji');
+            const originalEmoji = point.dataset.originalEmoji;
+            if (emoji && originalEmoji) {
+              emoji.textContent = originalEmoji;
+              emoji.style.opacity = '1';
+            }
+            const dot = point.querySelector('.mdj-point-dot');
+            if (dot) {
+              dot.style.filter = 'none';
+              dot.style.opacity = '1';
+            }
+          }
+        });
+
         // Kill effect: gray + skull
         this.selectedPlayers.forEach(playerId => {
           const point = mdjMap.querySelector(`[data-player-id="${playerId}"]`);
           if (point) {
-            point.classList.add('killed');
+            // SAVE ORIGINAL EMOJI BEFORE CHANGING IT
             const emoji = point.querySelector('.mdj-point-emoji');
+            if (emoji && !point.dataset.originalEmoji) {
+              point.dataset.originalEmoji = emoji.textContent;
+            }
+
+            point.classList.add('killed');
             if (emoji) {
               emoji.textContent = '💀';
               emoji.style.opacity = '0.6';
@@ -797,19 +1445,103 @@ class FirstNightMDJ {
         break;
 
       case 'Corbeau':
-        // Dark navy background from JSON affectedColor
+        // Apply border color from JSON affectedColor (only border, no background change)
         const corbeauRole = this.rolesLoader.getRole('Corbeau');
-        const corbeauColor = corbeauRole?.visual?.affectedColor?.fondColor || 'inherit';
-        this.selectedPlayers.forEach(playerId => {
-          const point = mdjMap.querySelector(`[data-player-id="${playerId}"]`);
-          if (point) {
-            point.classList.add('darkened');
+        const corbeauBorderColor = corbeauRole?.visual?.affectedColor?.borderColor;
+        console.log(`[MDJ] Corbeau preview - detection de visual affected colors: border color ${corbeauBorderColor ? '✓ ' + corbeauBorderColor : '✗ NOT FOUND'}`);
+
+        // Restore borders for non-selected players
+        mdjMap.querySelectorAll('.mdj-player-point').forEach(point => {
+          const playerId = point.dataset.playerId;
+          if (!this.selectedPlayers.includes(playerId)) {
+            point.classList.remove('affected');
             const dot = point.querySelector('.mdj-point-dot');
             if (dot) {
-              dot.style.background = corbeauColor;
+              dot.style.setProperty('--affected-border', 'transparent');
             }
           }
         });
+
+        // Apply border to selected players
+        this.selectedPlayers.forEach(playerId => {
+          const point = mdjMap.querySelector(`[data-player-id="${playerId}"]`);
+          if (point && corbeauBorderColor) {
+            point.classList.add('affected');
+            const dot = point.querySelector('.mdj-point-dot');
+            if (dot) {
+              dot.style.setProperty('--affected-border', corbeauBorderColor);
+            }
+          }
+        });
+        break;
+
+      case 'Sorciere':
+        const sorciereRole = this.rolesLoader.getRole('Sorciere');
+        const sorciereBorderColor = sorciereRole?.visual?.affectedColor?.borderColor || 'rgba(255,255,255,0.5)';
+
+        // Find kill target (second element if action is 'potion-death')
+        const killTargetId = this.selectedPlayers.length > 1 && this.selectedPlayers[0] === 'potion-death' ? this.selectedPlayers[1] : null;
+        const killTargetName = killTargetId ? this.getPlayerName(killTargetId) : null;
+
+        if (killTargetId) {
+          console.log(`[MDJ] 🧙‍♀️ Sorciere: poison → ${killTargetName}`);
+
+          // Clear all killed states first
+          mdjMap.querySelectorAll('.mdj-player-point.killed').forEach(point => {
+            const playerId = point.dataset.playerId;
+            if (playerId !== killTargetId) {
+              point.classList.remove('killed');
+              const emoji = point.querySelector('.mdj-point-emoji');
+              const originalEmoji = point.dataset.originalEmoji;
+              if (emoji && originalEmoji) {
+                emoji.textContent = originalEmoji;
+                emoji.style.opacity = '1';
+              }
+              const dot = point.querySelector('.mdj-point-dot');
+              if (dot) {
+                dot.style.filter = 'none';
+                dot.style.opacity = '1';
+              }
+            }
+          });
+
+          // Apply kill effect to selected target
+          const point = mdjMap.querySelector(`[data-player-id="${killTargetId}"]`);
+          if (point) {
+            const emoji = point.querySelector('.mdj-point-emoji');
+            if (emoji && !point.dataset.originalEmoji) {
+              point.dataset.originalEmoji = emoji.textContent;
+            }
+            point.classList.add('killed', 'affected');
+            if (emoji) {
+              emoji.textContent = '💀';
+              emoji.style.opacity = '0.6';
+            }
+            const dot = point.querySelector('.mdj-point-dot');
+            if (dot) {
+              dot.style.filter = 'grayscale(100%)';
+              dot.style.opacity = '0.6';
+              dot.style.setProperty('--affected-border', sorciereBorderColor);
+            }
+          }
+        } else {
+          // Clear all killed states if not poisoning
+          mdjMap.querySelectorAll('.mdj-player-point.killed').forEach(point => {
+            const emoji = point.querySelector('.mdj-point-emoji');
+            const originalEmoji = point.dataset.originalEmoji;
+            if (emoji && originalEmoji) {
+              emoji.textContent = originalEmoji;
+              emoji.style.opacity = '1';
+            }
+            const dot = point.querySelector('.mdj-point-dot');
+            if (dot) {
+              dot.style.filter = 'none';
+              dot.style.opacity = '1';
+              dot.style.setProperty('--affected-border', 'transparent');
+            }
+            point.classList.remove('killed', 'affected');
+          });
+        }
         break;
     }
   }
@@ -822,18 +1554,9 @@ class FirstNightMDJ {
     const mdjMap = document.getElementById('mdj-live-map');
     if (!mdjMap) return;
 
-    // Clear all affected states first
-    mdjMap.querySelectorAll('.mdj-player-point').forEach(point => {
-      point.classList.remove('affected');
-      const dot = point.querySelector('.mdj-point-dot');
-      if (dot) {
-        dot.style.setProperty('--affected-border', 'transparent');
-      }
-    });
-
     // Get Cupidon's affectedColor for border
     const cupidonRole = this.rolesLoader.getRole('Cupidon');
-    const cupidonBorderColor = cupidonRole?.visual?.affectedColor?.borderColor || '#ffff00';
+    const cupidonBorderColor = cupidonRole?.visual?.affectedColor?.borderColor || 'rgba(255,255,255,0.5)';
 
     // Apply affected state to selected lovers with Cupidon's color
     this.selectedPlayers.forEach(playerKey => {
@@ -846,6 +1569,10 @@ class FirstNightMDJ {
         }
       }
     });
+
+    // IMPORTANT: Do NOT clear other role effects!
+    // Other completed roles' borders should remain visible alongside Cupidon's selection
+    console.log('[MDJ] Cupidon map updated - preserving other role borders');
   }
 
   /**
@@ -854,10 +1581,12 @@ class FirstNightMDJ {
    */
   renderEnfantSauvageSelection(actionControls, actionInfo, bgColor, textColor, state) {
     if (!actionControls) return;
-    const players = this.gm.state.players || [];
     const selectedIdol = this.selectedPlayers[0] || null;
 
-    const playerListHtml = players
+    // Filter out dead players
+    const alivePlayers = this.playerRegistry.getAlive();
+
+    const playerListHtml = alivePlayers
       .map((player, idx) => {
         const playerId = player.id;
         const isSelected = selectedIdol === playerId;
@@ -1043,10 +1772,12 @@ class FirstNightMDJ {
    */
   renderVoyanteSelection(actionControls, actionInfo, bgColor, textColor, state) {
     if (!actionControls) return;
-    const players = this.gm.state.players || [];
     const selectedPlayer = this.selectedPlayers[0] || null;
 
-    const playerListHtml = players
+    // Filter out dead players
+    const alivePlayers = this.playerRegistry.getAlive();
+
+    const playerListHtml = alivePlayers
       .map((player, idx) => {
         const playerId = player.id;
         const isSelected = selectedPlayer === playerId;
@@ -1081,11 +1812,13 @@ class FirstNightMDJ {
             roleName: roleData?.name || 'Voyante',
             roleEmoji: roleData?.emoji || '🔮'
           };
+          console.log('[MDJ] Voyante selected player:', this.selectedPlayers[0], 'actionState:', this.actionState);
         } else {
           this.actionState = {};
         }
 
         this.renderActionButtons();
+        this.updateMapForRole();
       });
     });
 
@@ -1106,15 +1839,17 @@ class FirstNightMDJ {
    */
   renderSalvateurSelection(actionControls, actionInfo, bgColor, textColor, state) {
     if (!actionControls) return;
-    const players = this.gm.state.players || [];
     const selectedPlayer = this.selectedPlayers[0] || null;
 
-    const playerListHtml = players
+    // Filter out dead players
+    const alivePlayers = this.playerRegistry.getAlive();
+
+    const playerListHtml = alivePlayers
       .map((player, idx) => {
         const playerId = player.id;
         const isSelected = selectedPlayer === playerId;
         const roleData = this.rolesLoader.getRole(player.role);
-        const protectColor = roleData?.visual?.affectedColor?.borderColor || '#00FF00';
+        const protectColor = roleData?.visual?.affectedColor?.borderColor || 'rgba(255,255,255,0.5)';
 
         return `
           <div class="role-action-btn ${isSelected ? 'selected' : ''}"
@@ -1173,35 +1908,135 @@ class FirstNightMDJ {
     const players = this.gm.state.players || [];
     const selectedPlayer = this.selectedPlayers[0] || null;
 
-    const playerListHtml = players
-      .map((player, idx) => {
-        const playerId = player.id;
-        const isSelected = selectedPlayer === playerId;
-        const roleData = this.rolesLoader.getRole(player.role);
-        const isWolf = player.role.includes('Loup') || player.role.includes('Wolf');
+    // HORIZONTAL LAYOUT: Show left neighbor | selected player | right neighbor
+    let controlsHtml = '';
 
-        return `
-          <div class="role-action-btn ${isSelected ? 'selected' : ''}"
-               data-player-id="${playerId}"
-               style="background: ${isSelected ? bgColor + '30' : 'rgba(255,255,255,0.08)'};
-                      border: 2px solid ${isSelected ? bgColor : 'transparent'};">
-            <span class="btn-emoji">${roleData?.emoji || '❓'}</span>
-            <span class="btn-name">${player.name}</span>
-            ${isWolf ? '<span class="wolf-indicator">🐺</span>' : ''}
+    if (selectedPlayer) {
+      const selectedPlayerObj = players.find(p => p.id === selectedPlayer);
+      if (selectedPlayerObj) {
+        const selectedIdx = players.indexOf(selectedPlayerObj);
+        const leftIdx = (selectedIdx - 1 + players.length) % players.length;
+        const rightIdx = (selectedIdx + 1) % players.length;
+
+        const leftPlayer = players[leftIdx];
+        const rightPlayer = players[rightIdx];
+        const leftRole = this.rolesLoader.getRole(leftPlayer.role);
+        const rightRole = this.rolesLoader.getRole(rightPlayer.role);
+        const selectedRole = this.rolesLoader.getRole(selectedPlayerObj.role);
+
+        // Check for wolves in the 3 neighbors
+        const isLeftWolf = leftPlayer.role.includes('Loup') || leftPlayer.role.includes('Wolf');
+        const isSelectedWolf = selectedPlayerObj.role.includes('Loup') || selectedPlayerObj.role.includes('Wolf');
+        const isRightWolf = rightPlayer.role.includes('Loup') || rightPlayer.role.includes('Wolf');
+        const wolfCount = (isLeftWolf ? 1 : 0) + (isSelectedWolf ? 1 : 0) + (isRightWolf ? 1 : 0);
+
+        console.log(`[MDJ] Renard inspection - 3 neighbors: left=${leftPlayer.name} (${isLeftWolf ? 'wolf' : 'not wolf'}), center=${selectedPlayerObj.name} (${isSelectedWolf ? 'wolf' : 'not wolf'}), right=${rightPlayer.name} (${isRightWolf ? 'wolf' : 'not wolf'}) - Total wolves: ${wolfCount}`);
+
+        const wolfDetectionMessage = wolfCount === 0
+          ? '<div style="color: #ff6b6b; font-size: 0.7rem; font-weight: 700; margin-top: 8px; padding: 6px; background: rgba(255,107,107,0.2); border-radius: 3px;">⚠️ Il perd son pouvoir prochaine nuit</div>'
+          : `<div style="color: #4ecdc4; font-size: 0.7rem; font-weight: 700; margin-top: 8px; padding: 6px; background: rgba(78,205,196,0.2); border-radius: 3px;">🐺 ${wolfCount} loup${wolfCount > 1 ? 's' : ''} détecté${wolfCount > 1 ? 's' : ''}</div>`;
+
+        controlsHtml = `
+          <div style="display: flex; justify-content: space-around; align-items: center; gap: 10px; width: 100%;">
+            <!-- LEFT NEIGHBOR -->
+            <div style="flex: 1; text-align: center; padding: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; min-height: 60px; display: flex; flex-direction: column; justify-content: center; align-items: center; border: ${isLeftWolf ? '2px solid #ff4444' : '1px solid transparent'};">
+              <div style="font-size: 1.2rem; margin-bottom: 4px;">${leftRole?.emoji || '?'}</div>
+              <div style="font-size: 0.65rem; font-weight: 700; color: #e0e0f0;">${leftPlayer.name}</div>
+              ${isLeftWolf ? '<div style="font-size: 0.6rem; color: #ff4444; margin-top: 3px;">🐺 Loup</div>' : ''}
+            </div>
+
+            <!-- CENTER: SELECTED PLAYER (with click handlers for left/right selection) -->
+            <div style="flex: 1; text-align: center;">
+              <div style="padding: 8px; background: ${bgColor}; border-radius: 4px; min-height: 60px; display: flex; flex-direction: column; justify-content: center; align-items: center; color: ${textColor}; border: ${isSelectedWolf ? '2px solid #ff4444' : '1px solid transparent'};">
+                <div style="font-size: 1.4rem; margin-bottom: 4px; font-weight: 700;">${selectedRole?.emoji || '?'}</div>
+                <div style="font-size: 0.75rem; font-weight: 700;">${selectedPlayerObj.name}</div>
+                ${isSelectedWolf ? '<div style="font-size: 0.6rem; color: #ff4444; margin-top: 3px;">🐺 Loup</div>' : ''}
+              </div>
+
+              <!-- WOLF DETECTION INFO -->
+              ${wolfDetectionMessage}
+
+              <!-- NAVIGATION BUTTONS -->
+              <div style="display: flex; gap: 4px; margin-top: 8px; justify-content: center;">
+                <button class="renard-nav-btn renard-nav-left" style="padding: 4px 8px; font-size: 0.65rem; background: rgba(100,150,255,0.3); border: 1px solid rgba(100,150,255,0.5); color: white; border-radius: 3px; cursor: pointer;">◀ Gauche</button>
+                <button class="renard-nav-btn renard-nav-right" style="padding: 4px 8px; font-size: 0.65rem; background: rgba(100,150,255,0.3); border: 1px solid rgba(100,150,255,0.5); color: white; border-radius: 3px; cursor: pointer;">Droite ▶</button>
+              </div>
+            </div>
+
+            <!-- RIGHT NEIGHBOR -->
+            <div style="flex: 1; text-align: center; padding: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; min-height: 60px; display: flex; flex-direction: column; justify-content: center; align-items: center; border: ${isRightWolf ? '2px solid #ff4444' : '1px solid transparent'};">
+              <div style="font-size: 1.2rem; margin-bottom: 4px;">${rightRole?.emoji || '?'}</div>
+              <div style="font-size: 0.65rem; font-weight: 700; color: #e0e0f0;">${rightPlayer.name}</div>
+              ${isRightWolf ? '<div style="font-size: 0.6rem; color: #ff4444; margin-top: 3px;">🐺 Loup</div>' : ''}
+            </div>
           </div>
         `;
-      })
-      .join('');
+      }
+    } else {
+      // No player selected yet - show full list of players to choose from
+      // Filter out Renard themselves (cannot sniff own role) AND dead players
+      const renardPlayer = players.find(p => p.role === 'Renard');
+      const alivePlayers = this.playerRegistry.getAlive();
 
-    actionControls.innerHTML = playerListHtml;
+      const playerListHtml = alivePlayers
+        .filter(p => p.id !== renardPlayer?.id) // Exclude Renard from selection
+        .map((player) => {
+          const playerId = player.id;
+          const roleData = this.rolesLoader.getRole(player.role);
+          const isWolf = player.role.includes('Loup') || player.role.includes('Wolf');
 
-    actionControls.querySelectorAll('.role-action-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const playerId = btn.dataset.playerId;
-        this.selectedPlayers = this.selectedPlayers[0] === playerId ? [] : [playerId];
+          return `
+            <div class="role-action-btn ${selectedPlayer === playerId ? 'selected' : ''}"
+                 data-player-id="${playerId}"
+                 style="background: ${selectedPlayer === playerId ? bgColor + '30' : 'rgba(255,255,255,0.08)'};
+                        border: 2px solid ${selectedPlayer === playerId ? bgColor : 'transparent'};">
+              <span class="btn-emoji">${roleData?.emoji || '❓'}</span>
+              <span class="btn-name">${player.name}</span>
+              ${isWolf ? '<span class="wolf-indicator">🐺</span>' : ''}
+            </div>
+          `;
+        })
+        .join('');
 
-        // Setup actionState for validation
-        if (this.selectedPlayers.length > 0) {
+      controlsHtml = playerListHtml;
+    }
+
+    actionControls.innerHTML = controlsHtml;
+
+    // Attach event listeners
+    if (selectedPlayer) {
+      // Navigation buttons
+      const leftBtn = actionControls.querySelector('.renard-nav-left');
+      const rightBtn = actionControls.querySelector('.renard-nav-right');
+
+      if (leftBtn && rightBtn) {
+        const selectedPlayerObj = players.find(p => p.id === selectedPlayer);
+        const selectedIdx = players.indexOf(selectedPlayerObj);
+
+        leftBtn.addEventListener('click', () => {
+          const newIdx = (selectedIdx - 1 + players.length) % players.length;
+          const newPlayerId = players[newIdx].id;
+          this.selectedPlayers = [newPlayerId];
+          this.renderActionButtons();
+          this.updateMapForRole();
+        });
+
+        rightBtn.addEventListener('click', () => {
+          const newIdx = (selectedIdx + 1) % players.length;
+          const newPlayerId = players[newIdx].id;
+          this.selectedPlayers = [newPlayerId];
+          this.renderActionButtons();
+          this.updateMapForRole();
+        });
+      }
+    } else {
+      // Player selection buttons
+      actionControls.querySelectorAll('.role-action-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const playerId = btn.dataset.playerId;
+          this.selectedPlayers = [playerId];
+
+          // Setup actionState for validation
           const roleData = this.rolesLoader.getRole('Renard');
           this.actionState = {
             roleId: 'Renard',
@@ -1209,33 +2044,30 @@ class FirstNightMDJ {
             roleName: roleData?.name || 'Renard',
             roleEmoji: roleData?.emoji || '🦊'
           };
-        } else {
-          this.actionState = {};
-        }
 
-        this.renderActionButtons();
+          this.renderActionButtons();
+          this.updateMapForRole();
+        });
       });
-    });
+    }
 
+    // Validation button in actionInfo
     if (actionInfo) {
       if (selectedPlayer) {
-        const selectedPlayerObj = players.find(p => p.id === selectedPlayer);
-        if (selectedPlayerObj) {
-          const selectedIdx = players.indexOf(selectedPlayerObj);
-          const left = (selectedIdx - 1 + players.length) % players.length;
-          const right = (selectedIdx + 1) % players.length;
-          const leftRole = this.rolesLoader.getRole(players[left].role);
-          const rightRole = this.rolesLoader.getRole(players[right].role);
-
-          actionInfo.innerHTML = `
-            <div style="font-size: 0.7rem;">
-              👈 ${players[left].name}: ${leftRole?.emoji || '?'}<br>
-              ➡️ ${players[right].name}: ${rightRole?.emoji || '?'}<br>
-              <button class="btn-validate-action">✓ Confirmer</button>
-            </div>
-          `;
-          actionInfo.querySelector('.btn-validate-action')?.addEventListener('click',
-            () => this.completeRoleAction());
+        actionInfo.innerHTML = `<button class="btn-validate-action">✓ Confirmer</button>`;
+        const validateBtn = actionInfo.querySelector('.btn-validate-action');
+        if (validateBtn) {
+          validateBtn.addEventListener('click', () => {
+            // Set up actionState before completing
+            const roleData = this.rolesLoader.getRole('Renard');
+            this.actionState = {
+              roleId: 'Renard',
+              action: 'sniff',
+              roleName: roleData?.name || 'Renard',
+              roleEmoji: roleData?.emoji || '🦊'
+            };
+            this.completeRoleAction();
+          });
         }
       } else {
         actionInfo.innerHTML = 'Sélectionnez un joueur';
@@ -1253,16 +2085,33 @@ class FirstNightMDJ {
     const selectedVictim = this.selectedPlayers[0] || null;
     const currentPlayerRole = this.rolesLoader.getRole(this.selectedRoleId);
 
+    console.log(`[MDJ] renderWolfKillSelection for ${this.selectedRoleId}:`);
+    console.log(`[MDJ]   - Total players:`, players.map(p => ({ id: p.id, name: p.name, role: p.role })));
+    console.log(`[MDJ]   - Dead players:`, Array.from(this.deadPlayerIds));
+    console.log(`[MDJ]   - Selected victim:`, selectedVictim);
+
     // For Loup_Garou_Blanc: show ONLY wolves
     // For other wolves: show only non-wolves (normal kill)
     let validTargets;
     if (this.selectedRoleId === 'Loup_Garou_Blanc') {
-      // Blanc can only kill other wolves
-      validTargets = players.filter(p => (p.role.includes('Loup') || p.role.includes('Wolf')) && p.role !== 'Loup_Garou_Blanc');
+      // Blanc can only kill other wolves (that aren't dead)
+      validTargets = players.filter(p =>
+        (p.role.includes('Loup') || p.role.includes('Wolf'))
+        && p.role !== 'Loup_Garou_Blanc'
+        && !this.deadPlayerIds.has(p.id)
+      );
+      console.log(`[MDJ]   - Loup_Garou_Blanc mode: filtering for OTHER WOLVES only (excluding dead)`);
     } else {
-      // Normal wolves kill non-wolves
-      validTargets = players.filter(p => !p.role.includes('Loup') && !p.role.includes('Wolf'));
+      // Normal wolves kill non-wolves (no other wolves, no dead players)
+      validTargets = players.filter(p =>
+        !p.role.includes('Loup')
+        && !p.role.includes('Wolf')
+        && !this.deadPlayerIds.has(p.id)
+      );
+      console.log(`[MDJ]   - Normal wolf mode (${this.selectedRoleId}): filtering for NON-WOLVES only (excluding dead)`);
     }
+
+    console.log(`[MDJ]   - Valid targets (after filtering dead):`, validTargets.map(p => ({ id: p.id, name: p.name, role: p.role })));
 
     const playerListHtml = validTargets
       .map((player) => {
@@ -1287,7 +2136,17 @@ class FirstNightMDJ {
     actionControls.querySelectorAll('.role-action-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const playerId = btn.dataset.playerId;
-        this.selectedPlayers = this.selectedPlayers[0] === playerId ? [] : [playerId];
+        const wasSelected = this.selectedPlayers[0] === playerId;
+        const prevSelection = this.selectedPlayers[0];
+
+        // Toggle selection
+        this.selectedPlayers = wasSelected ? [] : [playerId];
+
+        console.log(`[MDJ] Wolf kill click:`);
+        console.log(`[MDJ]   - Clicked playerId:`, playerId);
+        console.log(`[MDJ]   - Was selected:`, wasSelected);
+        console.log(`[MDJ]   - Previous selection:`, prevSelection);
+        console.log(`[MDJ]   - New selection:`, this.selectedPlayers);
 
         // Setup actionState for validation
         if (this.selectedPlayers.length > 0) {
@@ -1298,11 +2157,14 @@ class FirstNightMDJ {
             roleName: roleData?.name || 'Loup',
             roleEmoji: roleData?.emoji || '🐺'
           };
+          console.log(`[MDJ] Wolf kill - actionState set, ready to validate`);
         } else {
           this.actionState = {};
+          console.log(`[MDJ] Wolf kill - selection cleared, actionState reset`);
         }
 
         this.renderActionButtons();
+        console.log(`[MDJ] Wolf kill - calling updateMapForRole to apply visuals`);
         this.updateMapForRole();
       });
     });
@@ -1310,8 +2172,10 @@ class FirstNightMDJ {
     if (actionInfo) {
       if (selectedVictim) {
         actionInfo.innerHTML = `<button class="btn-validate-action">☠️ Tuer</button>`;
-        actionInfo.querySelector('.btn-validate-action')?.addEventListener('click',
-          () => this.completeRoleAction());
+        actionInfo.querySelector('.btn-validate-action')?.addEventListener('click', () => {
+          console.log(`[MDJ] Wolf kill validation - completing action for victim:`, selectedVictim);
+          this.completeRoleAction();
+        });
       } else {
         actionInfo.innerHTML = 'Sélectionnez la victime';
       }
@@ -1326,7 +2190,8 @@ class FirstNightMDJ {
     if (!actionControls) return;
 
     const players = this.gm.state.players || [];
-    const sorciereRole = this.rolesLoader.getRole('Sorcière');
+    const sorciereRole = this.rolesLoader.getRole('Sorciere');
+    console.log('[MDJ] Sorciere role data:', sorciereRole);
     const actions = sorciereRole?.actions?.mdj_night_actions || [];
     const resurrectIcon = actions.find(a => a.id === 'resurrect')?.icon || '💚';
     const poisonIcon = actions.find(a => a.id === 'poison')?.icon || '💜';
@@ -1336,10 +2201,11 @@ class FirstNightMDJ {
     let victimId = null;
     for (const roleId of ['Simple_Loup_Garou', 'Grand_Mechant_Loup', 'Loup_Garou_Blanc']) {
       if (this.roleStates[roleId]?.result?.targets?.length > 0) {
-        victimName = this.roleStates[roleId].result.targets[0];
-        // Find player ID from name
-        const player = players.find(p => p.name === victimName);
-        if (player) victimId = player.id;
+        // targets are stored as player IDs (p0, p1, etc)
+        victimId = this.roleStates[roleId].result.targets[0];
+        // Get player name from ID
+        const player = players.find(p => p.id === victimId);
+        if (player) victimName = player.name;
         break;
       }
     }
@@ -1347,11 +2213,14 @@ class FirstNightMDJ {
     const selectedAction = this.selectedPlayers[0];
     const selectedKillTarget = this.selectedPlayers[1] || null;
 
+    // Ensure victimName is a real name, not an ID
+    const displayVictimName = victimId ? this.getPlayerName(victimId) : victimName;
+
     actionControls.innerHTML = `
       <div class="sorciere-controls">
         <div style="color: white; font-size: 0.8rem; margin-bottom: 10px; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 4px; border-left: 3px solid ${bgColor};">
           <strong>💀 Victime des Loups:</strong><br>
-          <span style="font-size: 0.9rem; font-weight: bold; color: #ffaaaa;">${victimName}</span>
+          <span style="font-size: 0.9rem; font-weight: bold; color: #ffaaaa;">${displayVictimName}</span>
         </div>
 
         <button class="potion-btn life-potion ${selectedAction === 'potion-life' ? 'selected' : ''}" style="background: ${selectedAction === 'potion-life' ? bgColor + '50' : bgColor + '30'}; border: 2px solid ${bgColor};">
@@ -1364,7 +2233,7 @@ class FirstNightMDJ {
           Tuer un autre joueur:
         </div>
         <div class="sorciere-kill-list" style="display: flex; flex-direction: column; gap: 3px; max-height: 150px; overflow-y: auto;">
-          ${players.map(p => `
+          ${this.playerRegistry.getAlive().map(p => `
             <button class="sorciere-kill-btn ${selectedAction === 'potion-death' && selectedKillTarget === p.id ? 'selected' : ''}"
                     data-player-id="${p.id}"
                     style="padding: 4px 8px; font-size: 0.7rem; background: ${selectedAction === 'potion-death' && selectedKillTarget === p.id ? bgColor + '50' : 'rgba(255,255,255,0.08)'}; border: 1px solid ${selectedAction === 'potion-death' && selectedKillTarget === p.id ? bgColor : 'rgba(255,255,255,0.2)'}; border-radius: 3px; color: white; cursor: pointer; text-align: left;">
@@ -1381,15 +2250,15 @@ class FirstNightMDJ {
 
       // Setup actionState for validation
       this.actionState = {
-        roleId: 'Sorcière',
+        roleId: 'Sorciere',
         action: 'resurrect',
-        roleName: sorciereRole?.name || 'Sorcière',
+        roleName: sorciereRole?.name || 'Sorciere',
         roleEmoji: sorciereRole?.emoji || '🧙‍♀️'
       };
 
       this.renderActionButtons();
 
-      // Restore victim's original emoji on map
+      // Restore victim's original colors and add resurrection border
       if (victimId) {
         const mdjMap = document.getElementById('mdj-live-map');
         if (mdjMap) {
@@ -1398,12 +2267,27 @@ class FirstNightMDJ {
             const victimPlayer = players.find(p => p.id === victimId);
             if (victimPlayer) {
               const victimRole = this.rolesLoader.getRole(victimPlayer.role);
+
+              // Restore normal colors (remove grayscale/dead effect)
+              victimPoint.style.filter = 'none';
+              victimPoint.style.opacity = '1';
+
+              // Restore emoji
               const emoji = victimPoint.querySelector('.mdj-point-emoji');
               if (emoji) {
                 emoji.textContent = victimRole?.emoji || '❓';
                 emoji.style.color = victimRole?.visual?.roleColor?.emojiColor || 'inherit';
                 emoji.style.opacity = '1';
               }
+
+              // Add green border for resurrection
+              const dot = victimPoint.querySelector('.mdj-point-dot');
+              if (dot) {
+                dot.style.setProperty('--affected-border', '#00ff00'); // Green border
+                victimPoint.classList.add('affected');
+              }
+
+              console.log(`[MDJ] 🧙‍♀️ Sorciere resurrection - restored ${victimPlayer.name} with green border`);
             }
           }
         }
@@ -1414,17 +2298,23 @@ class FirstNightMDJ {
     actionControls.querySelectorAll('.sorciere-kill-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const playerId = btn.dataset.playerId;
+        const playerName = this.getPlayerName(playerId);
+        console.log(`[MDJ] 🧙‍♀️ Sorciere: ${playerName} selected for poison`);
+
         this.selectedPlayers = ['potion-death', playerId];
+        console.log(`[MDJ] 🧙‍♀️ Sorciere selectedPlayers: poison → ${playerName}`);
 
         // Setup actionState for validation
         this.actionState = {
-          roleId: 'Sorcière',
+          roleId: 'Sorciere',
           action: 'poison',
-          roleName: sorciereRole?.name || 'Sorcière',
+          roleName: sorciereRole?.name || 'Sorciere',
           roleEmoji: sorciereRole?.emoji || '🧙‍♀️'
         };
 
         this.renderActionButtons();
+        this.updateMapForRole();
+        console.log(`[MDJ] 🧙‍♀️ Sorciere visuals applied for ${playerName}`);
       });
     });
 
@@ -1446,12 +2336,14 @@ class FirstNightMDJ {
    */
   renderCorbeauSelection(actionControls, actionInfo, bgColor, textColor, state) {
     if (!actionControls) return;
-    const players = this.gm.state.players || [];
     const selectedPlayer = this.selectedPlayers[0] || null;
     const corbeauRole = this.rolesLoader.getRole('Corbeau');
     const corbeauBorderColor = corbeauRole?.visual?.affectedColor?.borderColor || bgColor;
 
-    const playerListHtml = players
+    // Filter out dead players
+    const alivePlayers = this.playerRegistry.getAlive();
+
+    const playerListHtml = alivePlayers
       .map((player, idx) => {
         const playerId = player.id;
         const isSelected = selectedPlayer === playerId;
@@ -1496,7 +2388,7 @@ class FirstNightMDJ {
 
     if (actionInfo) {
       if (selectedPlayer) {
-        actionInfo.innerHTML = `<button class="btn-validate-action">✓ Assombrir</button>`;
+        actionInfo.innerHTML = `<button class="btn-validate-action">🗳️ Donner 2 votes contre</button>`;
         actionInfo.querySelector('.btn-validate-action')?.addEventListener('click',
           () => this.completeRoleAction());
       } else {
@@ -1511,64 +2403,6 @@ class FirstNightMDJ {
    * Clears selection and transitions to next role
    * Map effects persist until next role is selected
    */
-  completeRoleAction() {
-    // Check both actionState and selectedRoleId for validation
-    if (!this.actionState.roleId && !this.selectedRoleId) {
-      console.warn('[MDJ] completeRoleAction() called without valid role context');
-      return;
-    }
-
-    if (this.selectedPlayers.length === 0) {
-      console.warn('[MDJ] completeRoleAction() called without player selections');
-      return;
-    }
-
-    const players = this.gm.state.players || [];
-    const roleData = this.rolesLoader.getRole(this.selectedRoleId);
-
-    // Convert selectedPlayers (player IDs) to names
-    const targetNames = this.selectedPlayers
-      .map(key => {
-        // Handle player IDs like "player_0", "player_1"
-        if (key.startsWith('player_')) {
-          const player = players.find(p => p.id === key);
-          return player?.name || '?';
-        }
-        // Handle special selections like "potion-life", "potion-death"
-        return key;
-      })
-      .join(', ');
-
-    // Log action
-    if (this.logger && typeof this.logger.logAction === 'function') {
-      const roleEmoji = roleData?.emoji || '❓';
-      this.logger.logAction(
-        `${roleEmoji} ${roleData?.name}`,
-        `a agi sur: ${targetNames}`,
-        this.selectedPlayers
-      );
-    }
-
-    // Mark role as completed
-    if (this.roleStates[this.selectedRoleId]) {
-      this.roleStates[this.selectedRoleId].completed = true;
-      this.roleStates[this.selectedRoleId].result = {
-        targets: [...this.selectedPlayers]
-      };
-    }
-
-    // Clear selections & role state, but KEEP map effects visible
-    this.selectedPlayers = [];
-    this.actionState = {};
-    this.selectedRoleId = null;
-
-    // Re-render (effects on map persist for visual feedback)
-    this.renderRoleListbox();
-    this.renderActionButtons();
-
-    console.log('[MDJ] Role action completed for:', roleData?.name, 'targets:', targetNames);
-  }
-
   /**
    * Complete Cupidon action with selected lovers
    */
@@ -1592,7 +2426,7 @@ class FirstNightMDJ {
       this.roleStates['Cupidon'].completed = true;
       this.roleStates['Cupidon'].result = {
         action: 'lover',
-        targets: [lover1Name, lover2Name]
+        targets: [lover1.id, lover2.id]  // Store IDs not names!
       };
     }
 
@@ -1606,6 +2440,9 @@ class FirstNightMDJ {
     this.renderActionButtons();
 
     console.log('[MDJ] Cupidon completed with lovers:', lover1Name, 'and', lover2Name);
+
+    // Check if all roles are done - night summary will display if complete
+    this.checkIfNightComplete();
   }
 
   /**
@@ -1760,22 +2597,40 @@ class FirstNightMDJ {
    * @param {string} roleId
    */
   selectRole(roleId) {
+    console.log(`[MDJ] === SELECTING ROLE: ${roleId} ===`);
     const state = this.roleStates[roleId];
-    if (state.completed) {
+    if (state?.completed) {
       // Allow reviewing but not re-editing
-      console.log(`[MDJ] ${roleId} already completed`);
+      console.log(`[MDJ] ${roleId} already completed - result:`, state.result);
     }
 
     this.selectedRoleId = roleId;
     this.selectedPlayers = [];
+    console.log(`[MDJ] Cleared selectedPlayers before rendering role`);
 
-    // Re-render listbox and action buttons
+    // Re-render listbox, map (for breathing effect), and action buttons
+    console.log(`[MDJ] Calling renderRoleListbox()`);
     this.renderRoleListbox();
+
+    console.log(`[MDJ] Calling renderLiveMap()`);
+    this.renderLiveMap();
+
+    console.log(`[MDJ] Calling updateMapForRole() to apply current role effects`);
+    this.updateMapForRole();  // Apply role-specific effects (borders, colors, etc)
+
+    // CRITICAL: Restore effects from previously completed roles to make borders persistent
+    console.log(`[MDJ] Calling restoreCompletedRoleEffects() to restore borders from other roles`);
+    this.restoreCompletedRoleEffects();
+
     this.renderActionButtons();
     this.updateSelectedDisplay();
 
+    // Restore effects from completed roles
+    console.log(`[MDJ] Calling restoreCompletedRoleEffects() to restore previous roles' visuals`);
+    this.restoreCompletedRoleEffects();
+
     const roleData = this.rolesLoader.getRole(roleId);
-    console.log(`[MDJ] Selected role: ${roleData.emoji} ${roleData.name}`);
+    console.log(`[MDJ] === ROLE SELECTION COMPLETE: ${roleData.emoji} ${roleData.name} ===`);
   }
 
   /**
@@ -1823,8 +2678,8 @@ class FirstNightMDJ {
       'Voyante-see_role': 1,
       'Salvateur-protect': 1,
       'Renard-sniff': 1,
-      'Sorcière-resurrect': 1,
-      'Sorcière-poison': 1,
+      'Sorciere-resurrect': 1,
+      'Sorciere-poison': 1,
       'Corbeau-steal_votes': 1
     };
 
@@ -1837,36 +2692,57 @@ class FirstNightMDJ {
    * @param {string} playerIndex
    * @param {HTMLElement} playerCard
    */
-  handlePlayerClick(playerName, playerIndex, playerCard) {
-    if (!this.actionState.action) {
-      console.warn('[MDJ] No action selected');
+  /**
+   * Handle direct clicks on player circles on the map
+   * Supports both old (playerName, playerIndex, playerCard) and new (playerId) signatures
+   */
+  handlePlayerClick(playerNameOrId, playerIndex, playerCard) {
+    if (!this.actionState.action && !this.selectedRoleId) {
+      console.warn('[MDJ] No action or role selected');
       return;
     }
 
-    const targetCount = this.actionState.targetCount;
+    // Find the player - support both playerId and playerName
+    const players = this.gm.state.players || [];
+    let targetPlayer = null;
+
+    if (playerCard) {
+      // Old signature: (playerName, playerIndex, playerCard)
+      targetPlayer = players[playerIndex];
+    } else {
+      // New signature: (playerId)
+      targetPlayer = players.find(p => p.id === playerNameOrId);
+    }
+
+    if (!targetPlayer) {
+      console.warn('[MDJ] Player not found');
+      return;
+    }
+
+    const targetCount = this.actionState.targetCount || 0;
 
     // Toggle player selection
-    const isSelected = this.selectedPlayers.includes(playerName);
+    const isSelected = this.selectedPlayers.includes(targetPlayer.id);
 
     if (isSelected) {
-      this.selectedPlayers = this.selectedPlayers.filter(p => p !== playerName);
-      playerCard.classList.remove('selected');
+      this.selectedPlayers = this.selectedPlayers.filter(p => p !== targetPlayer.id);
     } else {
       if (targetCount > 0 && this.selectedPlayers.length >= targetCount) {
         console.warn(`[MDJ] Cannot select more than ${targetCount} player(s)`);
         return;
       }
-      this.selectedPlayers.push(playerName);
-      playerCard.classList.add('selected');
+      this.selectedPlayers.push(targetPlayer.id);
     }
 
     this.updateSelectedDisplay();
+    this.renderActionButtons();
+    this.updateMapForRole();
 
     // Check if we have enough selections
     if (targetCount === 0) {
       this.completeRoleAction();
     } else if (this.selectedPlayers.length === targetCount) {
-      // Auto-complete when enough selected
+      // Show complete button
       this.showCompleteButton();
     }
   }
@@ -1958,6 +2834,20 @@ class FirstNightMDJ {
       };
     }
 
+    // Track dead players from kill actions
+    if ((action === 'kill' || action === 'poison') && this.selectedPlayers.length > 0) {
+      const players = this.gm?.state?.players || [];
+      this.selectedPlayers.forEach(playerId => {
+        // Skip special keys like 'potion-death', 'potion-life'
+        if (!playerId.startsWith('potion-')) {
+          this.deadPlayerIds.add(playerId);
+          const playerName = this.getPlayerName(playerId);
+          console.log(`[MDJ] ☠️ ${roleName} killed ${playerName} (${playerId})`);
+        }
+      });
+      console.log(`[MDJ] ☠️ Total dead players: ${Array.from(this.deadPlayerIds).map(id => this.getPlayerName(id)).join(', ')}`);
+    }
+
     // Clear selections
     this.selectedPlayers = [];
     this.actionState = {};
@@ -2020,6 +2910,7 @@ class FirstNightMDJ {
 
   /**
    * Check if all roles are completed
+   * NOTE: No automatic phase change - user must click "Débat et Vote" button
    */
   checkIfNightComplete() {
     const allCompleted = Object.values(this.roleStates).every(
@@ -2027,17 +2918,16 @@ class FirstNightMDJ {
     );
 
     if (allCompleted) {
-      console.log('[MDJ] ✓ First night complete!');
+      console.log('[MDJ] ✓ First night complete! Night summary is ready.');
 
       // Log morning phase if function exists
       if (this.logger && typeof this.logger.logMorning === 'function') {
         this.logger.logMorning(1);
       }
 
-      // Transition to next phase (day or morning summary)
-      setTimeout(() => {
-        this.gm.changePhase('day');
-      }, 2000);
+      // Night summary will be shown by renderRoleListbox()
+      // User clicks "Débat et Vote" button to proceed to day phase
+      // No automatic transition - let user review summary first
     }
   }
 
@@ -2182,6 +3072,36 @@ class FirstNightMDJ {
         left: 7px;
         top: 66px;
         cursor: default;
+      }
+
+      /* Mobile responsive - unlock fixed width */
+      @media (max-width: 1024px) {
+        .game-master-overlay {
+          width: 95vw;
+          height: auto;
+          left: 2.5vw;
+          top: auto;
+          max-height: 90vh;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .game-master-overlay {
+          width: 100vw;
+          height: auto;
+          left: 0;
+          top: auto;
+          max-height: 95vh;
+          border-radius: 0;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .game-master-overlay {
+          width: 100vw;
+          height: auto;
+          max-height: 100vh;
+        }
       }
 
       .mdj-main-container {
@@ -2412,7 +3332,7 @@ class FirstNightMDJ {
       .mdj-point-dot {
         width: 30px;
         height: 30px;
-        border: 2px solid white;
+        border: none;
         border-radius: 50%;
         position: absolute;
         top: -15px;
@@ -2433,8 +3353,7 @@ class FirstNightMDJ {
       }
 
       .mdj-player-point.affected .mdj-point-dot {
-        border-color: var(--affected-border, #ffff00);
-        border-width: 5px;
+        border: 5px solid var(--affected-border, #ffff00);
         box-shadow: 0 0 20px var(--affected-border, #ffff00);
       }
 
@@ -2450,19 +3369,37 @@ class FirstNightMDJ {
         box-shadow: 0 0 16px rgba(0, 26, 77, 0.8);
       }
 
+      .mdj-player-point.breathing {
+        animation: playerBreathingContainer 1.2s ease-in-out infinite !important;
+        filter: drop-shadow(0 0 8px rgba(255, 180, 0, 0.8));
+        z-index: 10;
+      }
+
       .mdj-player-point.breathing .mdj-point-dot {
-        animation: playerBreathing 1.5s ease-in-out infinite;
-        box-shadow: 0 0 15px rgba(255, 200, 100, 0.8) !important;
+        animation: playerBreathing 1.2s ease-in-out infinite !important;
+        box-shadow: 0 0 25px rgba(255, 200, 100, 1) !important;
+        border: 3px solid rgba(255, 180, 0, 0.9) !important;
+      }
+
+      @keyframes playerBreathingContainer {
+        0%, 100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.08);
+        }
       }
 
       @keyframes playerBreathing {
         0%, 100% {
           transform: scale(1);
-          box-shadow: 0 0 8px rgba(255, 200, 100, 0.6) !important;
+          box-shadow: 0 0 15px rgba(255, 180, 0, 0.9) !important;
+          filter: brightness(1.1);
         }
         50% {
-          transform: scale(1.2);
-          box-shadow: 0 0 24px rgba(255, 200, 100, 1) !important;
+          transform: scale(1.15);
+          box-shadow: 0 0 40px rgba(255, 200, 100, 1) !important;
+          filter: brightness(1.4);
         }
       }
 
@@ -2964,21 +3901,6 @@ class FirstNightMDJ {
       .potion-btn:hover {
         transform: scale(1.05);
         box-shadow: 0 0 12px rgba(255,255,255,0.3);
-      }
-
-      .mdj-night-timer {
-        font-size: 1.4rem;
-        font-weight: 800;
-        letter-spacing: 2px;
-        color: #44ff44;
-        text-shadow: 0 0 8px rgba(68, 255, 68, 0.4);
-        padding: 8px 12px;
-        border-radius: 4px;
-        background: rgba(0,0,0,0.3);
-        border: 1px solid rgba(68,255,68,0.3);
-        text-align: center;
-        transition: all 0.3s ease;
-        font-family: 'Courier New', monospace;
       }
 
       @media (max-width: 1024px) {

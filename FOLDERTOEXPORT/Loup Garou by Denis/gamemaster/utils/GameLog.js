@@ -39,11 +39,11 @@ class GameLog {
   }
 
   witchRevive(witchName, targetName) {
-    this.addEvent(`🧪 ${witchName} (Sorcière) a ressuscité <strong>${targetName}</strong>`);
+    this.addEvent(`🧪 ${witchName} (Sorciere) a ressuscité <strong>${targetName}</strong>`);
   }
 
   witchPoison(witchName, targetName) {
-    this.addEvent(`☠️ ${witchName} (Sorcière) a empoisonné <strong>${targetName}</strong>`);
+    this.addEvent(`☠️ ${witchName} (Sorciere) a empoisonné <strong>${targetName}</strong>`);
   }
 
   getTurn() {

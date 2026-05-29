@@ -1,0 +1,235 @@
+{
+  "description": "Index dynamique - Généré automatiquement au démarrage du serveur",
+  "generatedAt": "2026-05-29T16:41:38.346Z",
+  "totalRoles": 57,
+  "roles": [
+    {
+      "id": "Cupidon",
+      "file": "01-Cupidon"
+    },
+    {
+      "id": "Enfant_Sauvage",
+      "file": "02-Enfant_Sauvage"
+    },
+    {
+      "id": "Chien_Loup",
+      "file": "03-Chien_Loup"
+    },
+    {
+      "id": "Abominable_Sectaire",
+      "file": "04-Abominable_Sectaire"
+    },
+    {
+      "id": "Voyante",
+      "file": "05-Voyante"
+    },
+    {
+      "id": "Ancien",
+      "file": "07-Ancien"
+    },
+    {
+      "id": "Ange",
+      "file": "08-Ange"
+    },
+    {
+      "id": "Salvateur",
+      "file": "09-Salvateur"
+    },
+    {
+      "id": "Voleur",
+      "file": "10-Voleur"
+    },
+    {
+      "id": "Renard",
+      "file": "12-Renard"
+    },
+    {
+      "id": "Corbeau",
+      "file": "13-Corbeau"
+    },
+    {
+      "id": "Servante_Devouee",
+      "file": "14-Servante_Devouee"
+    },
+    {
+      "id": "Joueur_Flute",
+      "file": "15-Joueur_Flute"
+    },
+    {
+      "id": "Ankou",
+      "file": "16-Ankou"
+    },
+    {
+      "id": "Marionnettiste",
+      "file": "17-Marionnettiste"
+    },
+    {
+      "id": "Chaman",
+      "file": "18-Chaman"
+    },
+    {
+      "id": "Garde_Du_Corps",
+      "file": "19-Garde_Du_Corps"
+    },
+    {
+      "id": "Pretre",
+      "file": "20-Pretre"
+    },
+    {
+      "id": "Gitane",
+      "file": "21-Gitane"
+    },
+    {
+      "id": "Noctambule",
+      "file": "22-Noctambule"
+    },
+    {
+      "id": "Mystique",
+      "file": "23-Mystique"
+    },
+    {
+      "id": "Mamie_Grincheuse",
+      "file": "24-Mamie_Grincheuse"
+    },
+    {
+      "id": "Fille_Joie",
+      "file": "25-Fille_Joie"
+    },
+    {
+      "id": "Comedien",
+      "file": "26-Comedien"
+    },
+    {
+      "id": "Necromancien",
+      "file": "27-Necromancien"
+    },
+    {
+      "id": "Arnacoeur",
+      "file": "28-Arnacoeur"
+    },
+    {
+      "id": "Lapin_Blanc",
+      "file": "29-Lapin_Blanc"
+    },
+    {
+      "id": "Tueur_Serie",
+      "file": "30-Tueur_Serie"
+    },
+    {
+      "id": "Pyromane",
+      "file": "31-Pyromane"
+    },
+    {
+      "id": "Simple_Loup_Garou",
+      "file": "31a-Simple_Loup_Garou"
+    },
+    {
+      "id": "Infect_Pere_Loups",
+      "file": "32-Infect_Pere_Loups"
+    },
+    {
+      "id": "Grand_Mechant_Loup",
+      "file": "33-Grand_Mechant_Loup"
+    },
+    {
+      "id": "Loup_Garou_Voyant",
+      "file": "35-Loup_Garou_Voyant"
+    },
+    {
+      "id": "Loup_Garou_Blanc",
+      "file": "36-Loup_Garou_Blanc"
+    },
+    {
+      "id": "Tireur",
+      "file": "37-Tireur"
+    },
+    {
+      "id": "Juge_Begue",
+      "file": "38-Juge_Begue"
+    },
+    {
+      "id": "Chasseur",
+      "file": "39-Chasseur"
+    },
+    {
+      "id": "Chevalier_Epee_Rouille",
+      "file": "40-Chevalier_Epee_Rouille"
+    },
+    {
+      "id": "Fils_Lune",
+      "file": "41-Fils_Lune"
+    },
+    {
+      "id": "Louveteau",
+      "file": "42-Louveteau"
+    },
+    {
+      "id": "Sorciere",
+      "file": "43-Sorciere"
+    },
+    {
+      "id": "Lepreux",
+      "file": "44-Lepreux"
+    },
+    {
+      "id": "Savant_Fou",
+      "file": "45-Savant_Fou"
+    },
+    {
+      "id": "Ange_Dechu",
+      "file": "46-Ange_Dechu"
+    },
+    {
+      "id": "Gros_Dur",
+      "file": "47-Gros_Dur"
+    },
+    {
+      "id": "Humain_Maudit",
+      "file": "48-Humain_Maudit"
+    },
+    {
+      "id": "Porteur_Amulette",
+      "file": "49-Porteur_Amulette"
+    },
+    {
+      "id": "Bouc_Emissaire",
+      "file": "51-Bouc_Emissaire"
+    },
+    {
+      "id": "Idiot_Village",
+      "file": "52-Idiot_Village"
+    },
+    {
+      "id": "Cultiste",
+      "file": "53-Cultiste"
+    },
+    {
+      "id": "Capitaine",
+      "file": "54-Capitaine"
+    },
+    {
+      "id": "President",
+      "file": "55-President"
+    },
+    {
+      "id": "Deux_Soeurs",
+      "file": "56-Deux_Soeurs"
+    },
+    {
+      "id": "Trois_Freres",
+      "file": "57-Trois_Freres"
+    },
+    {
+      "id": "Montreur_Ours",
+      "file": "58-Montreur_Ours"
+    },
+    {
+      "id": "Petite_Fille",
+      "file": "98-Petite_Fille"
+    },
+    {
+      "id": "Villageois",
+      "file": "99-Villageois"
+    }
+  ]
+}

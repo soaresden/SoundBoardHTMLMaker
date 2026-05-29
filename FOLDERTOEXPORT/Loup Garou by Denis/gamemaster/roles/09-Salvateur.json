@@ -25,10 +25,10 @@
   "visual": {
     "roleColor": {
       "fondColor": "#EBCF10",
-      "borderColor": "#D27E82"
+      "emojiColor": "#D27E82"
     },
     "affectedColor": {
-      "borderColor": "#C2BA2D"
+      "borderColor": "#EBCF10"
     }
   },
   "pouvoir": "Protège un joueur de l'élimination par les Loups chaque nuit.",

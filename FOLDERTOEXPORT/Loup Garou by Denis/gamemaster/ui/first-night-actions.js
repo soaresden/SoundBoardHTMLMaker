@@ -8,7 +8,7 @@
  * - Cupidon (selectPair)
  * - Enfant Sauvage (selectOne)
  * - Voleur (selectOne)
- * - Sorcière (selectOne)
+ * - Sorciere (selectOne)
  * - Salvateur (selectOne)
  * - Chien Loup (selectOne)
  */

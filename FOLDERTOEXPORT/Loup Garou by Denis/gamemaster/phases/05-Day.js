@@ -149,21 +149,37 @@ function renderDeathsAnnouncement(gameUI, deadPlayers, turn) {
   const gm = gameUI.gm;
   const players = gm.state.players || [];
 
+  // Load night report function if not already loaded
+  if (typeof renderNightReport === 'undefined' && window.renderNightReport) {
+    window.renderNightReport = window.renderNightReport;
+  }
+
   // Log deaths announcement if not already logged
   if (!gm.state.gameState?.deathsLogged) {
     const prevNightNum = turn - 1;
     const nightTag = `[Nuit${prevNightNum}]`;
+    const logger = window.gameLogger;
 
     if (deadPlayers.length > 0) {
       deadPlayers.forEach(player => {
         const cause = getDeathCauseFromHistory(gm, player);
-        gm.addGameLog(`☠️ ${player.name} (${player.roleId || '?'}) - ${cause}`, nightTag);
+        if (logger && typeof logger.logAction === 'function') {
+          logger.logAction(`☠️ ${player.name}`, `${cause}`);
+        }
       });
     } else {
-      gm.addGameLog(`✨ La nuit s'est déroulée sans victimes...`, nightTag);
+      if (logger && typeof logger.logAction === 'function') {
+        logger.logAction('✨ Nuit sans victimes', `Aucun mort cette nuit`);
+      }
     }
 
+    // Initialize gameState if needed
+    if (!gm.state.gameState) {
+      console.log('[Day.js] ⚠️ gameState was undefined, initializing...');
+      gm.state.gameState = {};
+    }
     gm.state.gameState.deathsLogged = true;
+    console.log('[Day.js] ✓ Deaths logged set to true');
   }
 
   // === GÉNÉRER LA TABLE (même structure que 03-FirstNight.js) ===
@@ -187,10 +203,11 @@ function renderDeathsAnnouncement(gameUI, deadPlayers, turn) {
       dotBorder = '#666666';
       boxShadow = 'none';
     } else {
-      // Joueurs vivants: couleur du rôle
-      const roleColor = gm.getRoleColor(p.roleId);
-      dotColor = roleColor.bg;
-      dotBorder = roleColor.border;
+      // Joueurs vivants: couleur du rôle (from ROLES_DATA)
+      const rolesData = window.ROLES_DATA?.roles || {};
+      const roleData = rolesData[p.role] || {};
+      dotColor = roleData.visual?.roleColor?.fondColor || '#666';
+      dotBorder = roleData.visual?.affectedColor?.borderColor || '#999';
       boxShadow = 'none';
     }
 
@@ -204,9 +221,11 @@ function renderDeathsAnnouncement(gameUI, deadPlayers, turn) {
     let finalBoxShadow = boxShadow;
 
     if (isLover) {
-      const loverVisual = gm.getRoleVisual('Cupidon', 'lovers');
-      finalBorderColor = loverVisual?.border || '#ff69b4';
-      finalBorderWidth = loverVisual?.borderWidth || '3px';
+      // Lovers use Cupidon's affected border color
+      const rolesData = window.ROLES_DATA?.roles || {};
+      const cupidoData = rolesData['Cupidon'] || {};
+      finalBorderColor = cupidoData.visual?.affectedColor?.borderColor || '#ff69b4';
+      finalBorderWidth = '3px';
     }
 
     return `

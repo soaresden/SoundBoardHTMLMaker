@@ -10,7 +10,7 @@
 // NO HARDCODED NIGHT_ROLE_ORDER array anymore
 
 const NIGHT_ROLES_WITH_ACTION = new Set([
-  'Voyante', 'Sorcière', 'Ancien', 'Ange', 'Servante_Devouee', 'Salvateur',
+  'Voyante', 'Sorciere', 'Ancien', 'Ange', 'Servante_Devouee', 'Salvateur',
   'Renard', 'Gitane', 'Joueur_Flute', 'Marionnettiste', 'Voleur',
   'Pyromane', 'Ankou', 'Lapin_Blanc', 'Juge_Begue',
   'Necromancien', 'Noctambule', 'Corbeau', 'Petite_Fille',
@@ -19,7 +19,7 @@ const NIGHT_ROLES_WITH_ACTION = new Set([
 
 const NIGHT_ROLE_ACTIONS = {
   'Voyante': { instruction: '👁️ Voyante, tu veux voir l\'identité de qui ?', type: 'voyanteLook' },
-  'Sorcière': { instruction: '🧙‍♀️ Sorcière, choisis qui ressusciter (VIE) ou empoisonner (MORT)', type: 'sorcierePotions' },
+  'Sorciere': { instruction: '🧙‍♀️ Sorciere, choisis qui ressusciter (VIE) ou empoisonner (MORT)', type: 'sorcierePotions' },
   'Ancien': { instruction: '👴 Ancien, qui protèges-tu cette nuit ?', type: 'selectOne' },
   'Ange': { instruction: '😇 Ange, qui protèges-tu cette nuit ?', type: 'selectOne' },
   'Servante_Devouee': { instruction: '👸 Servante, qui protèges-tu cette nuit ?', type: 'selectOne' },
@@ -500,18 +500,18 @@ function attachNightEvents(gameUI) {
         const voyante = players.find(p => p.roleId === 'Voyante');
         const target = players.find(p => p.id === gm.state.nightVoyanteLook.playerId);
         if (voyante && target) gm.addGameLog(`👁️ ${voyante.name} (Voyante) regarde ${target.name}`, nightTag);
-      } else if (currentRole === 'Sorcière' && gm.state.nightSorcierePotions) {
-        const sorciere = players.find(p => p.roleId === 'Sorcière');
+      } else if (currentRole === 'Sorciere' && gm.state.nightSorcierePotions) {
+        const sorciere = players.find(p => p.roleId === 'Sorciere');
         if (sorciere) {
           const choice = gm.state.nightSorcierePotions.choice;
           if (choice === 'save' && gm.state.wolvesVictim) {
             const victim = players.find(p => p.id === gm.state.wolvesVictim);
-            if (victim) gm.addGameLog(`🧪 ${sorciere.name} (Sorcière) ressuscite ${victim.name}`, nightTag);
+            if (victim) gm.addGameLog(`🧪 ${sorciere.name} (Sorciere) ressuscite ${victim.name}`, nightTag);
           } else if (choice === 'kill' && gm.state.nightSorcierePotions.mortTarget) {
             const target = players.find(p => p.id === gm.state.nightSorcierePotions.mortTarget);
-            if (target) gm.addGameLog(`☠️ ${sorciere.name} (Sorcière) empoisonne ${target.name}`, nightTag);
+            if (target) gm.addGameLog(`☠️ ${sorciere.name} (Sorciere) empoisonne ${target.name}`, nightTag);
           } else if (choice === 'nothing') {
-            gm.addGameLog(`🧙‍♀️ ${sorciere.name} (Sorcière) ne fait rien cette nuit`, nightTag);
+            gm.addGameLog(`🧙‍♀️ ${sorciere.name} (Sorciere) ne fait rien cette nuit`, nightTag);
           }
         }
       }
