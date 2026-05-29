@@ -1,6 +1,6 @@
 {
   "description": "Index dynamique - Généré automatiquement au démarrage du serveur",
-  "generatedAt": "2026-05-29T16:41:38.346Z",
+  "generatedAt": "2026-05-29T17:49:40.311Z",
   "totalRoles": 57,
   "roles": [
     {
@@ -42,10 +42,6 @@
     {
       "id": "Renard",
       "file": "12-Renard"
-    },
-    {
-      "id": "Corbeau",
-      "file": "13-Corbeau"
     },
     {
       "id": "Servante_Devouee",
@@ -222,6 +218,10 @@
     {
       "id": "Montreur_Ours",
       "file": "58-Montreur_Ours"
+    },
+    {
+      "id": "Corbeau",
+      "file": "97-Corbeau"
     },
     {
       "id": "Petite_Fille",
