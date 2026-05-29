@@ -3,7 +3,7 @@
  *
  * Mode Maître du Jeu Animé (MDJ) - First Night
  *
- * VERSION: 27
+ * VERSION: 47
  *
  * Layout:
  * - Left: Full-height listbox with role list
@@ -105,8 +105,8 @@ class FirstNightMDJ {
     }
 
     // Version message
-    console.log('VERSION 28');
-    console.log('v28: Renard borders fixed | Sorciere resurrection | Protected player immunity (immunisé) | Mayor election at START | 2-column night summary | Night 2 role filtering');
+    console.log('VERSION 34');
+    console.log('v34: Auto-skip grayed roles + show (immunisé) for protected wolf victims | Greyed roles jump to next action');
 
     // Debug logging
     console.log('[FirstNightMDJ] Constructor:', {
@@ -155,6 +155,18 @@ class FirstNightMDJ {
     const players = this.gm?.state?.players || [];
     const player = players.find(p => p.id === playerId);
     return player?.name || playerId; // Fallback to ID if not found
+  }
+
+  /**
+   * Helper: Get player display name with mayor medal if applicable
+   * Shows "🎖️ Name" if player is the elected mayor
+   */
+  getPlayerDisplayName(playerId) {
+    const name = this.getPlayerName(playerId);
+    if (this.mayorId && this.mayorId === playerId) {
+      return `🎖️ ${name}`;
+    }
+    return name;
   }
 
   /**
@@ -438,7 +450,11 @@ class FirstNightMDJ {
 
       if (this.selectedRoleId === 'Simple_Loup_Garou') {
         // All wolves breathe when wolves are deciding on victim
-        isCurrentRole = p.role && (p.role.includes('Loup') || p.role.includes('Wolf'));
+        // EXCEPT Chien_Loup if they chose to stay villager
+        const isChienLoupStayVillager = p.role === 'Chien_Loup' &&
+          this.roleStates['Chien_Loup']?.result?.targets?.includes('stay_villager');
+
+        isCurrentRole = !isChienLoupStayVillager && p.role && (p.role.includes('Loup') || p.role.includes('Wolf'));
         if (isCurrentRole) {
           console.log(`[MDJ] 🐺 Wolf pack breathing for: ${p.name} (${p.role}) - selectedRoleId: ${this.selectedRoleId}`);
         }
@@ -449,12 +465,15 @@ class FirstNightMDJ {
       const isDead = this.deadPlayerIds.has(p.id);
       const deadStyle = isDead ? 'filter: grayscale(100%) brightness(0.5); opacity: 0.6;' : '';
 
+      const isMayor = this.mayorId && this.mayorId === p.id;
+      const displayName = isMayor ? `🎖️ ${p.name}` : p.name;
+
       return `
         <div class="mdj-player-point ${isCurrentRole ? 'breathing' : ''}" data-player-id="${p.id}" data-player-name="${p.name}" data-original-emoji="${emoji}"
              style="left: ${x}px; top: ${y}px; position: absolute; ${deadStyle}">
           <div class="mdj-point-dot" style="background: ${bgColor}; --affected-border: ${affectedBorderColor};">
             <span class="mdj-point-emoji" style="color: ${emojiColor};">${isDead ? '💀' : emoji}</span>
-            <span class="mdj-point-name" style="top: ${nameTop}; left: ${nameLeft}; text-align: ${p.textAlign};">${isDead ? '💀' : ''} ${p.name}</span>
+            <span class="mdj-point-name" style="top: ${nameTop}; left: ${nameLeft}; text-align: ${p.textAlign};">${isDead ? '💀' : ''} ${displayName}</span>
           </div>
         </div>
       `;
@@ -475,6 +494,7 @@ class FirstNightMDJ {
 
   /**
    * Render legend showing all players with their emoji and color
+   * Shows 🎖️ medal next to mayor's name
    */
   renderLegend() {
     const legendContainer = document.getElementById('mdj-legend');
@@ -489,13 +509,14 @@ class FirstNightMDJ {
       const bgColor = roleData.visual?.roleColor?.fondColor || 'inherit';
       const emojiColor = roleData.visual?.roleColor?.emojiColor || 'inherit';
       const textColor = roleData.visual?.roleColor?.textColor || '#ffffff';
+      const isMayor = this.mayorId && this.mayorId === p.id;
 
       return `
         <div class="legend-item">
           <div class="legend-dot" style="background: ${bgColor};">
             <span class="legend-emoji" style="color: ${emojiColor};">${emoji}</span>
           </div>
-          <span class="legend-name">${p.name}</span>
+          <span class="legend-name">${isMayor ? '🎖️ ' : ''}${p.name}</span>
         </div>
       `;
     }).join('');
@@ -626,9 +647,9 @@ class FirstNightMDJ {
   }
 
   /**
-   * Start mayor election after first night
-   * Zone bleue: Liste des tous les joueurs (morts grisés)
-   * Zone rose: Formulaire d'élection
+   * Start mayor election at beginning of first night
+   * Zone bleue: Liste EXHAUSTIVE de tous les joueurs
+   * Zone rose: Formulaire d'élection (change à chaque sélection)
    */
   startMayorElection() {
     const listbox = document.getElementById('role-listbox');
@@ -640,7 +661,8 @@ class FirstNightMDJ {
 
     const players = this.gm.state.players || [];
 
-    // ZONE BLEUE: All players (dead grayed out)
+    // ZONE BLEUE: ALL players (exhaustive list)
+    // Dead players grayed out but still selectable
     const playerListHtml = players
       .map(p => {
         const roleData = this.rolesLoader.getRole(p.role);
@@ -648,14 +670,14 @@ class FirstNightMDJ {
         const isSelected = this.selectedMayorId === p.id;
 
         return `
-          <div class="listbox-item ${isSelected && !isDead ? 'selected' : ''}"
+          <div class="listbox-item ${isSelected ? 'selected' : ''}"
                data-player-id="${p.id}"
-               style="background: ${isSelected && !isDead ? '#4a90e2' : isDead ? 'rgba(100,100,100,0.3)' : 'rgba(255,255,255,0.1)'};
-                      cursor: ${isDead ? 'not-allowed' : 'pointer'};
-                      opacity: ${isDead ? 0.6 : 1};">
+               style="background: ${isSelected ? '#4a90e2' : isDead ? 'rgba(100,100,100,0.2)' : 'rgba(255,255,255,0.1)'};
+                      cursor: pointer;
+                      opacity: ${isDead ? 0.7 : 1};">
             <span class="item-icon">${isDead ? '💀' : roleData?.emoji || '❓'}</span>
-            <span class="item-name">${p.name}</span>
-            ${isSelected && !isDead ? '<span class="item-status">✓</span>' : ''}
+            <span class="item-name">${isDead ? '💀 ' : ''}${p.name}</span>
+            ${isSelected ? '<span class="item-status">✓</span>' : ''}
           </div>
         `;
       })
@@ -664,25 +686,23 @@ class FirstNightMDJ {
     listbox.innerHTML = `
       <div style="padding: 12px; color: #fff; border-bottom: 1px solid rgba(255,255,255,0.1);">
         <h3 style="margin: 0 0 8px 0; color: #FFD700; font-size: 14px;">👑 Élection du Maire</h3>
-        <p style="margin: 0; font-size: 11px; color: #aaa;">Joueurs vivants</p>
+        <p style="margin: 0; font-size: 11px; color: #aaa;">Tous les joueurs</p>
       </div>
       ${playerListHtml}
     `;
 
-    // Attach click handlers - only for alive players
+    // Attach click handlers - ANY player can be selected
     listbox.querySelectorAll('.listbox-item').forEach(item => {
       const playerId = item.dataset.playerId;
-      const isDead = this.deadPlayerIds.has(playerId);
 
-      if (!isDead) {
-        item.addEventListener('click', () => {
-          this.selectedMayorId = playerId;
-          this.startMayorElection(); // Re-render
-        });
-      }
+      item.addEventListener('click', () => {
+        this.selectedMayorId = playerId;
+        this.startTimer(); // Restart timer when selecting mayor
+        this.startMayorElection(); // Re-render with updated selection
+      });
     });
 
-    // ZONE ROSE: Election form
+    // ZONE ROSE: Election form (changes on each selection)
     if (titleBig) {
       titleBig.innerHTML = '👑 Élection du Maire';
       titleBig.style.background = '#FFD700';
@@ -693,23 +713,26 @@ class FirstNightMDJ {
 
     if (actionControls) {
       if (selectedPlayer) {
+        const selectedRole = this.rolesLoader.getRole(selectedPlayer.role);
+        const isDead = this.deadPlayerIds.has(selectedPlayer.id);
+
         actionControls.innerHTML = `
           <div style="padding: 12px; text-align: center; background: rgba(255,215,0,0.1); border-radius: 4px; border: 2px solid #FFD700;">
             <div style="font-size: 32px; margin-bottom: 8px;">
-              ${this.rolesLoader.getRole(selectedPlayer.role)?.emoji || '❓'}
+              ${isDead ? '💀' : selectedRole?.emoji || '❓'}
             </div>
             <div style="color: white; font-weight: bold; font-size: 14px;">
               ${selectedPlayer.name}
             </div>
             <div style="color: #FFD700; font-size: 11px; margin-top: 6px;">
-              Sera le nouveau Maire
+              ${isDead ? 'Sera le nouveau Maire (décédé)' : 'Sera le nouveau Maire'}
             </div>
           </div>
         `;
       } else {
         actionControls.innerHTML = `
           <div style="padding: 12px; text-align: center; color: #aaa; font-size: 11px;">
-            Sélectionnez un joueur vivant
+            Sélectionnez un joueur
           </div>
         `;
       }
@@ -718,7 +741,7 @@ class FirstNightMDJ {
     if (actionInfo) {
       actionInfo.innerHTML = `
         <div style="display: flex; gap: 8px;">
-          <button id="btn-elect-mayor" class="btn-validate-action" style="flex: 1; padding: 10px; background: #FFD700; color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px;">
+          <button id="btn-elect-mayor" class="btn-validate-action" style="flex: 1; padding: 10px; background: #FFD700; color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px; opacity: ${this.selectedMayorId ? 1 : 0.5};">
             ✓ Élire
           </button>
           <button id="btn-no-mayor" class="btn-cancel-action" style="flex: 1; padding: 10px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px;">
@@ -734,7 +757,7 @@ class FirstNightMDJ {
         electBtn.addEventListener('click', () => {
           if (this.selectedMayorId) {
             const mayor = players.find(p => p.id === this.selectedMayorId);
-            console.log(`[MDJ] 👑 ${mayor.name} elected as mayor`);
+            console.log(`[MDJ] 👑 ${mayor.name} elected as mayor ${this.deadPlayerIds.has(mayor.id) ? '(deceased)' : ''}`);
             this.mayorId = this.selectedMayorId;
             this.completeMayorElection();
           }
@@ -779,18 +802,20 @@ class FirstNightMDJ {
     const players = this.gm.state.players || [];
     const alivePlayers = this.playerRegistry.getAlive();
 
-    // ZONE BLEUE: List of alive players only
+    // ZONE BLEUE: List of alive players only (with mayor medal if applicable)
     const playerListHtml = alivePlayers
       .map(p => {
         const roleData = this.rolesLoader.getRole(p.role);
         const isSelected = this.selectedLynchVictimId === p.id;
+        const isMayor = this.mayorId && this.mayorId === p.id;
+        const displayName = isMayor ? `🎖️ ${p.name}` : p.name;
 
         return `
           <div class="listbox-item ${isSelected ? 'selected' : ''}"
                data-player-id="${p.id}"
                style="background: ${isSelected ? '#e74c3c' : 'rgba(255,255,255,0.1)'}; cursor: pointer;">
             <span class="item-icon">${roleData?.emoji || '❓'}</span>
-            <span class="item-name">${p.name}</span>
+            <span class="item-name">${displayName}</span>
             ${isSelected ? '<span class="item-status">✓</span>' : ''}
           </div>
         `;
@@ -1117,125 +1142,179 @@ class FirstNightMDJ {
       return this.renderNightSummary();
     }
 
-    // Get ASSIGNED roles from players in THIS game
+    // Get all players (alive and dead)
     const players = this.gm.state.players || [];
-    const assignedRoleIds = new Set(players.map(p => p.role));
 
-    // Get all ordered roles and filter to assigned night-active roles
-    const allOrderedRoles = this.rolesLoader.getOrderedRoleIds();
-
-    // Filter to only roles ASSIGNED TO PLAYERS + that have night actions
-    const nightRoles = allOrderedRoles.filter(roleId => {
-      // Only show roles actually assigned to players in this game
-      if (!assignedRoleIds.has(roleId)) return false;
-
-      const roleData = this.rolesLoader.getRole(roleId);
-      if (!roleData) return false;
-
-      // Include if explicitly marked as NightActive
-      if (roleData.actionType === 'NightActive') return true;
-
-      // Or if there are actions for this role
-      const actions = this.getActionsForRole(roleId);
-      if (actions && actions.length > 0) return true;
-
-      // Or if it's a wolf-related role (they act at night)
-      if (roleId.includes('Loup') || roleId.includes('Wolf')) return true;
-
-      return false;
-    });
-
-    // CRITICAL: Re-sort by file number extracted from filename
-    // Supports format: "98-Name.json", "98a-Name.json", "98b-Name.json", etc.
-    const parseFileNumber = (roleId) => {
-      const allRoles = window.ROLES_DATA?.roles || {};
-      const roleData = allRoles[roleId];
-
-      // Try to get filename from roleData (fallback to roleId)
-      let filename = roleData?._filename || roleId;
-
-      // Extract number and optional letter: "98" or "98a" or "98b"
-      const match = filename.match(/^(\d+)([a-z])?/i);
-      if (!match) {
-        return { num: 999, letter: '' };
-      }
-
-      return {
-        num: parseInt(match[1]),
-        letter: match[2] ? match[2].toLowerCase() : ''
-      };
-    };
-
-    nightRoles.sort((a, b) => {
-      const aFile = parseFileNumber(a);
-      const bFile = parseFileNumber(b);
-
-      // Compare numbers first
-      if (aFile.num !== bFile.num) {
-        return aFile.num - bFile.num;
-      }
-
-      // If numbers are equal, compare letters (empty letter comes first)
-      if (aFile.letter === '' && bFile.letter !== '') return -1;
-      if (aFile.letter !== '' && bFile.letter === '') return 1;
-      return aFile.letter.localeCompare(bFile.letter);
-    });
-
-    // If Night 2+ and no roles left, automatically skip to day phase
-    if (this.currentNight >= 2 && nightRoles.length === 0) {
-      console.log(`[MDJ] 🌙 Night ${this.currentNight}: No roles with night actions - skipping to day phase`);
-      if (this.gm && typeof this.gm.changePhase === 'function') {
-        this.gm.changePhase('day');
-      }
-      return;
-    }
-
-    // Auto-select first incomplete role if none selected
-    if (!this.selectedRoleId && nightRoles.length > 0) {
-      const firstRole = nightRoles.find(roleId => {
-        return !this.roleStates[roleId]?.completed;
+    // If Night 2+ and no roles with actions, automatically skip to day phase
+    if (this.currentNight >= 2) {
+      const hasActionsThisNight = players.some(p => {
+        const roleData = this.rolesLoader.getRole(p.role);
+        const nightActive = roleData?.nightActive || [];
+        return nightActive.length > 0 && nightActive.includes(this.currentNight);
       });
-      if (firstRole) {
-        this.selectedRoleId = firstRole;
-        console.log('[FirstNightMDJ] Auto-selected first role:', firstRole);
-        // Apply breathing effect ONCE when auto-selecting
-        this.renderLiveMap();
-        this.updateMapForRole();
-        // CRITICAL: Restore effects from previously completed roles to make borders persistent
-        this.restoreCompletedRoleEffects();
+
+      if (!hasActionsThisNight) {
+        console.log(`[MDJ] 🌙 Night ${this.currentNight}: No roles with night actions - skipping to day phase`);
+        if (this.gm && typeof this.gm.changePhase === 'function') {
+          this.gm.changePhase('day');
+        }
+        return;
       }
     }
 
-    const html = nightRoles
-      .map((roleId, index) => {
+    // Auto-select first role with action if none selected (respecting JSON file order)
+    // This must be BEFORE rendering so the HTML gets the correct classes
+    if (!this.selectedRoleId) {
+      const assignedRoleIds = new Set(players.map(p => p.role));
+      const allOrderedRoles = this.rolesLoader.getOrderedRoleIds();
+
+      const firstRoleWithAction = allOrderedRoles.find(roleId => {
+        if (!assignedRoleIds.has(roleId)) return false;
+        if (this.roleStates[roleId]?.completed) return false;
+
         const roleData = this.rolesLoader.getRole(roleId);
-        if (!roleData) return '';
+        const nightActive = roleData?.nightActive || [];
+        const actsThisNight = nightActive.length > 0 && nightActive.includes(this.currentNight);
+        if (!actsThisNight) return false;
 
-        const state = this.roleStates[roleId] || { completed: false };
-        const isSelected = this.selectedRoleId === roleId;
-        const isCompleted = state.completed;
+        const playerWithRole = players.find(p => p.role === roleId && !this.deadPlayerIds.has(p.id));
+        return !!playerWithRole;
+      });
 
-        // Get colors from JSON
-        const roleColor = roleData.visual?.roleColor?.fondColor || 'inherit';
-        const textColor = roleData.visual?.roleColor?.textColor || '#ffffff';
+      if (firstRoleWithAction) {
+        this.selectedRoleId = firstRoleWithAction;
+        console.log('[FirstNightMDJ] Auto-selected first role (by JSON order) with action:', firstRoleWithAction);
+      }
+    }
 
-        const emojiColor = roleData.visual?.roleColor?.emojiColor || 'inherit';
+    // Render player list (all players, blue zone)
+    // Players are shown with their role emoji and name
+    // Dead players are grayed out with skull emoji
+    // Players whose roles don't act this night are also grayed out
+    // IMPORTANT: Sort players by JSON order of their roles (Cupidon first, then Enfant_Sauvage, etc.)
+
+    // Get roles in JSON order, then map to players
+    const orderedRoleIds = this.rolesLoader.getOrderedRoleIds();
+    const playersByRole = {};
+    players.forEach(p => {
+      if (!playersByRole[p.role]) {
+        playersByRole[p.role] = [];
+      }
+      playersByRole[p.role].push(p);
+    });
+
+    // Build sorted player list using JSON role order
+    const sortedPlayers = [];
+    orderedRoleIds.forEach(roleId => {
+      if (playersByRole[roleId]) {
+        sortedPlayers.push(...playersByRole[roleId]);
+      }
+    });
+
+    const playerListHtml = sortedPlayers
+      .map(player => {
+        const roleData = this.rolesLoader.getRole(player.role);
+        const isDead = this.deadPlayerIds.has(player.id);
+        const nightActive = roleData?.nightActive || [];
+        const actsThisNight = nightActive.length > 0 && nightActive.includes(this.currentNight);
+        const isSelected = this.selectedRoleId === player.role;
+        const isCompleted = this.roleStates[player.role]?.completed;
+
+        // Grayed out if dead OR if role doesn't act this night
+        const isGreyedOut = isDead || (!actsThisNight && !isCompleted);
+
+        const roleColor = roleData?.visual?.roleColor?.fondColor || 'inherit';
+        const textColor = roleData?.visual?.roleColor?.textColor || '#ffffff';
+        const emojiColor = roleData?.visual?.roleColor?.emojiColor || 'inherit';
 
         return `
-          <div class="listbox-item ${isSelected ? 'selected' : ''} ${isCompleted ? 'completed' : ''}"
-               data-role-id="${roleId}"
-               data-role-index="${index}"
-               style="background: ${isSelected ? roleColor : 'rgba(255,255,255,0.1)'};
-                      color: ${isSelected ? textColor : 'white'};">
-            <span class="item-icon" style="color: ${emojiColor};">${roleData.emoji}</span>
-            <span class="item-name">${roleData.name}</span>
+          <div class="listbox-item ${isSelected ? 'selected breathing' : ''} ${isCompleted ? 'completed' : ''} ${isGreyedOut ? 'disabled' : ''}"
+               data-player-id="${player.id}"
+               data-role-id="${player.role}"
+               style="background: ${isGreyedOut ? 'rgba(100,100,100,0.2)' : isSelected ? roleColor : isDead ? 'rgba(100,100,100,0.1)' : 'rgba(255,255,255,0.1)'};
+                      color: ${isSelected ? textColor : isGreyedOut ? '#888' : 'white'};
+                      opacity: ${isGreyedOut ? 0.6 : 1};
+                      cursor: ${isGreyedOut ? 'not-allowed' : 'pointer'};
+                      border: ${isSelected ? '3px solid ' + roleColor : '1px solid transparent'};
+                      box-shadow: ${isSelected ? '0 0 12px ' + roleColor + '40' : 'none'};
+                      border-radius: 6px;
+                      transition: all 0.2s ease;"
+               title="${isDead ? 'Décédé' : !actsThisNight && !isCompleted ? 'Pas d\'action cette nuit' : ''}">
+            <span class="item-icon" style="color: ${isDead ? '#999' : emojiColor}; font-size: 1.2em;">
+              ${isDead ? '💀' : roleData?.emoji || '❓'}
+            </span>
+            <span class="item-name">
+              ${isDead ? '💀 ' : ''}${player.name}
+              ${!isDead && roleData?.name ? `<span style="font-size: 0.85em; opacity: 0.8;"> (${roleData.name})</span>` : ''}
+            </span>
             ${isCompleted ? '<span class="item-status">✓</span>' : ''}
+            ${isGreyedOut && !isDead ? '<span class="item-status" style="color: #888;">-</span>' : ''}
           </div>
         `;
       })
       .join('');
 
-    listbox.innerHTML = html || '<div style="color: white; padding: 10px; text-align: center; font-size: 0.75rem;">Aucun rôle</div>';
+    listbox.innerHTML = playerListHtml || '<div style="color: white; padding: 10px; text-align: center; font-size: 0.75rem;">Aucun joueur</div>';
+
+    // Attach click handlers to select player's role
+    listbox.querySelectorAll('.listbox-item').forEach(item => {
+      const playerId = item.dataset.playerId;
+      const roleId = item.dataset.roleId;
+      const isGreyedOut = item.classList.contains('disabled');
+
+      item.addEventListener('click', () => {
+        if (!isGreyedOut) {
+          const roleData = this.rolesLoader.getRole(roleId);
+          const nightActive = roleData?.nightActive || [];
+          const actsThisNight = nightActive.length > 0 && nightActive.includes(this.currentNight);
+
+          // Only allow selection if role acts this night
+          if (actsThisNight) {
+            this.selectedRoleId = roleId;
+            console.log(`[MDJ] Selected role ${roleId} for player ${playerId}`);
+
+            // Apply breathing effect
+            this.renderLiveMap();
+            this.updateMapForRole();
+            this.restoreCompletedRoleEffects();
+
+            // Re-render to update selection visual
+            this.renderRoleListbox();
+          }
+        }
+      });
+    });
+
+    // Auto-select first role with action if none selected (respecting JSON file order)
+    if (!this.selectedRoleId) {
+      // Get all assigned roles in JSON file order
+      const assignedRoleIds = new Set(players.map(p => p.role));
+      const allOrderedRoles = this.rolesLoader.getOrderedRoleIds();
+
+      // Find first role (by JSON order) with actions this night
+      const firstRoleWithAction = allOrderedRoles.find(roleId => {
+        if (!assignedRoleIds.has(roleId)) return false;
+        if (this.roleStates[roleId]?.completed) return false;
+
+        const roleData = this.rolesLoader.getRole(roleId);
+        const nightActive = roleData?.nightActive || [];
+        const actsThisNight = nightActive.length > 0 && nightActive.includes(this.currentNight);
+        if (!actsThisNight) return false;
+
+        // Also check that at least one player with this role is alive
+        const playerWithRole = players.find(p => p.role === roleId && !this.deadPlayerIds.has(p.id));
+        return !!playerWithRole;
+      });
+
+      if (firstRoleWithAction) {
+        this.selectedRoleId = firstRoleWithAction;
+        console.log('[FirstNightMDJ] Auto-selected first role (by JSON order) with action:', firstRoleWithAction);
+        // Apply breathing effect ONCE when auto-selecting
+        this.renderLiveMap();
+        this.updateMapForRole();
+        this.restoreCompletedRoleEffects();
+      }
+    }
 
     // Show action section for selected role
     this.renderActionButtons();
@@ -1287,6 +1366,18 @@ class FirstNightMDJ {
 
     const roleData = this.rolesLoader.getRole(this.selectedRoleId);
     const state = this.roleStates[this.selectedRoleId];
+
+    // Check if role acts this night
+    const nightActive = roleData.nightActive || [];
+    const actsThisNight = nightActive.length > 0 && nightActive.includes(this.currentNight);
+
+    // If role doesn't act this night, skip to next role with action
+    if (!actsThisNight && !state?.completed) {
+      console.log(`[MDJ] ⏭️ Skipping ${this.selectedRoleId} - no action this night, jumping to next role`);
+      this.completeRoleAction(); // Mark as completed (no-op) and move to next
+      return;
+    }
+
     const bgColor = roleData.visual?.roleColor?.fondColor || 'inherit';
     const textColor = roleData.visual?.roleColor?.textColor || '#ffffff';
 
@@ -2065,8 +2156,11 @@ class FirstNightMDJ {
     if (!actionControls) return;
     const selectedIdol = this.selectedPlayers[0] || null;
 
-    // Filter out dead players
-    const alivePlayers = this.playerRegistry.getAlive();
+    // Filter out dead players AND the Enfant Sauvage themselves
+    const enfantSauvagePlayer = this.gm.state.players?.find(p => p.role === 'Enfant_Sauvage');
+    const alivePlayers = this.playerRegistry.getAlive().filter(p =>
+      p.id !== enfantSauvagePlayer?.id // Exclude self
+    );
 
     const playerListHtml = alivePlayers
       .map((player, idx) => {
@@ -2684,6 +2778,9 @@ class FirstNightMDJ {
     const resurrectIcon = actions.find(a => a.id === 'resurrect')?.icon || '💚';
     const poisonIcon = actions.find(a => a.id === 'poison')?.icon || '💜';
 
+    // Get protected players for indicator
+    const protectedPlayers = this.getProtectedPlayers();
+
     // Get victim from wolf kill (if already selected)
     let victimName = '???';
     let victimId = null;
@@ -2704,11 +2801,15 @@ class FirstNightMDJ {
     // Ensure victimName is a real name, not an ID
     const displayVictimName = victimId ? this.getPlayerName(victimId) : victimName;
 
+    // Check if victim is protected (immunisé)
+    const isVictimProtected = victimId && protectedPlayers.has(victimId);
+    const protectionLabel = isVictimProtected ? ' <span style="color: #ff9999; font-weight: bold;">(immunisé)</span>' : '';
+
     actionControls.innerHTML = `
       <div class="sorciere-controls">
         <div style="color: white; font-size: 0.8rem; margin-bottom: 10px; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 4px; border-left: 3px solid ${bgColor};">
           <strong>💀 Victime des Loups:</strong><br>
-          <span style="font-size: 0.9rem; font-weight: bold; color: #ffaaaa;">${displayVictimName}</span>
+          <span style="font-size: 0.9rem; font-weight: bold; color: #ffaaaa;">${displayVictimName}${protectionLabel}</span>
         </div>
 
         <button class="potion-btn life-potion ${selectedAction === 'potion-life' ? 'selected' : ''}" style="background: ${selectedAction === 'potion-life' ? bgColor + '50' : bgColor + '30'}; border: 2px solid ${bgColor};">
@@ -2721,13 +2822,17 @@ class FirstNightMDJ {
           Tuer un autre joueur:
         </div>
         <div class="sorciere-kill-list" style="display: flex; flex-direction: column; gap: 3px; max-height: 150px; overflow-y: auto;">
-          ${this.playerRegistry.getAlive().map(p => `
+          ${this.playerRegistry.getAlive().map(p => {
+            const isProtected = protectedPlayers.has(p.id);
+            const protectedLabel = isProtected ? ' <span style="color: #ff9999; font-weight: bold;">(immunisé)</span>' : '';
+            return `
             <button class="sorciere-kill-btn ${selectedAction === 'potion-death' && selectedKillTarget === p.id ? 'selected' : ''}"
                     data-player-id="${p.id}"
                     style="padding: 4px 8px; font-size: 0.7rem; background: ${selectedAction === 'potion-death' && selectedKillTarget === p.id ? bgColor + '50' : 'rgba(255,255,255,0.08)'}; border: 1px solid ${selectedAction === 'potion-death' && selectedKillTarget === p.id ? bgColor : 'rgba(255,255,255,0.2)'}; border-radius: 3px; color: white; cursor: pointer; text-align: left;">
-              ${p.name}
+              ${p.name}${protectedLabel}
             </button>
-          `).join('')}
+          `;
+          }).join('')}
         </div>
       </div>
     `;
@@ -2975,7 +3080,7 @@ class FirstNightMDJ {
   }
 
   /**
-   * Start the night timer countdown
+   * Start the game chronometer (counts up from 00:00)
    */
   startTimer() {
     // Clear existing timer if any
@@ -2983,43 +3088,31 @@ class FirstNightMDJ {
       clearInterval(this.timerInterval);
     }
 
-    this.timerRemaining = this.timerDuration;
+    this.timerRemaining = 0; // Start at 0:00
     this.updateTimerDisplay();
 
     this.timerInterval = setInterval(() => {
-      this.timerRemaining--;
-
-      if (this.timerRemaining <= 0) {
-        clearInterval(this.timerInterval);
-        this.timerInterval = null;
-        console.log('[MDJ] ⏱️ Timer finished!');
-      }
+      this.timerRemaining++; // Count UP instead of down
 
       this.updateTimerDisplay();
     }, 1000);
 
-    console.log('[MDJ] ⏱️ Timer started - 5 minutes');
+    console.log('[MDJ] ⏱️ Chronometer started - 00:00');
   }
 
   /**
    * Update timer display
    */
   updateTimerDisplay() {
-    const timerElement = document.getElementById('mdj-night-timer');
+    const timerElement = document.getElementById('gmChrono');
     if (timerElement) {
       const minutes = Math.floor(this.timerRemaining / 60);
       const seconds = this.timerRemaining % 60;
       const displayTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
       timerElement.textContent = displayTime;
 
-      // Change color as time runs out
-      if (this.timerRemaining <= 30) {
-        timerElement.style.color = '#ff4444'; // Red for last 30 seconds
-      } else if (this.timerRemaining <= 60) {
-        timerElement.style.color = '#ffaa44'; // Orange for last minute
-      } else {
-        timerElement.style.color = '#44ff44'; // Green
-      }
+      // Chrono color stays consistent
+      timerElement.style.color = '#66d999';
     }
   }
 
@@ -3030,14 +3123,33 @@ class FirstNightMDJ {
     const container = document.querySelector('.mdj-main-container');
     if (!container) return;
 
-    // Role listbox selection
+    // Role listbox selection (handles BOTH mayor and role selections)
     const roleListbox = document.getElementById('role-listbox');
     if (roleListbox) {
       roleListbox.addEventListener('click', (e) => {
-        const roleItem = e.target.closest('.listbox-item');
-        if (roleItem) {
-          const roleId = roleItem.dataset.roleId;
-          this.selectRole(roleId);
+        const item = e.target.closest('.listbox-item');
+        if (item) {
+          // Mayor selection (ONLY if mayor election is not completed yet)
+          if (item.dataset.playerId && !this.mayorElectionCompleted) {
+            const playerId = item.dataset.playerId;
+            this.selectedMayorId = playerId;
+            this.startMayorElection(); // Re-render with updated selection
+            return;
+          }
+
+          // Role selection (if mayor election is completed)
+          if (this.mayorElectionCompleted) {
+            const roleId = item.dataset.roleId;
+            if (!roleId) return;
+
+            // Prevent selection of grayed-out roles (no action this night)
+            if (item.classList.contains('disabled')) {
+              console.log(`[MDJ] ❌ Cannot select ${roleId} - no action this night`);
+              return;
+            }
+
+            this.selectRole(roleId);
+          }
         }
       });
     }
@@ -3145,7 +3257,11 @@ class FirstNightMDJ {
     this.restoreCompletedRoleEffects();
 
     const roleData = this.rolesLoader.getRole(roleId);
-    console.log(`[MDJ] === ROLE SELECTION COMPLETE: ${roleData.emoji} ${roleData.name} ===`);
+    if (roleData) {
+      console.log(`[MDJ] === ROLE SELECTION COMPLETE: ${roleData.emoji} ${roleData.name} ===`);
+    } else {
+      console.warn(`[MDJ] Warning: Could not load role data for ${roleId}`);
+    }
   }
 
   /**
@@ -3401,7 +3517,7 @@ class FirstNightMDJ {
     // Clear selections
     this.selectedPlayers = [];
     this.actionState = {};
-    this.selectedRoleId = null;
+    // Don't clear selectedRoleId yet - we'll find and select the next one
 
     // Clear UI selections
     document.querySelectorAll('.player-card.selected').forEach(card => {
@@ -3411,11 +3527,46 @@ class FirstNightMDJ {
     // Update progress
     this.updateProgressCount();
 
-    // Re-render to move to next role
-    this.renderRoleListbox();
-    this.renderActionButtons();
+    console.log(`[MDJ] Role ${roleId} completed. Looking for next role...`);
 
-    console.log(`[MDJ] Role ${roleId} completed. Moving to next role...`);
+    // Find next role with action and auto-select it
+    const orderedRoles = this.rolesLoader.getOrderedRoleIds();
+    const currentRoleIdx = orderedRoles.indexOf(roleId);
+    let nextRoleWithAction = null;
+
+    for (let i = currentRoleIdx + 1; i < orderedRoles.length; i++) {
+      const nextRoleId = orderedRoles[i];
+      const nextRoleData = this.rolesLoader.getRole(nextRoleId);
+
+      // Check if role is assigned and not completed
+      const players = this.gm.state.players || [];
+      const isAssigned = players.some(p => p.role === nextRoleId);
+      const isCompleted = this.roleStates[nextRoleId]?.completed;
+
+      // Check if role has actions this night
+      const nightActive = nextRoleData?.nightActive || [];
+      const actsThisNight = nightActive.length > 0 && nightActive.includes(this.currentNight);
+
+      // Check if at least one player with this role is alive
+      const playerWithRole = players.find(p => p.role === nextRoleId && !this.deadPlayerIds.has(p.id));
+
+      if (isAssigned && !isCompleted && actsThisNight && playerWithRole) {
+        nextRoleWithAction = nextRoleId;
+        break;
+      }
+    }
+
+    // Re-render to update UI
+    this.renderRoleListbox();
+
+    // Auto-select next role if found (this will show the breathing animation)
+    if (nextRoleWithAction) {
+      console.log(`[MDJ] Auto-selecting next role with action: ${nextRoleWithAction}`);
+      this.selectRole(nextRoleWithAction);
+    } else {
+      this.renderActionButtons();
+      console.log(`[MDJ] No more roles with actions - night summary will display`);
+    }
 
     // Check if all roles are done
     this.checkIfNightComplete();
@@ -4199,6 +4350,11 @@ class FirstNightMDJ {
         border-color: white;
         box-shadow: 0 0 15px rgba(255,255,255,0.6);
         animation: roleListBreathing 2s ease-in-out infinite;
+      }
+
+      .listbox-item.breathing {
+        animation: playerBreathingContainer 1.2s ease-in-out infinite !important;
+        filter: drop-shadow(0 0 8px rgba(255, 180, 0, 0.8));
       }
 
       .listbox-item.completed {

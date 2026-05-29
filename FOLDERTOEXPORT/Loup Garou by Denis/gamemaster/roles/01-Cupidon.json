@@ -14,6 +14,9 @@
     }
   },
   "actionType": "NightActive",
+  "nightActive": [
+    1
+  ],
   "borderLifetime": "game",
   "tips": "Vous ne gagnez que si vos deux amoureux survivent jusqu'à la fin - aidez-les à éliminer tous les autres, quel que soit leur camp.",
   "actions": {

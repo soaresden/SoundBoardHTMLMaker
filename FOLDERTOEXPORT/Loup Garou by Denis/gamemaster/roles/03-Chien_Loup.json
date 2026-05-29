@@ -33,5 +33,8 @@
   },
   "pouvoir": "La premiere nuit, choisit un camp (Village ou Loups) et doit gagner avec ce camp.",
   "actionType": "NightActive",
-  "tips": "Choisissez bien votre camp - vous détenez l'équilibre du jeu."
+  "tips": "Choisissez bien votre camp - vous détenez l'équilibre du jeu.",
+  "nightActive": [
+    1
+  ]
 }

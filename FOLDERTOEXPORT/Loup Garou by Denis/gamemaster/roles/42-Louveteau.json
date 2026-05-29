@@ -25,5 +25,12 @@
   },
   "pouvoir": "Peut mordre une personne pour la transformer en Simple Loup-Garou.",
   "actionType": "DayActive",
-  "tips": "Aidez les loups à grandir - leur puissance est votre fierté."
+  "tips": "Aidez les loups à grandir - leur puissance est votre fierté.",
+  "nightActive": [
+    2,
+    4,
+    6,
+    8,
+    10
+  ]
 }

@@ -34,5 +34,17 @@
   "pouvoir": "Donnez 2 votes contre quelqu'un au matin",
   "actionType": "NightActive",
   "borderLifetime": "next_night",
-  "tips": "Maudissez les personnes dont vous suspectez."
+  "tips": "Maudissez les personnes dont vous suspectez.",
+  "nightActive": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+  ]
 }
