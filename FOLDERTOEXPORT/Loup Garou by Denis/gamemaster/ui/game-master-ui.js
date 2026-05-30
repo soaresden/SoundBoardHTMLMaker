@@ -7,7 +7,7 @@ class GameMasterUI {
     this.gm = gameMaster;
     this.collapsed = false;
     this.minimized = false;
-    this.activeTab = 'game'; // 'game' ou 'journal'
+    this.activeTab = 'game';
     console.log('[GameMaster UI] Constructor called');
 
     this.roleToCardFile = {
@@ -87,7 +87,6 @@ class GameMasterUI {
       ${renderWindowsButtons()}
       <div class="gm-tabs" id="gmTabs" style="display:flex; gap:0; background:rgba(0,0,0,0.3); border-bottom:1px solid rgba(199,125,255,0.2);">
         <button id="gmTabGame" class="gm-tab" data-tab="game" style="flex:1; padding:8px 12px; border:none; background:rgba(81,116,219,0.3); color:#81dff7; font-weight:600; cursor:pointer; font-size:11px; border-bottom:2px solid #5174db;">Jeu</button>
-        <button id="gmTabJournal" class="gm-tab" data-tab="journal" style="flex:1; padding:8px 12px; border:none; background:transparent; color:#aaa; font-weight:600; cursor:pointer; font-size:11px; border-bottom:2px solid transparent;">Journal</button>
       </div>
       <div class="gm-content" id="gmContent" style="display:flex; flex:1; gap:0; overflow:hidden;">
         <!-- Colonne de gauche: Table (persistante) -->
@@ -114,17 +113,10 @@ class GameMasterUI {
       this.updateTabStyles();
       this.render();
     });
-    document.getElementById('gmTabJournal')?.addEventListener('click', () => {
-      this.activeTab = 'journal';
-      this.updateTabStyles();
-      this.render();
-    });
   }
 
   updateTabStyles() {
     const gameTab = document.getElementById('gmTabGame');
-    const journalTab = document.getElementById('gmTabJournal');
-
     if (gameTab) {
       if (this.activeTab === 'game') {
         gameTab.style.background = 'rgba(81,116,219,0.3)';
@@ -137,17 +129,6 @@ class GameMasterUI {
       }
     }
 
-    if (journalTab) {
-      if (this.activeTab === 'journal') {
-        journalTab.style.background = 'rgba(199,125,255,0.2)';
-        journalTab.style.color = '#c77dff';
-        journalTab.style.borderBottom = '2px solid #c77dff';
-      } else {
-        journalTab.style.background = 'transparent';
-        journalTab.style.color = '#aaa';
-        journalTab.style.borderBottom = '2px solid transparent';
-      }
-    }
   }
 
   render() {
@@ -161,15 +142,7 @@ class GameMasterUI {
       return;
     }
 
-    // Afficher le journal si l'onglet journal est actif
-    if (this.activeTab === 'journal') {
-      // En mode journal, on utilise l'ancienne structure (full-width)
-      gmContent.style.display = 'block !important';
-      gmContent.style.flexDirection = 'column';
-      gmContent.style.overflow = 'auto';
-      gmContent.style.padding = '16px';
-      gmContent.innerHTML = this.renderJournal();
-    } else if (mode === 'selectRoles') {
+    if (mode === 'selectRoles') {
       // En mode sélection des rôles, afficher en full-width
       gmContent.style.display = 'block !important';
       gmContent.style.flexDirection = 'column';
@@ -419,16 +392,6 @@ class GameMasterUI {
         rightHtml = '<div style="padding:20px; color:#e8e8f0; text-align:center;">Jeu en cours...</div>';
       }
       rightColumn.innerHTML = rightHtml;
-    }
-
-    // Auto-scroll du log vers le dernier message
-    if (this.activeTab === 'journal') {
-      setTimeout(() => {
-        const logScroll = document.getElementById('gmLogScroll');
-        if (logScroll) {
-          logScroll.scrollTop = logScroll.scrollHeight;
-        }
-      }, 50);
     }
 
     // Attacher les événements des contrôles flèches pour mode tableSetup
@@ -925,7 +888,8 @@ class GameMasterUI {
     }
   }
 
-  renderJournal() {
+  _removedRenderJournal() {
+    // Journal tab removed — method kept as tombstone to avoid merge conflicts
     const players = this.gm.state.players || [];
     const selectedRoles = this.gm.state.selectedRoles || {};
     const gameLog = this.gm.state.gameLog || [];
