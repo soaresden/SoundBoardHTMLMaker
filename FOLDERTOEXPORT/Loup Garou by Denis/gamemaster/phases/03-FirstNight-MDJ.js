@@ -449,10 +449,14 @@ class FirstNightMDJ {
       let isCurrentRole = p.role === this.selectedRoleId;
 
       if (this.selectedRoleId === 'Simple_Loup_Garou') {
-        // Only Grand_Mechant_Loup breathes, not other wolves
-        isCurrentRole = p.role === 'Grand_Mechant_Loup';
+        // ALL wolves breathe when wolves are deciding on victim
+        // EXCEPT Chien_Loup if they chose to stay villager
+        const isChienLoupStayVillager = p.role === 'Chien_Loup' &&
+          this.roleStates['Chien_Loup']?.result?.targets?.includes('stay_villager');
+
+        isCurrentRole = !isChienLoupStayVillager && p.role && (p.role.includes('Loup') || p.role.includes('Wolf'));
         if (isCurrentRole) {
-          console.log(`[MDJ] 🐺 Grand_Mechant_Loup breathing for: ${p.name} (${p.role})`);
+          console.log(`[MDJ] 🐺 Wolf pack breathing for: ${p.name} (${p.role})`);
         }
       } else if (p.role === this.selectedRoleId) {
         console.log(`[MDJ] 🫁 Breathing for: ${p.name} (${p.role}) - selectedRoleId: ${this.selectedRoleId}`);
@@ -1235,7 +1239,7 @@ class FirstNightMDJ {
               ${isDead ? '💀' : roleData?.emoji || '❓'}
             </span>
             <span class="item-name">
-              ${isDead ? '💀 ' : ''}${player.name}
+              ${isDead ? '💀 ' : ''}${this.mayorId === player.id ? '🎖️ ' : ''}${player.name}
               ${!isDead && roleData?.name ? `<span style="font-size: 0.85em; opacity: 0.8;"> (${roleData.name})</span>` : ''}
             </span>
             ${isCompleted ? '<span class="item-status">✓</span>' : ''}
