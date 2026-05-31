@@ -636,12 +636,12 @@ class FirstNightMDJ {
 
     listbox.innerHTML = html;
 
-    // Attach click handler to proceed to next phase
+    // Attach click handler to proceed to voting phase
     const nextBtn = listbox.querySelector('#night-summary-btn-next');
     if (nextBtn) {
       nextBtn.addEventListener('click', () => {
-        console.log('[MDJ] Night summary complete - starting mayor election for first day');
-        this.startMayorElection();
+        console.log('[MDJ] Night summary complete - proceeding to day voting phase');
+        this.startVotingPhase();
       });
     }
   }
@@ -2825,7 +2825,7 @@ class FirstNightMDJ {
         <div style="color: white; font-size: 0.75rem; margin-bottom: 8px; padding: 6px; background: rgba(0,0,0,0.2); border-radius: 4px;">
           Empoisonner un joueur:
         </div>
-        <select class="sorciere-kill-combobox" style="width: 100%; padding: 6px; font-size: 0.8rem; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 3px;">
+        <select class="sorciere-kill-combobox" style="width: 100%; padding: 8px; font-size: 0.85rem; background: rgba(30,30,60,0.9); color: #fff; border: 2px solid #ff6666; border-radius: 4px; font-weight: bold;">
           <option value="">-- Choisir un joueur --</option>
           ${this.playerRegistry.getAlive().filter(p => p.role !== 'Sorciere').map(p => {
             const isProtected = protectedPlayers.has(p.id);
@@ -3496,14 +3496,18 @@ class FirstNightMDJ {
       this.selectedPlayers.forEach(playerId => {
         // Skip special keys like 'potion-death', 'potion-life'
         if (!playerId.startsWith('potion-')) {
-          // Check if player is protected - if so, don't count as dead
-          if (protectedPlayers.has(playerId)) {
+          // Sorcière poison bypasses protection (poison ≠ bite), but wolf kills don't
+          const isWolfKill = (action === 'kill');
+          const isProtected = protectedPlayers.has(playerId);
+          
+          if (isWolfKill && isProtected) {
             const playerName = this.getPlayerName(playerId);
-            console.log(`[MDJ] 🛡️ ${playerName} (${playerId}) is PROTECTED (immunisé) - attack blocked, no death recorded`);
+            console.log(`[MDJ] 🛡️ ${playerName} (${playerId}) is PROTECTED (immunisé) - wolf attack blocked, no death recorded`);
           } else {
             this.deadPlayerIds.add(playerId);
             const playerName = this.getPlayerName(playerId);
-            console.log(`[MDJ] ☠️ ${roleName} killed ${playerName} (${playerId})`);
+            const attackType = action === 'poison' && isProtected ? '☠️💜 (poison ignores protection!)' : '☠️';
+            console.log(`${attackType} ${roleName} killed ${playerName} (${playerId})`);
 
             // Check for cascading Cupidon death
             // If one lover dies, the other should also die
