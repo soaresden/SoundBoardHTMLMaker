@@ -123,6 +123,7 @@ class FirstNightMDJ {
     this.roleStates = {}; // Track which roles are completed
     this.deadPlayerIds = new Set(); // Track players who have been killed
     this.deathCauses = {}; // Track cause of death for each dead player (playerId -> cause)
+    this.transformations = {}; // Track role transformations (playerId -> {from, to, reason})
 
     // Initialize PlayerRegistry for centralized player data management
     this.playerRegistry = new PlayerRegistry(this.gm?.state?.players || [], this.deadPlayerIds);
@@ -1148,6 +1149,14 @@ class FirstNightMDJ {
       }
     });
 
+    // Check for Enfant Sauvage transformation
+    Object.entries(this.transformations).forEach(([playerId, trans]) => {
+      if (trans.from === 'Enfant_Sauvage') {
+        const playerName = this.getPlayerName(playerId);
+        actions.push(`🐒➡️🐺 ${playerName} (Enfant Sauvage) transformé en loup - ${trans.reason}`);
+      }
+    });
+
     // Collect deaths
     const deadPlayers = players.filter(p => this.deadPlayerIds.has(p.id));
     deadPlayers.forEach(p => {
@@ -1177,9 +1186,47 @@ class FirstNightMDJ {
       deaths.push({ name: p.name, role: p.role, emoji: emoji, cause: cause });
     });
 
+    // Check for Montreur d'Ours growl
+    let montreurOursHtml = '';
+    const montreurOursPlayer = players.find(p => p.role === 'Montreur_Ours' && !this.deadPlayerIds.has(p.id));
+    if (montreurOursPlayer) {
+      const idx = players.indexOf(montreurOursPlayer);
+      let leftIdx = idx === 0 ? players.length - 1 : idx - 1;
+      let rightIdx = idx === players.length - 1 ? 0 : idx + 1;
+
+      // Skip dead players to find living neighbors
+      let leftWolfIdx = leftIdx;
+      while (this.deadPlayerIds.has(players[leftWolfIdx].id) && leftWolfIdx !== idx) {
+        leftWolfIdx = leftWolfIdx === 0 ? players.length - 1 : leftWolfIdx - 1;
+      }
+      let rightWolfIdx = rightIdx;
+      while (this.deadPlayerIds.has(players[rightWolfIdx].id) && rightWolfIdx !== idx) {
+        rightWolfIdx = rightWolfIdx === players.length - 1 ? 0 : rightWolfIdx + 1;
+      }
+
+      const leftNeighbor = players[leftWolfIdx];
+      const rightNeighbor = players[rightWolfIdx];
+
+      const leftIsWolf = leftNeighbor && !this.deadPlayerIds.has(leftNeighbor.id) &&
+                         (leftNeighbor.role?.includes('Loup') || leftNeighbor.role?.includes('Wolf'));
+      const rightIsWolf = rightNeighbor && !this.deadPlayerIds.has(rightNeighbor.id) &&
+                          (rightNeighbor.role?.includes('Loup') || rightNeighbor.role?.includes('Wolf'));
+
+      const hasWolfNearby = leftIsWolf || rightIsWolf;
+      const growlText = hasWolfNearby
+        ? '🐻 L\'ours du Montreur d\'Ours grogne ! Ça sent le loup !'
+        : '🐻 Ça ne grogne pas, pas de loup à proximité de l\'ours';
+
+      montreurOursHtml = `
+        <div style="padding:8px; margin-bottom:8px; background:rgba(139,69,19,0.1); border-left:3px solid #8B4513; font-size:10px;">
+          ${growlText}
+        </div>
+      `;
+    }
+
     const actionsHtml = actions.length > 0
-      ? actions.map(a => `<div style="padding:6px; margin-bottom:4px; font-size:10px;">${a}</div>`).join('')
-      : '<div style="padding:8px; text-align:center; color:#999; font-size:10px;">Aucune action</div>';
+      ? montreurOursHtml + actions.map(a => `<div style="padding:6px; margin-bottom:4px; font-size:10px;">${a}</div>`).join('')
+      : montreurOursHtml + '<div style="padding:8px; text-align:center; color:#999; font-size:10px;">Aucune action</div>';
 
     const deathsHtml = deaths.length > 0
       ? deaths.map(d => `<div style="padding:6px; margin-bottom:4px; font-size:10px;"><strong>${d.emoji} ${d.name}</strong><br><span style="color:#ff9999; font-size:9px;">${d.cause}</span></div>`).join('')
@@ -1387,11 +1434,16 @@ class FirstNightMDJ {
         return;
       }
 
-      // For Night 2+: ONLY include roles with explicit NightActive type
-      // This excludes Cupidon, Enfant_Sauvage, Chien_Loup, etc.
+      // For Night 2+: Check if this role plays THIS NIGHT
+      // Must have actionType === 'NightActive' AND nightActive must include this night
       const isNightActiveRole = roleData.actionType === 'NightActive';
+      const nightActive = roleData.nightActive || [];
 
-      if (isNightActiveRole) {
+      // If nightActive is specified, check if this night is included
+      // If not specified, assume it plays all nights
+      const playsThisNight = nightActive.length === 0 || nightActive.includes(this.currentNight);
+
+      if (isNightActiveRole && playsThisNight) {
         this.roleStates[roleId] = {
           completed: false,
           selected: false,
@@ -1399,7 +1451,8 @@ class FirstNightMDJ {
         };
         console.log(`[MDJ] Night 2 role initialized: ${roleId} (${roleData.name})`);
       } else {
-        console.log(`[MDJ] Night 2 role SKIPPED: ${roleId} (${roleData.name}) - not NightActive`);
+        const skipReason = !isNightActiveRole ? 'not NightActive' : `not active for night ${this.currentNight}`;
+        console.log(`[MDJ] Night 2 role SKIPPED: ${roleId} (${roleData.name}) - ${skipReason}`);
       }
     });
 
@@ -3559,6 +3612,28 @@ class FirstNightMDJ {
    * @param {string} roleId
    */
   selectRole(roleId) {
+    // CRITICAL: Check if the player with this role is dead
+    const players = this.gm.state.players || [];
+    const playerWithRole = players.find(p => p.role === roleId);
+
+    if (playerWithRole && this.deadPlayerIds.has(playerWithRole.id)) {
+      console.log(`[MDJ] ⚠️ SKIP: ${roleId} (${playerWithRole.name}) is DEAD - finding next role`);
+      // Mark this role as completed so we don't try to select it again
+      if (this.roleStates[roleId]) {
+        this.roleStates[roleId].completed = true;
+      }
+      // Find next available role
+      const orderedRoles = this.rolesLoader.getOrderedRoleIds();
+      for (let i = 0; i < orderedRoles.length; i++) {
+        const nextRoleId = orderedRoles[i];
+        if (this.roleStates[nextRoleId] && !this.roleStates[nextRoleId].completed) {
+          return this.selectRole(nextRoleId);
+        }
+      }
+      // No more roles, show summary
+      return this.renderNightSummary();
+    }
+
     console.log(`[MDJ] === SELECTING ROLE: ${roleId} ===`);
     const state = this.roleStates[roleId];
     if (state?.completed) {
@@ -3866,12 +3941,19 @@ class FirstNightMDJ {
               const enfantPlayer = players.find(p => p.role === 'Enfant_Sauvage');
               if (enfantPlayer && !this.deadPlayerIds.has(enfantPlayer.id)) {
                 console.log(`[MDJ] 🐒➡️🐺 Enfant Sauvage ${enfantPlayer.name}'s idol ${playerName} died! Transform to wolf`);
+                // Record the transformation
+                this.transformations[enfantPlayer.id] = {
+                  from: 'Enfant_Sauvage',
+                  to: 'Simple_Loup_Garou',
+                  reason: `idole ${playerName} est morte`
+                };
                 // Change player role to wolf
                 enfantPlayer.role = 'Simple_Loup_Garou';
                 enfantPlayer.camp = 'Loup'; // Change team to Wolf
                 console.log(`[MDJ] ✓ ${enfantPlayer.name} is now a Simple Loup Garou (changed from Enfant Sauvage)`);
-                // Update map to show wolf visuals with new emoji 🐺
+                // Force complete visual update: re-render map + legend
                 this.renderLiveMap();
+                this.renderLegend();
               }
             }
           }
