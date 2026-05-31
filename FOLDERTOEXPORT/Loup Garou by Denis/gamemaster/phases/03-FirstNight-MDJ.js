@@ -1547,23 +1547,39 @@ class FirstNightMDJ {
       let playsThisNight = nightActive.length === 0 || nightActive.includes(this.currentNight);
 
       // If nightActive doesn't specify, check via phase (for roles like Loup_Garou_Blanc with everyOtherNight)
-      if (!playsThisNight && roleData.actions?.mdj_night_actions?.length > 0) {
-        const firstAction = roleData.actions.mdj_night_actions[0];
-        const phase = firstAction.phase;
-        const isEvenNight = this.currentNight % 2 === 0;
+      if (!playsThisNight && roleData.actions) {
+        let actionWithPhase = null;
 
-        if (phase === 'everyNight') {
-          playsThisNight = true;
-        } else if (phase === 'everyOtherNight') {
-          playsThisNight = isEvenNight; // Even nights (2, 4, 6...)
-        } else if (phase === 'afterFirstNight') {
-          playsThisNight = this.currentNight > 1;
-        } else if (phase === 'firstNight') {
-          playsThisNight = this.currentNight === 1;
+        // First check mdj_night_actions (if it exists)
+        if (roleData.actions.mdj_night_actions?.length > 0) {
+          actionWithPhase = roleData.actions.mdj_night_actions[0];
+        } else {
+          // Otherwise, search all actions for one with a phase property
+          for (const [key, action] of Object.entries(roleData.actions)) {
+            if (action && typeof action === 'object' && action.phase && action.enabled !== false) {
+              actionWithPhase = action;
+              break;
+            }
+          }
         }
 
-        if (playsThisNight) {
-          console.log(`[MDJ] Night ${this.currentNight} - ${roleId} activated via phase "${phase}"`);
+        if (actionWithPhase?.phase) {
+          const phase = actionWithPhase.phase;
+          const isEvenNight = this.currentNight % 2 === 0;
+
+          if (phase === 'everyNight') {
+            playsThisNight = true;
+          } else if (phase === 'everyOtherNight') {
+            playsThisNight = isEvenNight; // Even nights (2, 4, 6...)
+          } else if (phase === 'afterFirstNight') {
+            playsThisNight = this.currentNight > 1;
+          } else if (phase === 'firstNight') {
+            playsThisNight = this.currentNight === 1;
+          }
+
+          if (playsThisNight) {
+            console.log(`[MDJ] Night ${this.currentNight} - ${roleId} activated via phase "${phase}"`);
+          }
         }
       }
 
@@ -1700,11 +1716,18 @@ class FirstNightMDJ {
         const textColor = roleData?.visual?.roleColor?.textColor || '#ffffff';
         const emojiColor = roleData?.visual?.roleColor?.emojiColor || 'inherit';
 
+        // Background color: red for dead, role color if selected, light green for all alive players
+        const bgColor = isDead
+          ? 'rgba(255, 100, 100, 0.2)'
+          : isSelected
+            ? roleColor
+            : 'rgba(100, 255, 100, 0.2)';
+
         return `
           <div class="listbox-item ${isSelected ? 'selected breathing' : ''} ${isCompleted ? 'completed' : ''} ${isGreyedOut ? 'disabled' : ''}"
                data-player-id="${player.id}"
                data-role-id="${player.role}"
-               style="background: ${isGreyedOut ? 'rgba(100,100,100,0.2)' : isSelected ? roleColor : isDead ? 'rgba(100,100,100,0.1)' : 'rgba(255,255,255,0.1)'};
+               style="background: ${bgColor};
                       color: ${isSelected ? textColor : isGreyedOut ? '#888' : 'white'};
                       opacity: ${isGreyedOut ? 0.6 : 1};
                       cursor: ${isGreyedOut ? 'not-allowed' : 'pointer'};
