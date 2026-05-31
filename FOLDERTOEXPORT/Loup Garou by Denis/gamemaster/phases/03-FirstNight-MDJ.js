@@ -144,6 +144,12 @@ class FirstNightMDJ {
     // Chevalier curse tracking (wolf dies NEXT night, not immediately)
     this.chevalierCursedWolfId = null; // ID of wolf cursed by Chevalier (dies next night)
 
+    // Salvateur protection tracking (can't protect same person 2 nights in a row)
+    this.lastSalvateurProtected = null; // Track last protected player to prevent consecutive protection
+
+    // Renard power loss tracking
+    this.renardDetectedWolves = null; // Track if Renard detected wolves on Night 1 (loses power if not)
+
     // Voting phase tracking
     this.selectedLynchVictimId = null; // Player selected for lynch vote
 
@@ -1265,14 +1271,14 @@ class FirstNightMDJ {
     }
 
     // CRITICAL: Montreur_Ours and transformations are NOT in actions table - they go BELOW
-    // IMPROVED: Larger fonts and better contrast for readability
+    // IMPROVED: Much better readability with larger fonts, better contrast, and proper styling
     const actionsHtml = actions.length > 0
-      ? actions.map(a => `<div style="padding:8px; margin-bottom:6px; font-size:12px; background:rgba(0,0,0,0.2); border-radius:3px; border-left:3px solid #81dff7;">${a}</div>`).join('')
-      : '<div style="padding:12px; text-align:center; color:#aaa; font-size:11px;">Aucune action</div>';
+      ? actions.map(a => `<div style="padding:10px; margin-bottom:8px; font-size:13px; line-height:1.4; background:rgba(129,223,247,0.15); border-radius:4px; border-left:4px solid #00BFFF; color:#e0f5ff;">${a}</div>`).join('')
+      : '<div style="padding:12px; text-align:center; color:#888; font-size:12px; font-style:italic;">Aucune action</div>';
 
     const deathsHtml = deaths.length > 0
-      ? deaths.map(d => `<div style="padding:8px; margin-bottom:6px; font-size:12px; background:rgba(0,0,0,0.2); border-radius:3px; border-left:3px solid #ff6666;"><strong style="color:#ffaaaa;">${d.emoji} ${d.name}</strong><br><span style="color:#ff9999; font-size:11px;">${d.cause}</span></div>`).join('')
-      : '<div style="padding:12px; text-align:center; color:#aaa; font-size:11px;">Aucune mort</div>';
+      ? deaths.map(d => `<div style="padding:10px; margin-bottom:8px; font-size:13px; line-height:1.4; background:rgba(255,102,102,0.15); border-radius:4px; border-left:4px solid #ff4444;"><strong style="color:#ffcccc; font-size:14px;">${d.emoji} ${d.name}</strong><br><span style="color:#ffaaaa; font-size:12px;">${d.cause}</span></div>`).join('')
+      : '<div style="padding:12px; text-align:center; color:#888; font-size:12px; font-style:italic;">Aucune mort</div>';
 
     // Check for special role deaths that need handling
     // CRITICAL: Only show Chasseur revenge box if:
@@ -1504,10 +1510,11 @@ class FirstNightMDJ {
    * CRITICAL: Renard loses power if no wolves detected
    */
   initializeNight2RoleStates() {
-    // CRITICAL: Keep copy of previous night's Renard state before clearing
+    // CRITICAL: Keep copy of ALL previous night's states (needed for Chien_Loup stay_villager check, etc.)
     const previousRenardState = this.roleStates['Renard'];
+    const previousRoleStates = { ...this.roleStates }; // Keep all previous states
 
-    this.roleStates = {}; // Clear previous states
+    this.roleStates = { ...previousRoleStates }; // Keep previous states, only add/update new ones
     const orderedRoles = this.rolesLoader.getOrderedRoleIds();
     const players = this.gm.state.players || [];
     const assignedRoleIds = new Set(players.map(p => p.role));
@@ -1528,9 +1535,8 @@ class FirstNightMDJ {
       }
 
       // CRITICAL: Check if Renard lost power (detected 0 wolves on previous night)
-      if (roleId === 'Renard' && previousRenardState?.completed) {
-        const detectedWolves = previousRenardState.result?.targets?.length > 0;
-        if (!detectedWolves) {
+      if (roleId === 'Renard' && previousRenardState?.completed && this.renardDetectedWolves !== null) {
+        if (!this.renardDetectedWolves) {
           console.log(`[MDJ] Night ${this.currentNight} Renard SKIPPED: no wolves detected on Night ${this.currentNight - 1}, lost power`);
           return;
         }
@@ -1947,8 +1953,8 @@ class FirstNightMDJ {
     const players = this.gm.state.players || [];
     const selectedLovers = this.selectedPlayers || [];
 
-    // Filter out dead players
-    const alivePlayers = this.playerRegistry.getAlive();
+    // Filter out dead players AND last protected player (can't protect 2 nights in a row)
+    const alivePlayers = this.playerRegistry.getAlive().filter(p => p.id !== this.lastSalvateurProtected);
 
     // Create clickable player list
     const playerListHtml = alivePlayers
@@ -4063,6 +4069,12 @@ class FirstNightMDJ {
         action: action,
         targets: [...this.selectedPlayers]
       };
+
+      // CRITICAL: Track Salvateur protection (can't protect same person 2 nights in a row)
+      if (roleId === 'Salvateur' && action === 'protect' && this.selectedPlayers.length > 0) {
+        this.lastSalvateurProtected = this.selectedPlayers[0];
+        console.log(`[MDJ] Salvateur protected ${this.getPlayerName(this.lastSalvateurProtected)} - can't protect same person next night`);
+      }
     }
 
     // Track dead players from kill actions
