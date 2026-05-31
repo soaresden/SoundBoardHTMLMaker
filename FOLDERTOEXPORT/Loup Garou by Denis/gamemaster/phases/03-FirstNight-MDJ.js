@@ -189,6 +189,69 @@ class FirstNightMDJ {
   }
 
   /**
+   * Check if a role has an action that's active for this night phase
+   * Handles: firstNight, everyNight, everyOtherNight, etc.
+   * @param {string} roleId
+   * @returns {boolean}
+   */
+  hasActionForPhase(roleId) {
+    const roleData = this.rolesLoader.getRole(roleId);
+    if (!roleData) return false;
+
+    // Check standard mdj_night_actions field
+    if (roleData.actions?.mdj_night_actions && roleData.actions.mdj_night_actions.length > 0) {
+      console.log(`[MDJ] ${roleId} has mdj_night_actions`);
+      return true;
+    }
+
+    // Determine current night number: this is FirstNight = night 1
+    const currentNightNumber = 1;
+    const isEvenNight = currentNightNumber % 2 === 0;
+    const isOddNight = currentNightNumber % 2 === 1;
+
+    // Check if role has actions object with phase-dependent actions
+    if (roleData.actions && typeof roleData.actions === 'object') {
+      for (const [actionKey, actionData] of Object.entries(roleData.actions)) {
+        // Skip mdj_night_actions field
+        if (actionKey === 'mdj_night_actions') continue;
+
+        // Check if this is an action object (not a string)
+        if (typeof actionData === 'object' && actionData.enabled !== false) {
+          const phase = actionData.phase;
+          let isActiveThisNight = false;
+
+          // Check if action is active for this night based on phase
+          if (!phase) {
+            // No phase = always active
+            isActiveThisNight = true;
+          } else if (phase === 'everyNight') {
+            // Active every night
+            isActiveThisNight = true;
+          } else if (phase === 'firstNight') {
+            // Active only on first night
+            isActiveThisNight = (currentNightNumber === 1);
+          } else if (phase === 'everyOtherNight') {
+            // Active on even nights (2, 4, 6, etc.)
+            isActiveThisNight = isEvenNight;
+          } else if (phase === 'afterFirstNight') {
+            // Active after first night (nights 2+)
+            isActiveThisNight = (currentNightNumber > 1);
+          }
+
+          if (isActiveThisNight) {
+            console.log(`[MDJ] ${roleId} action "${actionKey}" ACTIVE for night ${currentNightNumber} (phase: ${phase || 'none'})`);
+            return true;
+          } else {
+            console.log(`[MDJ] ${roleId} action "${actionKey}" INACTIVE for night ${currentNightNumber} (phase: ${phase})`);
+          }
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /**
    * Initialize tracking for all active roles
    * Uses same filter logic as renderRoleListbox() for consistency
    */
@@ -204,12 +267,17 @@ class FirstNightMDJ {
       const roleData = this.rolesLoader.getRole(roleId);
       if (!roleData) return;
 
-      // Check if role has night actions
-      const hasNightAction =
-        roleData.actionType === 'NightActive' ||
-        (this.getActionsForRole(roleId) && this.getActionsForRole(roleId).length > 0) ||
-        roleId.includes('Loup') ||
-        roleId.includes('Wolf');
+      // Check if role has night actions ACTIVE FOR THIS PHASE
+      // If actionType is NightActive, still need to verify action is active for THIS phase
+      let hasNightAction = false;
+
+      if (roleData.actionType === 'NightActive') {
+        // Even NightActive roles must have an action for this phase
+        hasNightAction = this.hasActionForPhase(roleId);
+      } else {
+        // Non-NightActive roles might still have mdj_night_actions
+        hasNightAction = this.hasActionForPhase(roleId);
+      }
 
       if (hasNightAction) {
         this.roleStates[roleId] = {
@@ -453,10 +521,12 @@ class FirstNightMDJ {
       if (this.selectedRoleId === 'Simple_Loup_Garou') {
         // ALL wolves breathe when wolves are deciding on victim
         // EXCEPT Chien_Loup if they chose to stay villager
+        // EXCEPT dead wolves - don't breathe if dead
         const isChienLoupStayVillager = p.role === 'Chien_Loup' &&
           this.roleStates['Chien_Loup']?.result?.targets?.includes('stay_villager');
+        const isDead = this.deadPlayerIds.has(p.id);
 
-        isCurrentRole = !isChienLoupStayVillager && p.role && (p.role.includes('Loup') || p.role.includes('Wolf'));
+        isCurrentRole = !isDead && !isChienLoupStayVillager && p.role && (p.role.includes('Loup') || p.role.includes('Wolf'));
         if (isCurrentRole) {
           console.log(`[MDJ] 🐺 Wolf pack breathing for: ${p.name} (${p.role})`);
         }
@@ -545,11 +615,92 @@ class FirstNightMDJ {
    * IMPORTANT: Shows all night-active roles in order (01, 02, 03, ...)
    */
   /**
+   * Get night summary HTML with comboboxes for special deaths
+   */
+  getNightSummaryHtml() {
+    const players = this.gm.state.players || [];
+    const alivePlayers = players.filter(p => !this.deadPlayerIds.has(p.id));
+    const deadPlayers = players.filter(p => this.deadPlayerIds.has(p.id));
+
+    // Check for dead Chasseur and Chevalier
+    const deadChaseur = deadPlayers.find(p => p.role === 'Chasseur');
+    const deadChevalier = deadPlayers.find(p => p.role === 'Chevalier_Epee_Rouille');
+
+    // Check for Montreur_Ours growl (Montreur_Ours needs to know if it growled)
+    const mountreurOursPlayer = players.find(p => p.role === 'Montreur_Ours');
+
+    let html = '';
+
+    // Chasseur revenge kill
+    if (deadChaseur) {
+      const validTargets = alivePlayers.filter(p => p.role && (p.role.includes('Loup') || p.role.includes('Wolf')));
+      html += `
+        <div style="padding:12px; background:rgba(210,180,140,0.2); border:2px solid #D4A574; border-radius:6px; margin-bottom:12px;">
+          <h4 style="margin:0 0 8px 0; color:#D4A574; font-size:12px;">🏹 ${deadChaseur.name} (Chasseur) - Vengeance</h4>
+          <p style="margin:0 0 8px 0; color:#ddd; font-size:11px;">Le Chasseur peut tirer avant sa mort</p>
+          <select id="chasseur-target" style="width:100%; padding:6px; background:#333; color:#fff; border:1px solid #666; border-radius:3px; font-size:11px;">
+            <option value="">-- Sélectionner une cible --</option>
+            ${validTargets.map(p => {
+              const roleData = this.rolesLoader.getRole(p.role);
+              return `<option value="${p.id}">${p.name} (${roleData?.name || p.role})</option>`;
+            }).join('')}
+          </select>
+        </div>
+      `;
+    }
+
+    // Chevalier death curse
+    if (deadChevalier) {
+      const wolvesAlive = alivePlayers.filter(p => p.role && (p.role.includes('Loup') || p.role.includes('Wolf')));
+      const leftWolf = wolvesAlive.length > 0 ? wolvesAlive[0].name : '?';
+      html += `
+        <div style="padding:12px; background:rgba(255,215,0,0.15); border:2px solid #FFD700; border-radius:6px; margin-bottom:12px;">
+          <h4 style="margin:0 0 8px 0; color:#FFD700; font-size:12px;">⚔️ ${deadChevalier.name} (Chevalier) - Malédiction</h4>
+          <p style="margin:0 0 8px 0; color:#ddd; font-size:11px;">Le loup à sa gauche (${leftWolf}) mourra demain matin</p>
+        </div>
+      `;
+    }
+
+    // Lynch combobox
+    const nonWolves = alivePlayers.filter(p => !p.role || (!p.role.includes('Loup') && !p.role.includes('Wolf')));
+    html += `
+      <div style="padding:12px; background:rgba(150,100,200,0.2); border:2px solid #9966CC; border-radius:6px;">
+        <h4 style="margin:0 0 8px 0; color:#9966CC; font-size:12px;">🪓 Vote du Village - Au Bûcher!</h4>
+        <p style="margin:0 0 8px 0; color:#ddd; font-size:11px;">Qui sera exécuté aujourd'hui?</p>
+        <select id="lynch-target" style="width:100%; padding:6px; background:#333; color:#fff; border:1px solid #666; border-radius:3px; font-size:11px;">
+          <option value="">-- Sélectionner une victime --</option>
+          ${nonWolves.map(p => {
+            const roleData = this.rolesLoader.getRole(p.role);
+            return `<option value="${p.id}">${p.name} (${roleData?.name || 'Villageois'})</option>`;
+          }).join('')}
+        </select>
+      </div>
+    `;
+
+    return html;
+  }
+
+  /**
+   * Disable the role listbox (gray it out, no interactions)
+   */
+  disableRoleListbox() {
+    const listbox = document.getElementById('role-listbox');
+    if (!listbox) return;
+
+    // Gray out and disable interactions
+    listbox.style.opacity = '0.5';
+    listbox.style.pointerEvents = 'none';
+    listbox.style.backgroundColor = 'rgba(50, 50, 50, 0.5)';
+  }
+
+  /**
    * Render Night Summary - Shows completed actions and deaths
    * Replaces the role listbox once all roles are done
    */
   renderNightSummary() {
+    console.log(`[MDJ] 🌙 renderNightSummary() called`);
     const listbox = document.getElementById('role-listbox');
+
     if (!listbox) return;
 
     const players = this.gm.state.players || [];
@@ -667,16 +818,79 @@ class FirstNightMDJ {
     
     if (actionInfo) {
       actionInfo.innerHTML = `
-        <button id="night-summary-btn-start-vote" class="btn-validate-action"
-                style="width:100%; padding:12px; background:#4CAF50; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600; font-size:12px;">
-          ✓ Débat et Vote
+        <button id="night-summary-btn-lynch" class="btn-validate-action"
+                style="width:100%; padding:12px; background:#ff6b00; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600; font-size:12px;">
+          🪓 Au Bûcher!
         </button>
       `;
-      const voteBtn = actionInfo.querySelector('#night-summary-btn-start-vote');
-      if (voteBtn) {
-        voteBtn.addEventListener('click', () => {
-          console.log('[MDJ] Night summary complete - proceeding to voting phase');
-          this.startVotingPhase();
+      // Add event listeners for combobox changes (update avatar on selection)
+      const chasseurSelect = document.getElementById('chasseur-target');
+      const lynchSelect = document.getElementById('lynch-target');
+
+      const updateAvatarForCombobox = (selectElement) => {
+        const victimId = selectElement.value;
+        if (!victimId) return;
+
+        const mdjMap = document.getElementById('mdj-live-map');
+        if (!mdjMap) return;
+
+        const victimPoint = mdjMap.querySelector(`[data-player-id="${victimId}"]`);
+        if (victimPoint) {
+          // Add killed visual state
+          victimPoint.classList.add('killed');
+          const emoji = victimPoint.querySelector('.mdj-point-emoji');
+          if (emoji && !victimPoint.dataset.originalEmoji) {
+            victimPoint.dataset.originalEmoji = emoji.textContent;
+          }
+          if (emoji) {
+            emoji.textContent = '💀';
+            emoji.style.opacity = '0.6';
+          }
+          const dot = victimPoint.querySelector('.mdj-point-dot');
+          if (dot) {
+            dot.style.filter = 'grayscale(100%)';
+            dot.style.opacity = '0.6';
+          }
+          console.log(`[MDJ] Avatar updated - ${this.getPlayerName(victimId)} marked for death`);
+        }
+      };
+
+      if (chasseurSelect) {
+        chasseurSelect.addEventListener('change', () => updateAvatarForCombobox(chasseurSelect));
+      }
+      if (lynchSelect) {
+        lynchSelect.addEventListener('change', () => updateAvatarForCombobox(lynchSelect));
+      }
+
+      const lynchBtn = actionInfo.querySelector('#night-summary-btn-lynch');
+      if (lynchBtn) {
+        lynchBtn.addEventListener('click', () => {
+          const lynchSelect = document.getElementById('lynch-target');
+          const victimId = lynchSelect?.value;
+
+          if (!victimId) {
+            alert('Veuillez sélectionner une victime!');
+            return;
+          }
+
+          console.log('[MDJ] Lynch execution for:', victimId);
+
+          // Check if Chasseur needs to shoot first
+          const players = this.gm.state.players || [];
+          const deadChaseur = players.find(p => this.deadPlayerIds.has(p.id) && p.role === 'Chasseur');
+          const chasseurTargetSelect = document.getElementById('chasseur-target');
+
+          if (deadChaseur && chasseurTargetSelect) {
+            const chasseurTargetId = chasseurTargetSelect.value;
+            if (chasseurTargetId) {
+              // Chasseur shoots first
+              console.log('[MDJ] 🏹 Chasseur shoots:', chasseurTargetId);
+              this.deadPlayerIds.add(chasseurTargetId);
+            }
+          }
+
+          // Execute lynch
+          this.executeLynch(victimId);
         });
       }
     }
@@ -952,6 +1166,7 @@ class FirstNightMDJ {
     const players = this.gm.state.players || [];
     const actions = [];
     const deaths = [];
+    const aliveNonWolfPlayers = players.filter(p => !this.deadPlayerIds.has(p.id) && !this.playerRegistry.isWolf(p.id));
 
     // Collect actions
     Object.entries(this.roleStates).forEach(([roleId, state]) => {
@@ -995,7 +1210,7 @@ class FirstNightMDJ {
         cause = 'Dévoré par les Loups';
       }
 
-      deaths.push({ name: p.name, emoji: emoji, cause: cause });
+      deaths.push({ name: p.name, role: p.role, emoji: emoji, cause: cause });
     });
 
     const actionsHtml = actions.length > 0
@@ -1006,12 +1221,44 @@ class FirstNightMDJ {
       ? deaths.map(d => `<div style="padding:6px; margin-bottom:4px; font-size:10px;"><strong>${d.emoji} ${d.name}</strong><br><span style="color:#ff9999; font-size:9px;">${d.cause}</span></div>`).join('')
       : '<div style="padding:8px; text-align:center; color:#999; font-size:10px;">Aucune mort</div>';
 
-    // 2-column table layout
+    // Check for special role deaths that need handling
+    const deadChaseur = deaths.find(d => d.role === 'Chasseur');
+    const deadChevalier = deaths.find(d => d.role === 'Chevalier_Epee_Rouille');
+    const deadMaire = deaths.find(d => d.role === 'Maire'); // TODO: implement Maire
+
+    // Build special sections HTML
+    let specialSectionsHtml = '';
+
+    if (deadChaseur) {
+      const alivePlayers = players.filter(p => !this.deadPlayerIds.has(p.id));
+      const playerOptions = alivePlayers.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+      specialSectionsHtml += `
+        <div style="border: 1px solid rgba(200,150,100,0.3); border-radius: 4px; padding: 10px; background: rgba(200,150,100,0.05); margin-bottom: 12px;">
+          <h4 style="margin: 0 0 8px 0; color: #d4a574; font-size: 11px; font-weight: 600;">🏹 Chasseur Mort - Vengeance</h4>
+          <p style="margin: 0 0 8px 0; font-size: 10px; color: #ccc;">Le Chasseur a pu tirer avant de mourir. Qui visait-il?</p>
+          <select id="chasseur-target" style="width: 100%; padding: 6px; font-size: 10px; border-radius: 3px; border: 1px solid #555; background: #333; color: #fff;">
+            <option value="">-- Sélectionner une cible --</option>
+            ${playerOptions}
+          </select>
+        </div>
+      `;
+    }
+
+    if (deadChevalier) {
+      specialSectionsHtml += `
+        <div style="border: 1px solid rgba(255,200,0,0.3); border-radius: 4px; padding: 10px; background: rgba(255,200,0,0.05); margin-bottom: 12px;">
+          <h4 style="margin: 0 0 8px 0; color: #ffc800; font-size: 11px; font-weight: 600;">⚔️ Chevalier à l'Épée Rouillée - Malédiction</h4>
+          <p style="margin: 0; font-size: 10px; color: #ccc;">Le premier loup à la gauche du Chevalier mourra demain matin...</p>
+        </div>
+      `;
+    }
+
+    // 2-column main layout
     return `
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
         <!-- LEFT COLUMN: Actions -->
         <div style="border: 1px solid rgba(129,223,247,0.3); border-radius: 4px; padding: 8px; background: rgba(129,223,247,0.05);">
-          <h4 style="margin: 0 0 8px 0; color: #81dff7; font-size: 11px; font-weight: 600;">📋 Actions de la Nuit</h4>
+          <h4 style="margin: 0 0 8px 0; color: #81dff7; font-size: 11px; font-weight: 600;">📋 Actions</h4>
           <div style="max-height: 150px; overflow-y: auto;">
             ${actionsHtml}
           </div>
@@ -1019,11 +1266,24 @@ class FirstNightMDJ {
 
         <!-- RIGHT COLUMN: Deaths -->
         <div style="border: 1px solid rgba(255,153,153,0.3); border-radius: 4px; padding: 8px; background: rgba(255,153,153,0.05);">
-          <h4 style="margin: 0 0 8px 0; color: #ff9999; font-size: 11px; font-weight: 600;">☠️ Décès</h4>
+          <h4 style="margin: 0 0 8px 0; color: #ff9999; font-size: 11px; font-weight: 600;">☠️ Morts</h4>
           <div style="max-height: 150px; overflow-y: auto;">
             ${deathsHtml}
           </div>
         </div>
+      </div>
+
+      <!-- SPECIAL SECTIONS (Chasseur, Chevalier, etc.) -->
+      ${specialSectionsHtml}
+
+      <!-- LYNCH SELECTION -->
+      <div style="border: 1px solid rgba(200,100,200,0.3); border-radius: 4px; padding: 10px; background: rgba(200,100,200,0.05);">
+        <h4 style="margin: 0 0 8px 0; color: #d966ff; font-size: 11px; font-weight: 600;">🪓 Vote du Village - Au Bûcher!</h4>
+        <p style="margin: 0 0 8px 0; font-size: 10px; color: #ccc;">Qui sera exécuté aujourd'hui?</p>
+        <select id="lynch-target" style="width: 100%; padding: 8px; font-size: 10px; border-radius: 3px; border: 1px solid #555; background: #333; color: #fff; margin-bottom: 8px;">
+          <option value="">-- Sélectionner une victime --</option>
+          ${aliveNonWolfPlayers.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+        </select>
       </div>
     `;
   }
@@ -3583,7 +3843,7 @@ class FirstNightMDJ {
           // Sorcière poison bypasses protection (poison ≠ bite), but wolf kills don't
           const isWolfKill = (action === 'kill');
           const isProtected = protectedPlayers.has(playerId);
-          
+
           if (isWolfKill && isProtected) {
             const playerName = this.getPlayerName(playerId);
             console.log(`[MDJ] 🛡️ ${playerName} (${playerId}) is PROTECTED (immunisé) - wolf attack blocked, no death recorded`);
@@ -3604,6 +3864,16 @@ class FirstNightMDJ {
                   const otherLoverName = this.getPlayerName(otherLoverId);
                   console.log(`[MDJ] 💔 Cascading death: ${otherLoverName} (${otherLoverId}) dies with lover ${playerName}`);
                 }
+              }
+            }
+
+            // Check for Enfant Sauvage idol death - transform to wolf
+            if (this.roleStates['Enfant_Sauvage']?.completed && this.roleStates['Enfant_Sauvage']?.result?.targets?.includes(playerId)) {
+              const enfantPlayer = players.find(p => p.role === 'Enfant_Sauvage');
+              if (enfantPlayer && !this.deadPlayerIds.has(enfantPlayer.id)) {
+                console.log(`[MDJ] 🐒➡️🐺 Enfant Sauvage ${enfantPlayer.name}'s idol ${playerName} died! Transform to wolf`);
+                // TODO: Change player role and re-render map to show wolf visuals
+                // This will need to update the map to show the Enfant_Sauvage now as a wolf
               }
             }
           }
@@ -3722,12 +3992,34 @@ class FirstNightMDJ {
 
   /**
    * Check if all roles are completed
+   * NOTE: Only count roles whose players are ALIVE
+   * Dead players don't need to complete their night actions
    * NOTE: No automatic phase change - user must click "Débat et Vote" button
    */
   checkIfNightComplete() {
-    const allCompleted = Object.values(this.roleStates).every(
-      state => state.completed
-    );
+    const players = this.gm.state.players || [];
+
+    // Only check roles for ALIVE players
+    const allCompleted = Object.entries(this.roleStates).every(([roleId, state]) => {
+      const playerWithRole = players.find(p => p.role === roleId);
+      const isAlive = playerWithRole && !this.deadPlayerIds.has(playerWithRole.id);
+
+      // If player is dead, consider role "completed" (don't wait for them)
+      // Otherwise check if actually completed
+      return !isAlive || state.completed;
+    });
+
+    console.log(`[MDJ] checkIfNightComplete: checking completion status`);
+    console.log(`[MDJ]   - Completed roles:`, Object.entries(this.roleStates).filter(([_, s]) => s.completed).map(([id]) => id));
+    const pendingRoles = Object.entries(this.roleStates)
+      .filter(([roleId, s]) => {
+        const playerWithRole = players.find(p => p.role === roleId);
+        const isAlive = playerWithRole && !this.deadPlayerIds.has(playerWithRole.id);
+        return isAlive && !s.completed;
+      })
+      .map(([id]) => id);
+    console.log(`[MDJ]   - Pending roles (alive players only):`, pendingRoles);
+    console.log(`[MDJ]   - allCompleted: ${allCompleted}`);
 
     if (allCompleted) {
       console.log('[MDJ] ✓ First night complete! Night summary is ready.');
@@ -3742,6 +4034,8 @@ class FirstNightMDJ {
 
       // User clicks "Débat et Vote" button to proceed to day phase
       // No automatic transition - let user review summary first
+    } else {
+      console.log(`[MDJ] ⚠️ Night not complete yet - waiting for remaining roles`);
     }
   }
 

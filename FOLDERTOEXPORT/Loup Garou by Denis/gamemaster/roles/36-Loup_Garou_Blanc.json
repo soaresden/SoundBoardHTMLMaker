@@ -5,7 +5,7 @@
   "camp": "Seul",
   "description": "Rôle: Loup_Garou_Blanc",
   "actions": {
-    "ToutesNuits1sur2": {
+    "ToutesNuitsPaires": {
       "enabled": true,
       "type": "huntSelectively",
       "phase": "everyOtherNight",
@@ -23,12 +23,6 @@
   },
   "pouvoir": "Doit tuer tous les villageois ET tous les loups pour gagner seul.",
   "actionType": "NightActive",
-  "tips": "Cachez votre nature lupine - paraissez villageois à tous les yeux.",
-  "nightActive": [
-    2,
-    4,
-    6,
-    8,
-    10
+  "tips": "Cachez votre nature lupine - paraissez villageois à tous les yeux."
   ]
 }
