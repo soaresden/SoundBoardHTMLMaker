@@ -635,6 +635,40 @@ class FirstNightMDJ {
     `;
 
     listbox.innerHTML = html;
+    
+    // UPDATE RIGHT PANEL WITH NIGHT SUMMARY
+    const titleBig = document.getElementById('action-title-big');
+    const actionControls = document.getElementById('action-controls');
+    const actionInfo = document.getElementById('action-info');
+    
+    if (titleBig) {
+      titleBig.innerHTML = '🌙 Résumé Nuit 1';
+      titleBig.style.background = '#1a3a52';
+    }
+    
+    if (actionControls) {
+      actionControls.innerHTML = `
+        <div style="padding:12px; color:#ccc; font-size:12px;">
+          ${this.getNightSummaryHtml()}
+        </div>
+      `;
+    }
+    
+    if (actionInfo) {
+      actionInfo.innerHTML = `
+        <button id="night-summary-btn-start-vote" class="btn-validate-action"
+                style="width:100%; padding:12px; background:#4CAF50; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600; font-size:12px;">
+          ✓ Débat et Vote
+        </button>
+      `;
+      const voteBtn = actionInfo.querySelector('#night-summary-btn-start-vote');
+      if (voteBtn) {
+        voteBtn.addEventListener('click', () => {
+          console.log('[MDJ] Night summary complete - proceeding to voting phase');
+          this.startVotingPhase();
+        });
+      }
+    }
 
     // Attach click handler to proceed to voting phase
     const nextBtn = listbox.querySelector('#night-summary-btn-next');
@@ -1854,6 +1888,16 @@ class FirstNightMDJ {
         const dot = point.querySelector('.mdj-point-dot');
         if (dot) {
           dot.style.setProperty('--affected-border', 'transparent');
+        }
+        
+        // Restore dead player visual state (grayscale) if needed
+        const isDead = this.deadPlayerIds.has(pointPlayerId);
+        if (isDead) {
+          point.style.filter = 'grayscale(100%) brightness(0.5)';
+          point.style.opacity = '0.6';
+        } else {
+          point.style.filter = 'none';
+          point.style.opacity = '1';
         }
       }
     });
