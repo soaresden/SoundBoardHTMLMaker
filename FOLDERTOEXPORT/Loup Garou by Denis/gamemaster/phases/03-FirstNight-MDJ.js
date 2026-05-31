@@ -3,7 +3,7 @@
  *
  * Mode Maître du Jeu Animé (MDJ) - First Night
  *
- * VERSION: 49
+ * VERSION: 47
  *
  * Layout:
  * - Left: Full-height listbox with role list
@@ -449,14 +449,10 @@ class FirstNightMDJ {
       let isCurrentRole = p.role === this.selectedRoleId;
 
       if (this.selectedRoleId === 'Simple_Loup_Garou') {
-        // All wolves breathe when wolves are deciding on victim
-        // EXCEPT Chien_Loup if they chose to stay villager
-        const isChienLoupStayVillager = p.role === 'Chien_Loup' &&
-          this.roleStates['Chien_Loup']?.result?.targets?.includes('stay_villager');
-
-        isCurrentRole = !isChienLoupStayVillager && p.role && (p.role.includes('Loup') || p.role.includes('Wolf'));
+        // Only Grand_Mechant_Loup breathes, not other wolves
+        isCurrentRole = p.role === 'Grand_Mechant_Loup';
         if (isCurrentRole) {
-          console.log(`[MDJ] 🐺 Wolf pack breathing for: ${p.name} (${p.role}) - selectedRoleId: ${this.selectedRoleId}`);
+          console.log(`[MDJ] 🐺 Grand_Mechant_Loup breathing for: ${p.name} (${p.role})`);
         }
       } else if (p.role === this.selectedRoleId) {
         console.log(`[MDJ] 🫁 Breathing for: ${p.name} (${p.role}) - selectedRoleId: ${this.selectedRoleId}`);
@@ -537,231 +533,111 @@ class FirstNightMDJ {
    * Render Night Summary - Shows completed actions and deaths
    * Replaces the role listbox once all roles are done
    */
-  /**
-   * Called when all night roles are done.
-   * Updates both zones: blue = vote list, pink = Fin Nuit panel.
-   */
   renderNightSummary() {
-    // Persist night kills to gm.state.players so NightMDJ can read them
+    const listbox = document.getElementById('role-listbox');
+    if (!listbox) return;
+
     const players = this.gm.state.players || [];
-    this.deadPlayerIds.forEach(id => {
-      const p = players.find(pl => pl.id === id);
-      if (p) p.isDead = true;
+    const actions = [];
+    const deaths = [];
+
+    // Collect all completed actions
+    Object.entries(this.roleStates).forEach(([roleId, state]) => {
+      if (state.completed && state.result?.targets?.length > 0) {
+        const roleData = this.rolesLoader.getRole(roleId);
+        const roleName = roleData?.name || roleId;
+        const emoji = roleData?.emoji || '❓';
+        const action = state.result.action;
+
+        const targets = state.result.targets
+          .filter(t => !t.startsWith('potion-'))
+          .map(id => this.getPlayerName(id))
+          .join(' et ');
+
+        if (action === 'lover' && targets) {
+          actions.push(`${emoji} ${roleName} a touché ${targets}`);
+        } else if (action === 'idol' && targets) {
+          actions.push(`${emoji} ${roleName} a désigné ${targets}`);
+        } else if (action === 'see_role' && targets) {
+          actions.push(`${emoji} ${roleName} a vu ${targets}`);
+        } else if (action === 'protect' && targets) {
+          actions.push(`${emoji} ${roleName} a protégé ${targets}`);
+        } else if (action === 'sniff' && targets) {
+          actions.push(`${emoji} ${roleName} a reniflé ${targets}`);
+        }
+      }
     });
 
-    // Blue zone: vote player list
-    this._renderDayVoteListbox();
-    // Pink zone: Fin Nuit debrief
-    this.renderDayDebriefPanel();
-  }
-
-  /**
-   * Render the day vote player list in the blue (center) zone.
-   * Shows all alive players as selectable vote targets.
-   */
-  /**
-   * Render the day vote player list in the CENTER panel (replaces role-listbox zone).
-   * Shows ALL players: alive = selectable, dead = grayed out.
-   * Uses a dedicated "DayListPeople" container to avoid conflicts with role-listbox handlers.
-   */
-  _renderDayVoteListbox() {
-    const centerPanel = document.querySelector('.mdj-center-panel');
-    if (!centerPanel) return;
-    if (this._dayVoteKilled) return;
-
-    const players = this.gm.state.players || [];
-
-    const itemsHtml = players.map(p => {
-      const isDead = this.deadPlayerIds.has(p.id);
+    // Collect all deaths
+    const deadPlayers = players.filter(p => this.deadPlayerIds.has(p.id));
+    deadPlayers.forEach(p => {
       const roleData = this.rolesLoader.getRole(p.role);
-      const isSelected = this._dayVoteSelectedId === p.id;
-      return `
-        <div class="day-list-person ${isDead ? 'dead' : ''} ${isSelected ? 'selected' : ''}"
-             data-player-id="${p.id}"
-             style="display:flex; align-items:center; gap:8px; padding:8px 10px;
-                    margin-bottom:4px; border-radius:5px;
-                    background:${isSelected ? 'rgba(230,126,34,0.25)' : isDead ? 'rgba(60,60,60,0.2)' : 'rgba(255,255,255,0.06)'};
-                    border:2px solid ${isSelected ? '#e67e22' : 'transparent'};
-                    opacity:${isDead ? '0.45' : '1'};
-                    cursor:${isDead ? 'not-allowed' : 'pointer'};
-                    transition:all 0.12s ease;">
-          <span style="font-size:1.1em;">${isDead ? '💀' : roleData?.emoji || '👤'}</span>
-          <span style="font-weight:600; font-size:0.85em; color:${isDead ? '#888' : '#f0f0f0'};">${p.name}</span>
-          ${isSelected ? '<span style="margin-left:auto; color:#e67e22;">☞</span>' : ''}
-        </div>`;
-    }).join('');
+      const emoji = roleData?.emoji || '❓';
 
-    centerPanel.innerHTML = `
-      <div id="day-list-people" style="display:flex; flex-direction:column; height:100%; padding:8px;">
-        <div style="font-size:0.7em; font-weight:700; color:#e0a070; text-transform:uppercase;
-                    letter-spacing:1px; padding:4px 6px; margin-bottom:6px;
-                    border-bottom:1px solid rgba(230,126,34,0.3);">
-          ⚖️ Vote du Village
-        </div>
-        <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column;">
-          ${itemsHtml}
-        </div>
-      </div>`;
+      let cause = 'Cause inconnue';
+      if (this.roleStates['Grand_Mechant_Loup']?.result?.targets?.includes(p.id)) {
+        cause = 'Dévoré par le Grand Méchant Loup';
+      } else if (this.roleStates['Sorciere']?.result?.targets?.includes(p.id)) {
+        cause = 'Tué par la potion de la Sorcière';
+      } else {
+        cause = 'Dévoré par les Loups';
+      }
 
-    centerPanel.querySelectorAll('.day-list-person:not(.dead)').forEach(item => {
-      item.addEventListener('click', () => {
-        this._dayVoteSelectedId = item.dataset.playerId;
-        this._renderDayVoteListbox();
-        this._updateDayVotePinkArea();
+      deaths.push({
+        name: p.name,
+        emoji: emoji,
+        cause: cause
       });
     });
-  }
 
-  /**
-   * Update the vote section (actionInfo) in the pink zone.
-   * Shows selected player info + cascading effects preview + Tuer button.
-   */
-  _updateDayVotePinkArea() {
-    const actionInfo = document.getElementById('action-info');
-    if (!actionInfo || this._dayVoteKilled) return;
+    const actionsHtml = actions.length > 0
+      ? actions.map(action => `<div style="padding:8px; background:rgba(100,150,200,0.2); border-left:3px solid #81dff7; margin-bottom:6px; font-size:11px; border-radius:2px;">${action}</div>`).join('')
+      : '<div style="padding:12px; text-align:center; color:#aaa; font-size:11px;">Aucune action spéciale</div>';
 
-    if (!this._dayVoteSelectedId) {
-      actionInfo.innerHTML = `<div style="text-align:center; color:#888; font-size:0.85em; padding:8px 0;">Sélectionnez un joueur</div>`;
-      return;
-    }
+    const deathsHtml = deaths.length > 0
+      ? deaths.map(d => `
+          <div style="padding:8px; background:rgba(212,102,102,0.2); border-left:3px solid #ff9999; margin-bottom:6px; font-size:11px; border-radius:2px;">
+            <strong>${d.emoji} ${d.name}</strong><br>
+            <span style="color:#ff9999; font-size:10px;">${d.cause}</span>
+          </div>
+        `).join('')
+      : '<div style="padding:12px; text-align:center; color:#aaa; font-size:11px;">Aucune mort cette nuit</div>';
 
-    const players = this.gm.state.players || [];
-    const player = players.find(p => p.id === this._dayVoteSelectedId);
-    if (!player) return;
-    const roleData = this.rolesLoader.getRole(player.role);
+    const html = `
+      <div style="display:flex; flex-direction:column; height:100%; background:rgba(0,0,0,0.3); border-radius:6px; overflow:hidden;">
+        <div style="flex:1; overflow-y:auto; padding:12px;">
+          <div style="margin-bottom:12px;">
+            <h3 style="margin:0 0 8px 0; color:#81dff7; font-size:12px; font-weight:600; border-bottom:2px solid #81dff7; padding-bottom:6px;">
+              📋 Actions de la Nuit
+            </h3>
+            ${actionsHtml}
+          </div>
 
-    // Cascading effects preview
-    const cascades = [];
-    const cupidonLovers = this.roleStates['Cupidon']?.result?.targets || [];
-    if (cupidonLovers.includes(player.id) && cupidonLovers.length === 2) {
-      const otherId = cupidonLovers.find(id => id !== player.id);
-      const otherName = this.getPlayerName(otherId);
-      cascades.push(`💔 ${otherName} meurt par amour`);
-    }
-    const idolTargets = this.roleStates['Enfant_Sauvage']?.result?.targets || [];
-    if (idolTargets.includes(player.id)) {
-      const enfant = players.find(p => p.role === 'Enfant_Sauvage');
-      if (enfant) cascades.push(`🐒→🐺 ${enfant.name} devient Loup Garou`);
-    }
-    const cascadeHtml = cascades.length > 0
-      ? `<div style="margin-bottom:8px; padding:6px 8px; background:rgba(150,80,30,0.2);
-                     border-left:2px solid #e67e22; border-radius:3px; font-size:0.75em; color:#ffb87a;">
-           ${cascades.map(c => `<div>${c}</div>`).join('')}
-         </div>`
-      : '';
-
-    actionInfo.innerHTML = `
-      <div style="padding:8px 10px; background:rgba(180,50,30,0.2); border:1px solid rgba(220,80,40,0.4);
-                  border-radius:6px; margin-bottom:8px;">
-        <div style="font-size:0.85em; color:#aaa; margin-bottom:2px;">Sera sacrifié au bûcher :</div>
-        <div style="font-size:1em; font-weight:700; color:#ffcdd2;">${roleData?.emoji || '👤'} ${player.name}</div>
-        <div style="font-size:0.75em; color:#aaa;">${roleData?.name || player.role}</div>
-      </div>
-      ${cascadeHtml}
-      <button id="btn-day-kill"
-              style="width:100%; padding:12px; background:linear-gradient(135deg,#c0392b,#96281b);
-                     color:white; border:none; border-radius:6px; cursor:pointer;
-                     font-weight:700; font-size:13px;">
-        💀 Confirmer le sacrifice
-      </button>`;
-
-    document.getElementById('btn-day-kill')?.addEventListener('click', () => {
-      this._executeDayKill(player.id);
-    });
-  }
-
-  /**
-   * Execute the day vote kill: mark player(s) dead, compute cascades, show Night transition.
-   */
-  _executeDayKill(playerId) {
-    const players = this.gm.state.players || [];
-    const player = players.find(p => p.id === playerId);
-    if (!player) return;
-
-    // Mark primary kill
-    this.deadPlayerIds.add(playerId);
-    player.isDead = true;
-    this._dayVoteKilled = true;
-
-    // Compute cascading effects
-    const dayKillNotes = [];
-    const roleData = this.rolesLoader.getRole(player.role);
-    dayKillNotes.push(`☠️ ${player.name} (${roleData?.name || player.role}) a été sacrifié`);
-
-    // Cupidon: other lover dies
-    const cupidonLovers = this.roleStates['Cupidon']?.result?.targets || [];
-    if (cupidonLovers.includes(playerId) && cupidonLovers.length === 2) {
-      const otherId = cupidonLovers.find(id => id !== playerId);
-      const other = players.find(p => p.id === otherId);
-      if (other && !this.deadPlayerIds.has(otherId)) {
-        this.deadPlayerIds.add(otherId);
-        other.isDead = true;
-        const otherRole = this.rolesLoader.getRole(other.role);
-        dayKillNotes.push(`💔 ${other.name} (${otherRole?.name || other.role}) meurt par amour`);
-      }
-    }
-
-    // Enfant_Sauvage: idol dies → enfant becomes wolf
-    const idolTargets = this.roleStates['Enfant_Sauvage']?.result?.targets || [];
-    if (idolTargets.includes(playerId)) {
-      const enfant = players.find(p => p.role === 'Enfant_Sauvage' && !this.deadPlayerIds.has(p.id));
-      if (enfant) {
-        enfant.role = 'Simple_Loup_Garou';
-        const enfantRole = this.rolesLoader.getRole('Simple_Loup_Garou');
-        dayKillNotes.push(`🐒→🐺 ${enfant.name} devient Loup Garou !`);
-      }
-    }
-
-    // Update map with all dead players
-    this.renderLiveMap();
-    this.restoreCompletedRoleEffects();
-
-    // Update center panel: sleep message
-    const centerPanel = document.querySelector('.mdj-center-panel');
-    if (centerPanel) {
-      centerPanel.innerHTML = `
-        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center;
-                    height:100%; text-align:center; padding:24px; gap:10px;">
-          <div style="font-size:3em;">😴</div>
-          <div style="font-weight:700; color:#c8a0e0; font-size:1em;">Endormez-vous…</div>
-          <div style="font-size:0.8em; color:#888;">Nuit ${this.currentNight + 1} arrive</div>
-        </div>`;
-    }
-
-    // Update pink zone with Jour summary + Night button
-    const titleBig = document.getElementById('action-title-big');
-    if (titleBig) {
-      titleBig.innerHTML = `☀️ Jour ${this.currentNight}`;
-      titleBig.style.background = 'linear-gradient(135deg,#2a1800,#5a3000)';
-      titleBig.style.color = '#ffd080';
-    }
-
-    const actionControls = document.getElementById('action-controls');
-    if (actionControls) {
-      const notesHtml = dayKillNotes.map(n => `
-        <div style="padding:5px 8px; font-size:0.82em; background:rgba(200,80,30,0.15);
-                    border-left:2px solid #e67e22; border-radius:2px; margin-bottom:5px; color:#ffcdd2;">
-          ${n}
-        </div>`).join('');
-      actionControls.innerHTML = `
-        <div style="font-size:0.7em; font-weight:700; color:#e0a070; text-transform:uppercase;
-                    letter-spacing:1px; margin-bottom:8px; border-bottom:1px solid rgba(230,126,34,0.3); padding-bottom:4px;">
-          📋 Résultat du Vote
+          <div>
+            <h3 style="margin:0 0 8px 0; color:#ff9999; font-size:12px; font-weight:600; border-bottom:2px solid #ff9999; padding-bottom:6px;">
+              ☠️ Décès
+            </h3>
+            ${deathsHtml}
+          </div>
         </div>
-        ${notesHtml}`;
-    }
 
-    const actionInfo = document.getElementById('action-info');
-    if (actionInfo) {
-      actionInfo.innerHTML = `
-        <button id="btn-start-night2"
-                style="width:100%; padding:12px; background:linear-gradient(135deg,#2d1060,#4a1080);
-                       color:#c8a0ff; border:1px solid #6a30a0; border-radius:6px; cursor:pointer;
-                       font-weight:700; font-size:13px;">
-          🌙 Commencer Nuit ${this.currentNight + 1}
-        </button>`;
-      document.getElementById('btn-start-night2')?.addEventListener('click', () => {
-        this.gm.changePhase('night');
+        <div style="padding:12px; border-top:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.5);">
+          <button id="night-summary-btn-next" class="btn-night-complete"
+                  style="width:100%; padding:12px; background:#4CAF50; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600; font-size:12px;">
+            ✓ Débat et Vote
+          </button>
+        </div>
+      </div>
+    `;
+
+    listbox.innerHTML = html;
+
+    // Attach click handler to proceed to next phase
+    const nextBtn = listbox.querySelector('#night-summary-btn-next');
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => {
+        console.log('[MDJ] Night summary complete - starting mayor election for first day');
+        this.startMayorElection();
       });
     }
   }
@@ -922,41 +798,36 @@ class FirstNightMDJ {
     const players = this.gm.state.players || [];
     const alivePlayers = this.playerRegistry.getAlive();
 
-    // ZONE BLEUE: List of alive players only (with mayor medal if applicable)
-    const playerListHtml = alivePlayers
+    // ZONE BLEUE: Combobox for vote selection (with mayor medal if applicable)
+    const voteComboboxHtml = alivePlayers
       .map(p => {
         const roleData = this.rolesLoader.getRole(p.role);
-        const isSelected = this.selectedLynchVictimId === p.id;
         const isMayor = this.mayorId && this.mayorId === p.id;
         const displayName = isMayor ? `🎖️ ${p.name}` : p.name;
-
-        return `
-          <div class="listbox-item ${isSelected ? 'selected' : ''}"
-               data-player-id="${p.id}"
-               style="background: ${isSelected ? '#e74c3c' : 'rgba(255,255,255,0.1)'}; cursor: pointer;">
-            <span class="item-icon">${roleData?.emoji || '❓'}</span>
-            <span class="item-name">${displayName}</span>
-            ${isSelected ? '<span class="item-status">✓</span>' : ''}
-          </div>
-        `;
+        const isSelected = this.selectedLynchVictimId === p.id;
+        return `<option value="${p.id}" ${isSelected ? 'selected' : ''}>${displayName}</option>`;
       })
       .join('');
 
     listbox.innerHTML = `
       <div style="padding: 12px; color: #fff; border-bottom: 1px solid rgba(255,255,255,0.1);">
         <h3 style="margin: 0 0 8px 0; color: #e74c3c; font-size: 14px;">🗳️ Vote du Jour</h3>
-        <p style="margin: 0; font-size: 11px; color: #aaa;">Joueurs vivants</p>
+        <p style="margin: 0; font-size: 11px; color: #aaa;">Sélectionnez le joueur à éliminer:</p>
       </div>
-      ${playerListHtml}
+      <select class="day-vote-combobox" style="width: 100%; padding: 8px; margin: 8px 12px; font-size: 0.9rem; background: rgba(0,0,0,0.3); color: white; border: 1px solid #e74c3c; border-radius: 3px;">
+        <option value="">-- Choisir --</option>
+        ${voteComboboxHtml}
+      </select>
     `;
 
-    // Attach click handlers
-    listbox.querySelectorAll('.listbox-item').forEach(item => {
-      item.addEventListener('click', () => {
-        this.selectedLynchVictimId = item.dataset.playerId;
+    // Attach change handler
+    const voteCombobox = listbox.querySelector('.day-vote-combobox');
+    if (voteCombobox) {
+      voteCombobox.addEventListener('change', () => {
+        this.selectedLynchVictimId = voteCombobox.value || null;
         this.startVotingPhase(); // Re-render
       });
-    });
+    }
 
     // ZONE ROSE: Night summary + voting controls with 2-column table
     if (titleBig) {
@@ -1559,10 +1430,6 @@ class FirstNightMDJ {
           actionControls.innerHTML = controlsHtml || '<p class="no-actions">Aucune action</p>';
         }
     }
-
-    // Always ensure map breathing is correct after any action render
-    const mdjMapForBreath = document.getElementById('mdj-live-map');
-    if (mdjMapForBreath) this._ensureBreathing(mdjMapForBreath);
   }
 
   /**
@@ -2026,8 +1893,13 @@ class FirstNightMDJ {
           }
         });
 
-        // Apply border to selected players
+        // Apply border to selected players (but NOT if they have completed role effects)
         this.selectedPlayers.forEach(playerId => {
+          // Don't apply Voyante border if player already has completed role effect (Salvateur, idol, etc)
+          if (playersWithCompletedEffects.has(playerId)) {
+            console.log(`[MDJ] Voyante - skipping border for ${playerId} (already has completed role effect)`);
+            return;
+          }
           const point = mdjMap.querySelector(`[data-player-id="${playerId}"]`);
           if (point && voyanteBorderColor) {
             point.classList.add('affected');
@@ -2095,10 +1967,8 @@ class FirstNightMDJ {
         const selectedNames = this.selectedPlayers.map(id => this.getPlayerName(id)).join(', ');
         console.log(`[MDJ] 🐺 Selected to kill: ${selectedNames || '(none)'}`);
 
-        // Restore emojis for non-selected players that have originalEmoji saved
-        // NOTE: .killed class may already be removed by the general cleanup above, so
-        // we query all player points with originalEmoji, not just .killed ones
-        mdjMap.querySelectorAll('.mdj-player-point[data-original-emoji]').forEach(point => {
+        // Restore emojis for non-selected players
+        mdjMap.querySelectorAll('.mdj-player-point.killed').forEach(point => {
           const playerId = point.dataset.playerId;
           const isSelected = this.selectedPlayers.includes(playerId);
 
@@ -2106,7 +1976,7 @@ class FirstNightMDJ {
             point.classList.remove('killed');
             const emoji = point.querySelector('.mdj-point-emoji');
             const originalEmoji = point.dataset.originalEmoji;
-            if (emoji && originalEmoji && emoji.textContent !== originalEmoji) {
+            if (emoji && originalEmoji) {
               emoji.textContent = originalEmoji;
               emoji.style.opacity = '1';
             }
@@ -2243,56 +2113,6 @@ class FirstNightMDJ {
         }
         break;
     }
-
-    // Always re-ensure breathing on the current role's player(s) after any map update
-    this._ensureBreathing(mdjMap);
-  }
-
-  /**
-   * Re-apply breathing class to the player(s) for the currently selected role.
-   * Called after every map manipulation to prevent CSS animation loss.
-   */
-  _ensureBreathing(mdjMap) {
-    if (!this.selectedRoleId || !mdjMap) return;
-    const players = this.gm.state.players || [];
-    const wolfRoles = ['Simple_Loup_Garou', 'Grand_Mechant_Loup', 'Loup_Garou_Blanc'];
-    const isWolfPhase = wolfRoles.includes(this.selectedRoleId);
-
-    // First: remove breathing from players that shouldn't breathe
-    mdjMap.querySelectorAll('.mdj-player-point.breathing').forEach(point => {
-      const pid = point.dataset.playerId;
-      const player = players.find(p => p.id === pid);
-      if (!player) { point.classList.remove('breathing'); return; }
-      if (isWolfPhase) {
-        const isChienLoupStay = player.role === 'Chien_Loup' &&
-          this.roleStates['Chien_Loup']?.result?.targets?.includes('stay_villager');
-        const isWolf = (player.role.includes('Loup') || player.role.includes('Wolf')) && !isChienLoupStay;
-        if (!isWolf) point.classList.remove('breathing');
-      } else {
-        if (player.role !== this.selectedRoleId) point.classList.remove('breathing');
-      }
-    });
-
-    // Then: add breathing to the correct players
-    if (isWolfPhase) {
-      players.forEach(p => {
-        if (!p.role || this.deadPlayerIds.has(p.id)) return;
-        const isChienLoupStay = p.role === 'Chien_Loup' &&
-          this.roleStates['Chien_Loup']?.result?.targets?.includes('stay_villager');
-        const isWolf = (p.role.includes('Loup') || p.role.includes('Wolf')) && !isChienLoupStay;
-        if (isWolf) {
-          const point = mdjMap.querySelector(`[data-player-id="${p.id}"]`);
-          if (point && !point.classList.contains('breathing')) point.classList.add('breathing');
-        }
-      });
-    } else {
-      players.forEach(p => {
-        if (p.role === this.selectedRoleId && !this.deadPlayerIds.has(p.id)) {
-          const point = mdjMap.querySelector(`[data-player-id="${p.id}"]`);
-          if (point && !point.classList.contains('breathing')) point.classList.add('breathing');
-        }
-      });
-    }
   }
 
   /**
@@ -2322,9 +2142,6 @@ class FirstNightMDJ {
     // IMPORTANT: Do NOT clear other role effects!
     // Other completed roles' borders should remain visible alongside Cupidon's selection
     console.log('[MDJ] Cupidon map updated - preserving other role borders');
-
-    // Re-ensure breathing on Cupidon's player
-    this._ensureBreathing(mdjMap);
   }
 
   /**
@@ -2382,16 +2199,6 @@ class FirstNightMDJ {
 
         this.renderActionButtons();
         this.updateMapForRole();
-
-        // Re-apply breathing on Enfant_Sauvage player (updateMapForRole can disrupt it)
-        const enfantPlayer = this.gm.state.players?.find(p => p.role === 'Enfant_Sauvage');
-        if (enfantPlayer) {
-          const mdjMapEl = document.getElementById('mdj-live-map');
-          const enfantPoint = mdjMapEl?.querySelector(`[data-player-id="${enfantPlayer.id}"]`);
-          if (enfantPoint && !enfantPoint.classList.contains('breathing')) {
-            enfantPoint.classList.add('breathing');
-          }
-        }
       });
     });
 
@@ -3005,24 +2812,24 @@ class FirstNightMDJ {
           ${resurrectIcon} Potion Vie - La sauver
         </button>
 
+        <button class="potion-btn do-nothing-btn ${selectedAction === 'do-nothing' ? 'selected' : ''}" style="background: ${selectedAction === 'do-nothing' ? 'rgba(100,100,100,0.5)' : 'rgba(100,100,100,0.3)'}; border: 2px solid #999;">
+          ⏭️ Ne rien faire
+        </button>
+
         <div style="color: #aaa; font-size: 0.7rem; margin: 8px 0; text-align: center;">─── ou ───</div>
 
         <div style="color: white; font-size: 0.75rem; margin-bottom: 8px; padding: 6px; background: rgba(0,0,0,0.2); border-radius: 4px;">
-          Tuer un autre joueur:
+          Empoisonner un joueur:
         </div>
-        <div class="sorciere-kill-list" style="display: flex; flex-direction: column; gap: 3px; max-height: 150px; overflow-y: auto;">
-          ${this.playerRegistry.getAlive().map(p => {
+        <select class="sorciere-kill-combobox" style="width: 100%; padding: 6px; font-size: 0.8rem; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 3px;">
+          <option value="">-- Choisir un joueur --</option>
+          ${this.playerRegistry.getAlive().filter(p => p.role !== 'Sorciere').map(p => {
             const isProtected = protectedPlayers.has(p.id);
-            const protectedLabel = isProtected ? ' <span style="color: #ff9999; font-weight: bold;">(immunisé)</span>' : '';
-            return `
-            <button class="sorciere-kill-btn ${selectedAction === 'potion-death' && selectedKillTarget === p.id ? 'selected' : ''}"
-                    data-player-id="${p.id}"
-                    style="padding: 4px 8px; font-size: 0.7rem; background: ${selectedAction === 'potion-death' && selectedKillTarget === p.id ? bgColor + '50' : 'rgba(255,255,255,0.08)'}; border: 1px solid ${selectedAction === 'potion-death' && selectedKillTarget === p.id ? bgColor : 'rgba(255,255,255,0.2)'}; border-radius: 3px; color: white; cursor: pointer; text-align: left;">
-              ${p.name}${protectedLabel}
-            </button>
-          `;
+            const protectedLabel = isProtected ? ' (immunisé)' : '';
+            const isSelected = selectedAction === 'potion-death' && selectedKillTarget === p.id;
+            return `<option value="${p.id}" ${isSelected ? 'selected' : ''}>${p.name}${protectedLabel}</option>`;
           }).join('')}
-        </div>
+        </select>
       </div>
     `;
 
@@ -3076,10 +2883,33 @@ class FirstNightMDJ {
       }
     });
 
-    // Kill buttons - select who to kill
-    actionControls.querySelectorAll('.sorciere-kill-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const playerId = btn.dataset.playerId;
+    // Do-nothing button
+    actionControls.querySelector('.do-nothing-btn')?.addEventListener('click', () => {
+      this.selectedPlayers = ['do-nothing'];
+
+      // Setup actionState for validation
+      this.actionState = {
+        roleId: 'Sorciere',
+        action: 'skip',
+        roleName: sorciereRole?.name || 'Sorciere',
+        roleEmoji: sorciereRole?.emoji || '🧙‍♀️'
+      };
+
+      this.renderActionButtons();
+      console.log(`[MDJ] 🧙‍♀️ Sorciere: Ne rien faire`);
+    });
+
+    // Combobox for kill selection
+    const combobox = actionControls.querySelector('.sorciere-kill-combobox');
+    if (combobox) {
+      combobox.addEventListener('change', () => {
+        const playerId = combobox.value;
+        if (!playerId) {
+          this.selectedPlayers = [];
+          this.renderActionButtons();
+          return;
+        }
+
         const playerName = this.getPlayerName(playerId);
         console.log(`[MDJ] 🧙‍♀️ Sorciere: ${playerName} selected for poison`);
 
@@ -3125,7 +2955,7 @@ class FirstNightMDJ {
         this.updateMapForRole();
         console.log(`[MDJ] 🧙‍♀️ Sorciere visuals applied for ${playerName}`);
       });
-    });
+    }
 
     if (actionInfo) {
       if (this.selectedPlayers.length > 0) {
@@ -3753,114 +3583,12 @@ class FirstNightMDJ {
       console.log(`[MDJ] Auto-selecting next role with action: ${nextRoleWithAction}`);
       this.selectRole(nextRoleWithAction);
     } else {
+      this.renderActionButtons();
       console.log(`[MDJ] No more roles with actions - night summary will display`);
-      this.renderDayDebriefPanel();
     }
 
     // Check if all roles are done
     this.checkIfNightComplete();
-  }
-
-  /**
-   * Render the day debrief panel in the pink (action) zone
-   * Shown when all night role actions are complete
-   */
-  /**
-   * Render the "Fin Nuit X" panel in the pink (right) zone.
-   * Shows a 2-column table: Night Events | Deaths, plus the vote interaction area.
-   */
-  renderDayDebriefPanel() {
-    this._dayVoteSelectedId = this._dayVoteSelectedId || null;
-    this._dayVoteKilled = this._dayVoteKilled || false;
-
-    const titleBig = document.getElementById('action-title-big');
-    const actionControls = document.getElementById('action-controls');
-    const actionInfo = document.getElementById('action-info');
-
-    if (titleBig) {
-      titleBig.innerHTML = `🌅 Fin Nuit ${this.currentNight}`;
-      titleBig.style.background = 'linear-gradient(135deg, #1a0a2e, #2d1860)';
-      titleBig.style.color = '#e8d0ff';
-    }
-
-    const players = this.gm.state.players || [];
-    const cupidonLovers = this.roleStates['Cupidon']?.result?.targets || [];
-
-    // ── Collect events (compact, one line each) ───────────────────────────────
-    const events = [];
-    const skipActions = new Set(['kill', 'poison', 'resurrect']);
-    Object.entries(this.roleStates).forEach(([roleId, state]) => {
-      if (!state.completed || !state.result) return;
-      const action = state.result.action;
-      if (skipActions.has(action)) return;
-      const roleData = this.rolesLoader.getRole(roleId);
-      const emoji = roleData?.emoji || '❓';
-      const targets = (state.result.targets || [])
-        .filter(t => !t.startsWith('potion-') && t !== 'join_wolves' && t !== 'stay_villager')
-        .map(id => this.getPlayerName(id)).filter(Boolean);
-      let text = '';
-      if (action === 'lover' && targets.length)          text = `${emoji} ${targets.join(' & ')}`;
-      else if (action === 'idol' && targets.length)      text = `${emoji} → ${targets[0]}`;
-      else if (action === 'see_role' && targets.length)  text = `${emoji} → ${targets[0]}`;
-      else if (action === 'protect' && targets.length)   text = `${emoji} → ${targets[0]}`;
-      else if (action === 'sniff' && targets.length)     text = `${emoji} → ${targets.join(',')}`;
-      else if (action === 'steal_votes' && targets.length) text = `${emoji} → ${targets[0]}`;
-      else if (action === 'join_wolves')                 text = `${emoji} → 🐺`;
-      else if (action === 'stay_villager')               text = `${emoji} → 🏘️`;
-      if (text) events.push(text);
-    });
-
-    // ── Collect deaths with human-readable cause ───────────────────────────────
-    const deaths = [];
-    this.deadPlayerIds.forEach(playerId => {
-      const p = players.find(pl => pl.id === playerId);
-      if (!p) return;
-      let cause = 'par les Loups';
-      if (this.roleStates['Grand_Mechant_Loup']?.result?.targets?.includes(playerId))
-        cause = 'par le Grand Méchant Loup';
-      if (this.roleStates['Sorciere']?.result?.action === 'poison' &&
-          this.roleStates['Sorciere']?.result?.targets?.includes(playerId))
-        cause = 'par la Sorcière';
-      if (cupidonLovers.includes(playerId) && cupidonLovers.length === 2) {
-        const otherId = cupidonLovers.find(id => id !== playerId);
-        const otherName = this.getPlayerName(otherId);
-        if (this.deadPlayerIds.has(otherId) && otherId !== playerId) {
-          cause = `par amour avec ${otherName}`;
-        }
-      }
-      deaths.push({ name: p.name, cause });
-    });
-
-    // ── Compact 2-col layout ──────────────────────────────────────────────────
-    const col = 'flex:1; min-width:0; background:rgba(0,0,0,0.2); border-radius:5px; padding:8px; overflow-y:auto;';
-    const hdr = 'font-size:0.65em; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; padding-bottom:4px;';
-    const row = 'font-size:0.78em; padding:3px 5px; margin-bottom:3px; border-left:2px solid; border-radius:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;';
-
-    const evHtml = events.length
-      ? events.map(e => `<div style="${row} color:#c8e0ff; border-color:#5080c0; background:rgba(80,130,200,0.1);">${e}</div>`).join('')
-      : `<div style="font-size:0.75em; color:#555; text-align:center; padding:4px;">—</div>`;
-
-    const dtHtml = deaths.length
-      ? deaths.map(d => `<div style="${row} color:#ffcdd2; border-color:#c05050; background:rgba(180,40,40,0.12);">${d.name} <span style="color:#ff9999;font-size:0.85em;">(${d.cause})</span></div>`).join('')
-      : `<div style="font-size:0.75em; color:#555; text-align:center; padding:4px;">🌙 Aucune</div>`;
-
-    if (actionControls) {
-      actionControls.innerHTML = `
-        <div style="display:flex; gap:6px; height:100%; min-height:0;">
-          <div style="${col}">
-            <div style="${hdr} color:#81b4f7; border-bottom:1px solid rgba(80,130,200,0.3);">📋 Événements</div>
-            ${evHtml}
-          </div>
-          <div style="${col}">
-            <div style="${hdr} color:#ff9999; border-bottom:1px solid rgba(180,40,40,0.3);">☠️ Morts</div>
-            ${dtHtml}
-          </div>
-        </div>`;
-    }
-
-    if (actionInfo) {
-      actionInfo.innerHTML = `<div style="text-align:center; color:#777; font-size:0.82em; padding:6px 0;">⚖️ Sélectionnez un joueur</div>`;
-    }
   }
 
   /**
@@ -4576,10 +4304,23 @@ class FirstNightMDJ {
         border-radius: 4px;
       }
 
-      .role-list-blue::-webkit-scrollbar { width: 3px; }
-      .role-list-blue::-webkit-scrollbar-track { background: rgba(255,255,255,0.08); border-radius: 1px; }
-      .role-list-blue::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.25); border-radius: 1px; }
-      .role-list-blue::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.4); }
+      .role-list-blue::-webkit-scrollbar {
+        width: 3px;
+      }
+
+      .role-list-blue::-webkit-scrollbar-track {
+        background: rgba(255,255,255,0.08);
+        border-radius: 1px;
+      }
+
+      .role-list-blue::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,0.25);
+        border-radius: 1px;
+      }
+
+      .role-list-blue::-webkit-scrollbar-thumb:hover {
+        background: rgba(255,255,255,0.4);
+      }
 
       .progress-bar {
         text-align: center;
@@ -4590,6 +4331,12 @@ class FirstNightMDJ {
         background: rgba(255,255,255,0.08);
         border-radius: 6px;
         flex-shrink: 0;
+      }
+
+      .progress {
+        font-size: 0.8rem;
+        color: #e0e0f0;
+        font-weight: 600;
       }
 
       .listbox-item {
@@ -4612,7 +4359,11 @@ class FirstNightMDJ {
         line-height: 1;
       }
 
-      .listbox-item:hover { background: rgba(255,255,255,0.2); transform: translateX(3px); }
+      .listbox-item:hover {
+        background: rgba(255,255,255,0.2);
+        transform: translateX(3px);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+      }
 
       .listbox-item.selected {
         border-color: white;
@@ -4625,17 +4376,179 @@ class FirstNightMDJ {
         filter: drop-shadow(0 0 8px rgba(255, 180, 0, 0.8));
       }
 
-      .listbox-item.completed { opacity: 0.4; text-decoration: line-through; }
-
-      @keyframes roleListBreathing {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.03); }
+      .listbox-item.completed {
+        opacity: 0.4;
+        text-decoration: line-through;
       }
 
-      .item-icon { font-size: 0.85rem; flex-shrink: 0; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; }
-      .item-name { flex: 1; font-size: 0.65rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .item-status { font-size: 0.7rem; margin-left: auto; flex-shrink: 0; }
+      @keyframes roleListBreathing {
+        0%, 100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.03);
+        }
+      }
 
+      .item-icon {
+        font-size: 0.85rem;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+      }
+
+      .item-name {
+        flex: 1;
+        font-size: 0.65rem;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .item-status {
+        font-size: 0.7rem;
+        margin-left: auto;
+        flex-shrink: 0;
+      }
+
+      /* Bubble/affected state styles for drag-drop mechanic */
+      .bubble-action {
+        position: fixed;
+        pointer-events: none;
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0.9;
+        border-radius: 50%;
+        font-size: 2rem;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      }
+
+      .mdj-player-point.drag-over .mdj-point-dot {
+        animation: playerPulse 0.5s ease-in-out;
+      }
+
+      @keyframes playerPulse {
+        0%, 100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.3);
+        }
+      }
+
+      /* Selection display for action confirmation */
+      .selected-display {
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 8px;
+        padding: 12px;
+        color: white;
+        font-size: 0.9rem;
+        margin-top: 8px;
+      }
+
+      .selection-info {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .selection-info p {
+        margin: 0;
+        font-size: 0.9rem;
+      }
+
+      .selected-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 6px;
+      }
+
+      .tag {
+        display: inline-block;
+        padding: 4px 10px;
+        background: rgba(255,255,255,0.2);
+        color: white;
+        border-radius: 16px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        border: 1px solid rgba(255,255,255,0.3);
+      }
+
+      .complete-action-btn {
+        width: 100%;
+        padding: 10px;
+        background: rgba(76,175,80,0.8);
+        color: white;
+        border: 2px solid rgba(100,200,100,0.6);
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 0.9rem;
+        transition: all 0.2s ease;
+        margin-top: 8px;
+      }
+
+      .complete-action-btn:hover {
+        background: rgba(100,200,100,0.9);
+        transform: scale(1.05);
+      }
+
+      /* Cupidon Lover Selection */
+      .cupidon-player-option {
+        padding: 10px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: all 0.2s ease;
+        background: rgba(255,255,255,0.08);
+        flex-shrink: 0;
+        min-height: 36px;
+      }
+
+      .cupidon-player-option:hover {
+        background: rgba(255,255,255,0.15);
+        transform: translateX(3px);
+      }
+
+      .cupidon-player-option.selected {
+        border: 2px solid;
+        box-shadow: 0 0 12px rgba(255,215,0,0.4);
+      }
+
+      .player-emoji {
+        font-size: 1rem;
+        flex-shrink: 0;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .player-name {
+        flex: 1;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: white;
+      }
+
+      .selection-checkmark {
+        font-size: 1.2rem;
+        color: #4CAF50;
+        flex-shrink: 0;
+      }
+
+      /* Generic role action button */
       .role-action-btn {
         padding: 5px 8px;
         border-radius: 3px;
@@ -4649,27 +4562,55 @@ class FirstNightMDJ {
         font-size: 0.7rem;
       }
 
-      .role-action-btn:hover { background: rgba(255,255,255,0.15) !important; transform: translateX(2px); }
+      .role-action-btn:hover {
+        background: rgba(255,255,255,0.15) !important;
+        transform: translateX(2px);
+      }
 
-      .btn-emoji { font-size: 0.85rem; flex-shrink: 0; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; }
-      .btn-name { flex: 1; font-size: 0.7rem; font-weight: 500; color: white; }
-
-      .cupidon-player-option {
-        padding: 10px 12px;
-        border-radius: 6px;
-        cursor: pointer;
+      .btn-emoji {
+        font-size: 0.85rem;
+        flex-shrink: 0;
+        width: 16px;
+        height: 16px;
         display: flex;
         align-items: center;
-        gap: 10px;
-        transition: all 0.2s ease;
-        background: rgba(255,255,255,0.08);
-        flex-shrink: 0;
-        min-height: 36px;
+        justify-content: center;
       }
-      .cupidon-player-option:hover { background: rgba(255,255,255,0.15); transform: translateX(3px); }
-      .cupidon-player-option.selected { border: 2px solid; box-shadow: 0 0 12px rgba(255,215,0,0.4); }
 
-      .player-name { flex: 1; font-size: 0.85rem; font-weight: 600; color: white; }
+      .btn-name {
+        flex: 1;
+        font-size: 0.7rem;
+        font-weight: 500;
+        color: white;
+      }
+
+      .voyante-info {
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+
+      .voyante-role {
+        font-size: 0.65rem;
+        color: rgba(255,255,255,0.7);
+        flex-basis: 100%;
+        padding-left: 0;
+        margin-left: 20px;
+      }
+
+      .wolf-indicator {
+        font-size: 0.8rem;
+        margin-left: auto;
+      }
+
+      .kill-btn .btn-emoji {
+        filter: grayscale(100%);
+      }
+
+      .sorciere-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
 
       .potion-btn {
         padding: 6px 10px;
@@ -4681,18 +4622,152 @@ class FirstNightMDJ {
         transition: all 0.2s ease;
         line-height: 1.2;
       }
-      .potion-btn:hover { transform: scale(1.05); box-shadow: 0 0 12px rgba(255,255,255,0.3); }
 
-      .sorciere-controls { display: flex; flex-direction: column; gap: 4px; }
+      .potion-btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0 12px rgba(255,255,255,0.3);
+      }
+
+      @media (max-width: 1024px) {
+        .mdj-main-container {
+          grid-template-columns: 40% 45% 15%;
+          padding: 12px;
+        }
+
+        .mdj-point-name {
+          font-size: 0.7rem;
+          left: -35px;
+          width: 70px;
+        }
+      }
 
       @media (max-width: 768px) {
-        .mdj-main-container { flex-direction: column; padding: 6px; gap: 4px; }
-        .mdj-left-panel, .mdj-center-panel, .mdj-right-panel { flex: 0 0 auto; min-width: auto; min-height: 180px; }
-        .mdj-center-panel { width: 100%; }
-        .listbox-item { padding: 4px 6px; font-size: 0.65rem; min-height: 20px; }
-        .role-action-btn { padding: 4px 6px; font-size: 0.65rem; min-height: 20px; }
-        .action-title-big { font-size: 0.9rem; }
-        .mdj-resize-handle { display: none; }
+        .mdj-main-container {
+          grid-template-columns: 1fr;
+          height: auto;
+        }
+
+        .mdj-left-panel,
+        .mdj-center-panel,
+        .mdj-right-panel {
+          min-height: 250px;
+        }
+
+        .action-title-big {
+          font-size: 1.1rem;
+        }
+
+        .panel-header-compact {
+          font-size: 0.85rem;
+        }
+
+        .player-visual {
+          width: 50px;
+          height: 50px;
+        }
+      }
+
+      /* Tablet: 768px - 1024px */
+      @media (max-width: 1024px) {
+        .game-master-overlay {
+          width: 90vw;
+          height: auto;
+          left: auto;
+          top: auto;
+        }
+
+        .mdj-main-container {
+          padding: 8px;
+        }
+
+        .mdj-center-panel {
+          width: 200px;
+        }
+
+        .mdj-table-visual {
+          max-width: 300px;
+          max-height: 300px;
+        }
+      }
+
+      /* Mobile: < 768px */
+      @media (max-width: 768px) {
+        .game-master-overlay {
+          width: 95vw;
+          height: auto;
+          max-width: 100%;
+          left: 2.5vw;
+          top: 10px;
+          border-radius: 8px;
+        }
+
+        .mdj-main-container {
+          flex-direction: column;
+          padding: 6px;
+          gap: 4px;
+        }
+
+        .mdj-resize-handle {
+          width: 100%;
+          height: 6px;
+          cursor: row-resize;
+        }
+
+        .mdj-left-panel,
+        .mdj-center-panel,
+        .mdj-right-panel {
+          flex: 0 0 auto;
+          min-width: auto;
+          min-height: 180px;
+        }
+
+        .mdj-center-panel {
+          width: 100%;
+        }
+
+        .mdj-table-visual {
+          max-width: 200px;
+          max-height: 200px;
+        }
+
+        .mdj-live-map {
+          flex: 0 0 auto;
+          min-height: 180px;
+        }
+
+        .mdj-legend {
+          flex: 0 0 50px;
+        }
+
+        .legend-grid {
+          grid-template-columns: repeat(3, 1fr);
+        }
+
+        .listbox-item {
+          padding: 4px 6px;
+          font-size: 0.65rem;
+          min-height: 20px;
+        }
+
+        .role-action-btn {
+          padding: 4px 6px;
+          font-size: 0.65rem;
+          min-height: 20px;
+        }
+
+        .panel-header-compact {
+          font-size: 0.7rem;
+          margin-bottom: 2px;
+        }
+
+        .action-title-big {
+          font-size: 0.9rem;
+        }
+
+        /* Hide resize handles on mobile */
+        .mdj-resize-handle {
+          display: none;
+        }
       }
     `;
     document.head.appendChild(style);
