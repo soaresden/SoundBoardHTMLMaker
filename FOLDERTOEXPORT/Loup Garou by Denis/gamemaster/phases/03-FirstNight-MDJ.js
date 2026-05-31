@@ -138,6 +138,12 @@ class FirstNightMDJ {
     this.mayorId = null; // Elected mayor (null if none)
     this.mayorElectionCompleted = false; // Flag: has mayor election been completed?
 
+    // CRITICAL: Chasseur has only ONE shot for the entire game
+    this.chasseurHasShot = false; // Track if Chasseur has already used his revenge shot
+
+    // Chevalier curse tracking (wolf dies NEXT night, not immediately)
+    this.chevalierCursedWolfId = null; // ID of wolf cursed by Chevalier (dies next night)
+
     // Voting phase tracking
     this.selectedLynchVictimId = null; // Player selected for lynch vote
 
@@ -844,12 +850,15 @@ class FirstNightMDJ {
           const deadChaseur = players.find(p => this.deadPlayerIds.has(p.id) && p.role === 'Chasseur');
           const chasseurTargetSelect = document.getElementById('chasseur-target');
 
-          if (deadChaseur && chasseurTargetSelect) {
+          if (deadChaseur && chasseurTargetSelect && !this.chasseurHasShot) {
             const chasseurTargetId = chasseurTargetSelect.value;
             if (chasseurTargetId) {
-              // Chasseur shoots first
+              // Chasseur shoots first (only ONE shot per game!)
               console.log('[MDJ] 🏹 Chasseur shoots:', chasseurTargetId);
               this.deadPlayerIds.add(chasseurTargetId);
+              // CRITICAL: Mark the cause of death for Chasseur's victim
+              this.deathCauses[chasseurTargetId] = 'chasseur';
+              this.chasseurHasShot = true; // CRITICAL: Mark that Chasseur used his only shot
               // CRITICAL: Check for cascading Cupidon death (if target is a lover)
               this.checkCupidonCascadingDeath(chasseurTargetId);
             }
@@ -1123,10 +1132,33 @@ class FirstNightMDJ {
     const players = this.gm.state.players || [];
     const actions = [];
     const deaths = [];
+
+    // CRITICAL: Track which players died THIS night (not from previous nights)
+    // This is used to show Chasseur revenge box only if he died THIS night
+    const deadThisNight = [];
+    for (const roleId of ['Simple_Loup_Garou', 'Grand_Mechant_Loup', 'Loup_Garou_Blanc', 'Sorciere']) {
+      if (this.roleStates[roleId]?.completed && this.roleStates[roleId]?.result?.targets?.length > 0) {
+        deadThisNight.push(...this.roleStates[roleId].result.targets.filter(t => !t.startsWith('potion-')));
+      }
+    }
+    // Also add Chasseur revenge kills from THIS night summary
+    const chasseurTargetSelect = typeof document !== 'undefined' ? document.getElementById('chasseur-target') : null;
+    const chasseurTarget = chasseurTargetSelect?.value;
+    if (chasseurTarget) {
+      deadThisNight.push(chasseurTarget);
+    }
+    // Add lynch victim
+    const lynchSelect = typeof document !== 'undefined' ? document.getElementById('lynch-target') : null;
+    const lynchVictim = lynchSelect?.value;
+    if (lynchVictim) {
+      deadThisNight.push(lynchVictim);
+    }
+
     // Lynch can include ANYONE alive, even wolves - removed wolf filter
     const alivePlayers = players.filter(p => !this.deadPlayerIds.has(p.id));
 
-    // Collect actions
+    // Collect actions (ONLY role actions, not transformations or Montreur_Ours)
+    const transformations = [];
     Object.entries(this.roleStates).forEach(([roleId, state]) => {
       if (state.completed && state.result?.targets?.length > 0) {
         const roleData = this.rolesLoader.getRole(roleId);
@@ -1153,11 +1185,11 @@ class FirstNightMDJ {
       }
     });
 
-    // Check for Enfant Sauvage transformation
+    // CRITICAL: Collect transformations separately (display BELOW action table, not inside)
     Object.entries(this.transformations).forEach(([playerId, trans]) => {
       if (trans.from === 'Enfant_Sauvage') {
         const playerName = this.getPlayerName(playerId);
-        actions.push(`🐒➡️🐺 ${playerName} (Enfant Sauvage) transformé en loup - ${trans.reason}`);
+        transformations.push(`🐒➡️🐺 ${playerName} (Enfant Sauvage) transformé en loup - ${trans.reason}`);
       }
     });
 
@@ -1176,6 +1208,10 @@ class FirstNightMDJ {
         cause = 'Tué par la potion de la Sorcière';
       } else if (deathCause === 'lynch') {
         cause = 'Lynché par le village';
+      } else if (deathCause === 'chasseur') {
+        cause = 'Tué par la vengeance du Chasseur';
+      } else if (deathCause === 'chevalier') {
+        cause = 'Maudit par le Chevalier';
       } else if (deathCause === 'wolf') {
         // Determine which wolf killed them
         if (this.roleStates['Grand_Mechant_Loup']?.result?.targets?.includes(p.id)) {
@@ -1228,16 +1264,24 @@ class FirstNightMDJ {
       `;
     }
 
+    // CRITICAL: Montreur_Ours and transformations are NOT in actions table - they go BELOW
+    // IMPROVED: Larger fonts and better contrast for readability
     const actionsHtml = actions.length > 0
-      ? montreurOursHtml + actions.map(a => `<div style="padding:6px; margin-bottom:4px; font-size:10px;">${a}</div>`).join('')
-      : montreurOursHtml + '<div style="padding:8px; text-align:center; color:#999; font-size:10px;">Aucune action</div>';
+      ? actions.map(a => `<div style="padding:8px; margin-bottom:6px; font-size:12px; background:rgba(0,0,0,0.2); border-radius:3px; border-left:3px solid #81dff7;">${a}</div>`).join('')
+      : '<div style="padding:12px; text-align:center; color:#aaa; font-size:11px;">Aucune action</div>';
 
     const deathsHtml = deaths.length > 0
-      ? deaths.map(d => `<div style="padding:6px; margin-bottom:4px; font-size:10px;"><strong>${d.emoji} ${d.name}</strong><br><span style="color:#ff9999; font-size:9px;">${d.cause}</span></div>`).join('')
-      : '<div style="padding:8px; text-align:center; color:#999; font-size:10px;">Aucune mort</div>';
+      ? deaths.map(d => `<div style="padding:8px; margin-bottom:6px; font-size:12px; background:rgba(0,0,0,0.2); border-radius:3px; border-left:3px solid #ff6666;"><strong style="color:#ffaaaa;">${d.emoji} ${d.name}</strong><br><span style="color:#ff9999; font-size:11px;">${d.cause}</span></div>`).join('')
+      : '<div style="padding:12px; text-align:center; color:#aaa; font-size:11px;">Aucune mort</div>';
 
     // Check for special role deaths that need handling
-    const deadChaseur = deaths.find(d => d.role === 'Chasseur');
+    // CRITICAL: Only show Chasseur revenge box if:
+    // 1) He died THIS night (not from previous nights)
+    // 2) He hasn't already used his ONE SHOT
+    const chasseurPlayer = players.find(p => p.role === 'Chasseur' && this.deadPlayerIds.has(p.id));
+    const deadChaseur = chasseurPlayer && deadThisNight.includes(chasseurPlayer.id) && !this.chasseurHasShot
+      ? deaths.find(d => d.role === 'Chasseur')
+      : null;
     const deadChevalier = deaths.find(d => d.role === 'Chevalier_Epee_Rouille');
     const deadMaire = deaths.find(d => d.role === 'Maire'); // TODO: implement Maire
 
@@ -1260,29 +1304,52 @@ class FirstNightMDJ {
     }
 
     if (deadChevalier) {
-      specialSectionsHtml += `
-        <div style="border: 1px solid rgba(255,200,0,0.3); border-radius: 4px; padding: 10px; background: rgba(255,200,0,0.05); margin-bottom: 12px;">
-          <h4 style="margin: 0 0 8px 0; color: #ffc800; font-size: 11px; font-weight: 600;">⚔️ Chevalier à l'Épée Rouillée - Malédiction</h4>
-          <p style="margin: 0; font-size: 10px; color: #ccc;">Le premier loup à la gauche du Chevalier mourra demain matin...</p>
-        </div>
-      `;
+      // CRITICAL: Find the wolf to the left of the Chevalier
+      const chevalierPlayer = players.find(p => p.role === 'Chevalier_Epee_Rouille');
+      if (chevalierPlayer) {
+        const idx = players.indexOf(chevalierPlayer);
+        let leftIdx = idx === 0 ? players.length - 1 : idx - 1;
+
+        // Skip dead players to find alive neighbors
+        let leftWolfIdx = leftIdx;
+        while (this.deadPlayerIds.has(players[leftWolfIdx].id) && leftWolfIdx !== idx) {
+          leftWolfIdx = leftWolfIdx === 0 ? players.length - 1 : leftWolfIdx - 1;
+        }
+
+        const leftNeighbor = players[leftWolfIdx];
+        const isWolf = leftNeighbor && (leftNeighbor.role?.includes('Loup') || leftNeighbor.role?.includes('Wolf'));
+
+        if (isWolf && !this.deadPlayerIds.has(leftNeighbor.id)) {
+          // Mark this wolf to die next night
+          this.chevalierCursedWolfId = leftNeighbor.id;
+          const wolfName = leftNeighbor.name;
+          console.log(`[MDJ] ⚔️ Chevalier cursed wolf: ${wolfName} will die NEXT night`);
+
+          specialSectionsHtml += `
+            <div style="border: 2px solid #FFD700; border-radius: 6px; padding: 12px; background: rgba(255,215,0,0.15); margin-bottom: 12px;">
+              <h4 style="margin: 0 0 8px 0; color: #FFD700; font-size: 12px; font-weight: 700;">⚔️ Chevalier Malédiction</h4>
+              <p style="margin: 0; font-size: 12px; color: #ffeb99;">🐺 ${wolfName} (loup à gauche) mourra demain nuit...</p>
+            </div>
+          `;
+        }
+      }
     }
 
-    // 2-column main layout
+    // 2-column main layout (IMPROVED READABILITY: larger fonts, better contrast)
     return `
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
         <!-- LEFT COLUMN: Actions -->
-        <div style="border: 1px solid rgba(129,223,247,0.3); border-radius: 4px; padding: 8px; background: rgba(129,223,247,0.05);">
-          <h4 style="margin: 0 0 8px 0; color: #81dff7; font-size: 11px; font-weight: 600;">📋 Actions</h4>
-          <div style="max-height: 150px; overflow-y: auto;">
+        <div style="border: 2px solid #81dff7; border-radius: 6px; padding: 10px; background: rgba(129,223,247,0.15);">
+          <h4 style="margin: 0 0 10px 0; color: #81dff7; font-size: 13px; font-weight: 700;">📋 Actions</h4>
+          <div style="max-height: 180px; overflow-y: auto;">
             ${actionsHtml}
           </div>
         </div>
 
         <!-- RIGHT COLUMN: Deaths -->
-        <div style="border: 1px solid rgba(255,153,153,0.3); border-radius: 4px; padding: 8px; background: rgba(255,153,153,0.05);">
-          <h4 style="margin: 0 0 8px 0; color: #ff9999; font-size: 11px; font-weight: 600;">☠️ Morts</h4>
-          <div style="max-height: 150px; overflow-y: auto;">
+        <div style="border: 2px solid #ff6666; border-radius: 6px; padding: 10px; background: rgba(255,102,102,0.15);">
+          <h4 style="margin: 0 0 10px 0; color: #ff6666; font-size: 13px; font-weight: 700;">☠️ Morts</h4>
+          <div style="max-height: 180px; overflow-y: auto;">
             ${deathsHtml}
           </div>
         </div>
@@ -1290,6 +1357,16 @@ class FirstNightMDJ {
 
       <!-- SPECIAL SECTIONS (Chasseur, Chevalier, etc.) -->
       ${specialSectionsHtml}
+
+      <!-- MONTREUR D'OURS GROWL (BELOW table, not inside) -->
+      ${montreurOursHtml}
+
+      <!-- ENFANT SAUVAGE TRANSFORMATIONS (BELOW table, not inside) -->
+      ${transformations.length > 0 ? transformations.map(t => `
+        <div style="padding:8px; margin-bottom:8px; background:rgba(170,34,14,0.1); border-left:3px solid #AA220E; font-size:10px;">
+          ${t}
+        </div>
+      `).join('') : ''}
 
       <!-- LYNCH SELECTION -->
       <div style="border: 1px solid rgba(200,100,200,0.3); border-radius: 4px; padding: 10px; background: rgba(200,100,200,0.05);">
@@ -1387,6 +1464,16 @@ class FirstNightMDJ {
     console.log('[MDJ] ===== NIGHT 2 START =====');
     this.currentNight = 2;
 
+    // CRITICAL: Apply Chevalier curse - kill cursed wolf at start of Night 2
+    if (this.chevalierCursedWolfId && !this.deadPlayerIds.has(this.chevalierCursedWolfId)) {
+      const cursedWolf = this.gm?.state?.players?.find(p => p.id === this.chevalierCursedWolfId);
+      if (cursedWolf) {
+        this.deadPlayerIds.add(this.chevalierCursedWolfId);
+        this.deathCauses[this.chevalierCursedWolfId] = 'chevalier';
+        console.log(`[MDJ] ⚔️ Chevalier curse applies: ${cursedWolf.name} dies at start of Night 2`);
+      }
+    }
+
     // Reset selections for night 2
     this.selectedRoleId = null;
     this.selectedPlayers = [];
@@ -1414,8 +1501,12 @@ class FirstNightMDJ {
    * Initialize role states for Night 2
    * Only include roles that have actual night actions (NightActive)
    * IMPORTANT: Dead players' roles should NOT be initialized for next night
+   * CRITICAL: Renard loses power if no wolves detected
    */
   initializeNight2RoleStates() {
+    // CRITICAL: Keep copy of previous night's Renard state before clearing
+    const previousRenardState = this.roleStates['Renard'];
+
     this.roleStates = {}; // Clear previous states
     const orderedRoles = this.rolesLoader.getOrderedRoleIds();
     const players = this.gm.state.players || [];
@@ -1436,14 +1527,45 @@ class FirstNightMDJ {
         return;
       }
 
+      // CRITICAL: Check if Renard lost power (detected 0 wolves on previous night)
+      if (roleId === 'Renard' && previousRenardState?.completed) {
+        const detectedWolves = previousRenardState.result?.targets?.length > 0;
+        if (!detectedWolves) {
+          console.log(`[MDJ] Night ${this.currentNight} Renard SKIPPED: no wolves detected on Night ${this.currentNight - 1}, lost power`);
+          return;
+        }
+      }
+
       // For Night 2+: Check if this role plays THIS NIGHT
-      // Must have actionType === 'NightActive' AND nightActive must include this night
+      // Must have actionType === 'NightActive' AND either:
+      // - nightActive array includes this night, OR
+      // - phase matches current night (everyNight, everyOtherNight, afterFirstNight, etc.)
       const isNightActiveRole = roleData.actionType === 'NightActive';
       const nightActive = roleData.nightActive || [];
 
-      // If nightActive is specified, check if this night is included
-      // If not specified, assume it plays all nights
-      const playsThisNight = nightActive.length === 0 || nightActive.includes(this.currentNight);
+      // Check via nightActive array first
+      let playsThisNight = nightActive.length === 0 || nightActive.includes(this.currentNight);
+
+      // If nightActive doesn't specify, check via phase (for roles like Loup_Garou_Blanc with everyOtherNight)
+      if (!playsThisNight && roleData.actions?.mdj_night_actions?.length > 0) {
+        const firstAction = roleData.actions.mdj_night_actions[0];
+        const phase = firstAction.phase;
+        const isEvenNight = this.currentNight % 2 === 0;
+
+        if (phase === 'everyNight') {
+          playsThisNight = true;
+        } else if (phase === 'everyOtherNight') {
+          playsThisNight = isEvenNight; // Even nights (2, 4, 6...)
+        } else if (phase === 'afterFirstNight') {
+          playsThisNight = this.currentNight > 1;
+        } else if (phase === 'firstNight') {
+          playsThisNight = this.currentNight === 1;
+        }
+
+        if (playsThisNight) {
+          console.log(`[MDJ] Night ${this.currentNight} - ${roleId} activated via phase "${phase}"`);
+        }
+      }
 
       if (isNightActiveRole && playsThisNight) {
         this.roleStates[roleId] = {
@@ -1977,25 +2099,36 @@ class FirstNightMDJ {
         }
       }
 
+      // CRITICAL: Corbeau border disappears each day (borderLifetime: "next_night")
+      // Only restore if it's the same night it was placed (don't persist overnight)
       if (roleId === 'Corbeau' && state.result.targets && state.result.targets.length > 0) {
-        // Restore Corbeau's victim bordure
-        const borderColor = roleData?.visual?.affectedColor?.borderColor;
-        const emojiColor = roleData?.visual?.roleColor?.emojiColor;
-        const bgColor = roleData?.visual?.roleColor?.fondColor;
-        console.log(`[MDJ] Corbeau - detection de visual affected colors: border color ${borderColor ? '✓ ' + borderColor : '✗ NOT FOUND'}, emoji: ${roleData?.emoji || 'N/A'}, bg: ${bgColor || 'N/A'}, emoji-color: ${emojiColor || 'N/A'}`);
+        // Check if borderLifetime says it should disappear next night
+        const borderLifetime = roleData?.borderLifetime;
 
-        const victim = players.find(p =>
-          state.result.targets.includes(p.id)
-        );
-        if (victim && borderColor) {
-          const point = mdjMap.querySelector(`[data-player-id="${victim.id}"]`);
-          if (point) {
-            point.classList.add('affected');
-            const dot = point.querySelector('.mdj-point-dot');
-            if (dot) {
-              dot.style.setProperty('--affected-border', borderColor);
+        // Only restore Corbeau border if it's being placed THIS night (borderLifetime: next_night means it disappears at day)
+        // Don't restore old Corbeau borders from previous nights
+        if (borderLifetime !== 'next_night' || this.currentNight === 1) {
+          // Safe to restore (either no lifetime set, or it's Night 1 first placement)
+          const borderColor = roleData?.visual?.affectedColor?.borderColor;
+          const emojiColor = roleData?.visual?.roleColor?.emojiColor;
+          const bgColor = roleData?.visual?.roleColor?.fondColor;
+          console.log(`[MDJ] Corbeau - detection de visual affected colors: border color ${borderColor ? '✓ ' + borderColor : '✗ NOT FOUND'}, emoji: ${roleData?.emoji || 'N/A'}, bg: ${bgColor || 'N/A'}, emoji-color: ${emojiColor || 'N/A'}`);
+
+          const victim = players.find(p =>
+            state.result.targets.includes(p.id)
+          );
+          if (victim && borderColor) {
+            const point = mdjMap.querySelector(`[data-player-id="${victim.id}"]`);
+            if (point) {
+              point.classList.add('affected');
+              const dot = point.querySelector('.mdj-point-dot');
+              if (dot) {
+                dot.style.setProperty('--affected-border', borderColor);
+              }
             }
           }
+        } else {
+          console.log(`[MDJ] Corbeau border NOT restored - borderLifetime: "${borderLifetime}" (disappears at day)`);
         }
       }
 
@@ -4334,4 +4467,959 @@ class FirstNightMDJ {
         .game-master-overlay {
           width: 100vw;
           height: auto;
- 
+          max-height: 100vh;
+        }
+      }
+
+      .mdj-main-container {
+        display: flex;
+        flex-direction: row;
+        height: 100%;
+        gap: 0;
+        padding: 12px;
+        background: linear-gradient(135deg, #1a1f3a 0%, #2d1b4e 100%);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        align-items: stretch;
+      }
+
+      .mdj-resize-handle {
+        width: 8px;
+        background: linear-gradient(90deg, transparent, rgba(100,200,255,0.3), transparent);
+        cursor: col-resize;
+        user-select: none;
+        flex-shrink: 0;
+        transition: background 0.2s;
+      }
+
+      .mdj-resize-handle:hover {
+        background: linear-gradient(90deg, transparent, rgba(100,200,255,0.6), transparent);
+      }
+
+      .mdj-left-panel {
+        background: linear-gradient(135deg, rgba(40,50,80,0.9), rgba(35,45,70,0.9));
+        border: 2px solid rgba(100,200,255,0.2);
+        border-radius: 12px;
+        padding: 6px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        gap: 4px;
+        flex: 0 0 390px;
+        min-height: 0;
+      }
+
+      .mdj-center-panel {
+        background: linear-gradient(135deg, rgba(50,100,200,0.8), rgba(70,120,220,0.8));
+        border: 2px solid rgba(100,150,255,0.3);
+        border-radius: 12px;
+        padding: 12px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        flex: 0 0 250px;
+        min-height: 0;
+      }
+
+      .mdj-role-list-wrapper {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0;
+        gap: 4px;
+      }
+
+      .mdj-right-panel {
+        background: linear-gradient(135deg, rgba(180,80,180,0.7), rgba(150,60,150,0.7));
+        border: 2px solid rgba(220,100,220,0.3);
+        border-radius: 12px;
+        padding: 12px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        flex: 0 0 325px;
+        min-height: 0;
+      }
+
+      .panel-header-compact {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #e0e0f0;
+        margin-bottom: 4px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 4px;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        flex-shrink: 0;
+      }
+
+      .mdj-live-map {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        width: 100%;
+        min-height: 0;
+      }
+
+      .mdj-map-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+      }
+
+      .mdj-table-visual {
+        position: relative;
+        width: 90%;
+        height: 90%;
+        max-width: 420px;
+        max-height: 420px;
+        aspect-ratio: 1;
+        overflow: visible;
+        border-radius: 40px;
+      }
+
+      .mdj-table-center {
+        position: absolute;
+        width: 36px;
+        height: 36px;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(120,85,60,0.3);
+        border: 2px solid rgba(140,100,70,0.5);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        opacity: 0.4;
+        z-index: 1;
+      }
+
+      .mdj-table-rim {
+        position: absolute;
+        width: 90px;
+        height: 90px;
+        border: 2px solid rgba(100,150,255,0.15);
+        border-radius: 50%;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+      }
+
+      .mdj-legend {
+        flex: 0 0 65px;
+        background: rgba(0,0,0,0.3);
+        border: 1px solid rgba(100,200,255,0.15);
+        border-radius: 8px;
+        padding: 4px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .legend-title {
+        font-size: 0.55rem;
+        font-weight: 600;
+        color: #e0e0f0;
+        margin-bottom: 2px;
+        text-align: center;
+        flex-shrink: 0;
+      }
+
+      .legend-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 2px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        flex: 1;
+        min-height: 0;
+      }
+
+      .legend-grid::-webkit-scrollbar {
+        width: 3px;
+      }
+
+      .legend-grid::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,0.2);
+        border-radius: 1px;
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 2px;
+        padding: 1px 2px;
+        background: rgba(255,255,255,0.02);
+        border-radius: 2px;
+        min-height: 0;
+      }
+
+      .legend-dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        border: 0.5px solid rgba(255,255,255,0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 0.45rem;
+      }
+
+      .legend-emoji {
+        display: none;
+      }
+
+      .legend-name {
+        font-size: 0.5rem;
+        color: #c0c0d0;
+        font-weight: 400;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex: 1;
+      }
+
+      .mdj-player-point {
+        cursor: pointer;
+        user-select: none;
+        transition: all 0.2s ease;
+      }
+
+      .mdj-point-dot {
+        width: 30px;
+        height: 30px;
+        border: none;
+        border-radius: 50%;
+        position: absolute;
+        top: -15px;
+        left: -15px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        color: white;
+        font-size: 0.85rem;
+        transition: all 0.2s ease;
+      }
+
+      .mdj-player-point:hover .mdj-point-dot {
+        transform: scale(1.2);
+        box-shadow: 0 6px 18px rgba(255,255,255,0.6);
+      }
+
+      .mdj-player-point.affected .mdj-point-dot {
+        border: 5px solid var(--affected-border, #ffff00);
+        box-shadow: 0 0 20px var(--affected-border, #ffff00);
+      }
+
+      .mdj-player-point.killed .mdj-point-dot {
+        border-width: 4px;
+        border-color: #ff4444;
+        box-shadow: 0 0 16px rgba(255, 68, 68, 0.8);
+      }
+
+      .mdj-player-point.darkened .mdj-point-dot {
+        border-width: 4px;
+        border-color: #001a4d;
+        box-shadow: 0 0 16px rgba(0, 26, 77, 0.8);
+      }
+
+      .mdj-player-point.breathing {
+        animation: playerBreathingContainer 1.2s ease-in-out infinite !important;
+        filter: drop-shadow(0 0 8px rgba(255, 180, 0, 0.8));
+        z-index: 10;
+      }
+
+      .mdj-player-point.breathing .mdj-point-dot {
+        animation: playerBreathing 1.2s ease-in-out infinite !important;
+        box-shadow: 0 0 25px rgba(255, 200, 100, 1) !important;
+        border: 3px solid rgba(255, 180, 0, 0.9) !important;
+      }
+
+      @keyframes playerBreathingContainer {
+        0%, 100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.08);
+        }
+      }
+
+      @keyframes playerBreathing {
+        0%, 100% {
+          transform: scale(1);
+          box-shadow: 0 0 15px rgba(255, 180, 0, 0.9) !important;
+          filter: brightness(1.1);
+        }
+        50% {
+          transform: scale(1.15);
+          box-shadow: 0 0 40px rgba(255, 200, 100, 1) !important;
+          filter: brightness(1.4);
+        }
+      }
+
+      .mdj-point-emoji {
+        display: block;
+      }
+
+      .mdj-point-name {
+        position: absolute;
+        font-size: 0.6rem;
+        font-weight: 700;
+        color: #f0f0f8;
+        white-space: nowrap;
+        pointer-events: none;
+        background: rgba(20,25,45,0.9);
+        padding: 2px 3px;
+        border-radius: 2px;
+        border: 0.5px solid rgba(100,150,255,0.3);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        display: inline-block;
+      }
+
+      .mdj-action-zone {
+        background: rgba(255,255,255,0.08);
+        border-radius: 8px;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        height: 100%;
+      }
+
+      .action-title-big {
+        font-size: 1rem;
+        font-weight: 800;
+        color: white;
+        padding: 10px;
+        border-radius: 8px;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+        text-align: center;
+        transition: all 0.2s ease;
+        flex-shrink: 0;
+        min-height: 0;
+      }
+
+      .action-controls {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        align-items: stretch;
+        justify-content: flex-start;
+        overflow-y: auto;
+        padding-right: 4px;
+      }
+
+      .action-controls::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .action-controls::-webkit-scrollbar-track {
+        background: rgba(255,255,255,0.1);
+        border-radius: 3px;
+      }
+
+      .action-controls::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,0.3);
+        border-radius: 3px;
+      }
+
+      .action-btn-mdj {
+        padding: 6px 10px;
+        color: white;
+        border: 2px solid white;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.75rem;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+        white-space: nowrap;
+        text-align: center;
+        line-height: 1.2;
+      }
+
+      .action-btn-mdj:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      }
+
+      .action-btn-mdj:active {
+        transform: scale(0.98);
+      }
+
+      .chien-loup-btn {
+        padding: 6px 10px;
+        color: white;
+        border: 2px solid white;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.75rem;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+        white-space: nowrap;
+        text-align: center;
+        line-height: 1.2;
+      }
+
+      .chien-loup-btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      }
+
+      .chien-loup-btn:active {
+        transform: scale(0.98);
+      }
+
+      .action-info {
+        background: rgba(255,255,255,0.12);
+        border-radius: 6px;
+        padding: 8px;
+        color: #e0e0f0;
+        font-size: 0.8rem;
+        text-align: center;
+        border-left: 2px solid rgba(255,255,255,0.3);
+        flex-shrink: 0;
+      }
+
+      .btn-validate-action {
+        width: 100%;
+        padding: 6px 8px;
+        background: rgba(76, 175, 80, 0.8);
+        color: white;
+        border: 2px solid rgba(100, 200, 100, 0.6);
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.75rem;
+        transition: all 0.2s ease;
+        line-height: 1.2;
+      }
+
+      .btn-validate-action:hover {
+        background: rgba(100, 200, 100, 0.9);
+        transform: scale(1.05);
+      }
+
+      .btn-validate-action:active {
+        transform: scale(0.98);
+      }
+
+      .no-actions {
+        color: rgba(255,255,255,0.6);
+        font-style: italic;
+        font-size: 0.95rem;
+      }
+
+
+      .role-list-header {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #ffffff;
+        padding: 5px 6px;
+        background: rgba(0,0,0,0.2);
+        border-radius: 4px;
+        text-align: center;
+        flex-shrink: 0;
+        border-left: 2px solid rgba(255,255,255,0.5);
+      }
+
+      .role-list-blue {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 2px;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        background: rgba(0,0,0,0.15);
+        border-radius: 4px;
+      }
+
+      .role-list-blue::-webkit-scrollbar {
+        width: 3px;
+      }
+
+      .role-list-blue::-webkit-scrollbar-track {
+        background: rgba(255,255,255,0.08);
+        border-radius: 1px;
+      }
+
+      .role-list-blue::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,0.25);
+        border-radius: 1px;
+      }
+
+      .role-list-blue::-webkit-scrollbar-thumb:hover {
+        background: rgba(255,255,255,0.4);
+      }
+
+      .progress-bar {
+        text-align: center;
+        color: #e0e0f0;
+        font-weight: 700;
+        font-size: 0.8rem;
+        padding: 8px;
+        background: rgba(255,255,255,0.08);
+        border-radius: 6px;
+        flex-shrink: 0;
+      }
+
+      .progress {
+        font-size: 0.8rem;
+        color: #e0e0f0;
+        font-weight: 600;
+      }
+
+      .listbox-item {
+        padding: 5px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        background: rgba(255,255,255,0.12);
+        color: white;
+        transition: all 0.2s ease;
+        border: 2px solid transparent;
+        font-weight: 700;
+        font-size: 0.7rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex-shrink: 0;
+        min-height: 24px;
+        overflow: visible;
+        line-height: 1;
+      }
+
+      .listbox-item:hover {
+        background: rgba(255,255,255,0.2);
+        transform: translateX(3px);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+      }
+
+      .listbox-item.selected {
+        border-color: white;
+        box-shadow: 0 0 15px rgba(255,255,255,0.6);
+        animation: roleListBreathing 2s ease-in-out infinite;
+      }
+
+      .listbox-item.breathing {
+        animation: playerBreathingContainer 1.2s ease-in-out infinite !important;
+        filter: drop-shadow(0 0 8px rgba(255, 180, 0, 0.8));
+      }
+
+      .listbox-item.completed {
+        opacity: 0.4;
+        text-decoration: line-through;
+      }
+
+      @keyframes roleListBreathing {
+        0%, 100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.03);
+        }
+      }
+
+      .item-icon {
+        font-size: 0.85rem;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+      }
+
+      .item-name {
+        flex: 1;
+        font-size: 0.65rem;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .item-status {
+        font-size: 0.7rem;
+        margin-left: auto;
+        flex-shrink: 0;
+      }
+
+      /* Bubble/affected state styles for drag-drop mechanic */
+      .bubble-action {
+        position: fixed;
+        pointer-events: none;
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0.9;
+        border-radius: 50%;
+        font-size: 2rem;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      }
+
+      .mdj-player-point.drag-over .mdj-point-dot {
+        animation: playerPulse 0.5s ease-in-out;
+      }
+
+      @keyframes playerPulse {
+        0%, 100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.3);
+        }
+      }
+
+      /* Selection display for action confirmation */
+      .selected-display {
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 8px;
+        padding: 12px;
+        color: white;
+        font-size: 0.9rem;
+        margin-top: 8px;
+      }
+
+      .selection-info {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .selection-info p {
+        margin: 0;
+        font-size: 0.9rem;
+      }
+
+      .selected-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 6px;
+      }
+
+      .tag {
+        display: inline-block;
+        padding: 4px 10px;
+        background: rgba(255,255,255,0.2);
+        color: white;
+        border-radius: 16px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        border: 1px solid rgba(255,255,255,0.3);
+      }
+
+      .complete-action-btn {
+        width: 100%;
+        padding: 10px;
+        background: rgba(76,175,80,0.8);
+        color: white;
+        border: 2px solid rgba(100,200,100,0.6);
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 0.9rem;
+        transition: all 0.2s ease;
+        margin-top: 8px;
+      }
+
+      .complete-action-btn:hover {
+        background: rgba(100,200,100,0.9);
+        transform: scale(1.05);
+      }
+
+      /* Cupidon Lover Selection */
+      .cupidon-player-option {
+        padding: 10px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: all 0.2s ease;
+        background: rgba(255,255,255,0.08);
+        flex-shrink: 0;
+        min-height: 36px;
+      }
+
+      .cupidon-player-option:hover {
+        background: rgba(255,255,255,0.15);
+        transform: translateX(3px);
+      }
+
+      .cupidon-player-option.selected {
+        border: 2px solid;
+        box-shadow: 0 0 12px rgba(255,215,0,0.4);
+      }
+
+      .player-emoji {
+        font-size: 1rem;
+        flex-shrink: 0;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .player-name {
+        flex: 1;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: white;
+      }
+
+      .selection-checkmark {
+        font-size: 1.2rem;
+        color: #4CAF50;
+        flex-shrink: 0;
+      }
+
+      /* Generic role action button */
+      .role-action-btn {
+        padding: 5px 8px;
+        border-radius: 3px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        transition: all 0.2s ease;
+        flex-shrink: 0;
+        min-height: 24px;
+        font-size: 0.7rem;
+      }
+
+      .role-action-btn:hover {
+        background: rgba(255,255,255,0.15) !important;
+        transform: translateX(2px);
+      }
+
+      .btn-emoji {
+        font-size: 0.85rem;
+        flex-shrink: 0;
+        width: 16px;
+        height: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .btn-name {
+        flex: 1;
+        font-size: 0.7rem;
+        font-weight: 500;
+        color: white;
+      }
+
+      .voyante-info {
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+
+      .voyante-role {
+        font-size: 0.65rem;
+        color: rgba(255,255,255,0.7);
+        flex-basis: 100%;
+        padding-left: 0;
+        margin-left: 20px;
+      }
+
+      .wolf-indicator {
+        font-size: 0.8rem;
+        margin-left: auto;
+      }
+
+      .kill-btn .btn-emoji {
+        filter: grayscale(100%);
+      }
+
+      .sorciere-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .potion-btn {
+        padding: 6px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.75rem;
+        color: white;
+        transition: all 0.2s ease;
+        line-height: 1.2;
+      }
+
+      .potion-btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0 12px rgba(255,255,255,0.3);
+      }
+
+      @media (max-width: 1024px) {
+        .mdj-main-container {
+          grid-template-columns: 40% 45% 15%;
+          padding: 12px;
+        }
+
+        .mdj-point-name {
+          font-size: 0.7rem;
+          left: -35px;
+          width: 70px;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .mdj-main-container {
+          grid-template-columns: 1fr;
+          height: auto;
+        }
+
+        .mdj-left-panel,
+        .mdj-center-panel,
+        .mdj-right-panel {
+          min-height: 250px;
+        }
+
+        .action-title-big {
+          font-size: 1.1rem;
+        }
+
+        .panel-header-compact {
+          font-size: 0.85rem;
+        }
+
+        .player-visual {
+          width: 50px;
+          height: 50px;
+        }
+      }
+
+      /* Tablet: 768px - 1024px */
+      @media (max-width: 1024px) {
+        .game-master-overlay {
+          width: 90vw;
+          height: auto;
+          left: auto;
+          top: auto;
+        }
+
+        .mdj-main-container {
+          padding: 8px;
+        }
+
+        .mdj-center-panel {
+          width: 200px;
+        }
+
+        .mdj-table-visual {
+          max-width: 300px;
+          max-height: 300px;
+        }
+      }
+
+      /* Mobile: < 768px */
+      @media (max-width: 768px) {
+        .game-master-overlay {
+          width: 95vw;
+          height: auto;
+          max-width: 100%;
+          left: 2.5vw;
+          top: 10px;
+          border-radius: 8px;
+        }
+
+        .mdj-main-container {
+          flex-direction: column;
+          padding: 6px;
+          gap: 4px;
+        }
+
+        .mdj-resize-handle {
+          width: 100%;
+          height: 6px;
+          cursor: row-resize;
+        }
+
+        .mdj-left-panel,
+        .mdj-center-panel,
+        .mdj-right-panel {
+          flex: 0 0 auto;
+          min-width: auto;
+          min-height: 180px;
+        }
+
+        .mdj-center-panel {
+          width: 100%;
+        }
+
+        .mdj-table-visual {
+          max-width: 200px;
+          max-height: 200px;
+        }
+
+        .mdj-live-map {
+          flex: 0 0 auto;
+          min-height: 180px;
+        }
+
+        .mdj-legend {
+          flex: 0 0 50px;
+        }
+
+        .legend-grid {
+          grid-template-columns: repeat(3, 1fr);
+        }
+
+        .listbox-item {
+          padding: 4px 6px;
+          font-size: 0.65rem;
+          min-height: 20px;
+        }
+
+        .role-action-btn {
+          padding: 4px 6px;
+          font-size: 0.65rem;
+          min-height: 20px;
+        }
+
+        .panel-header-compact {
+          font-size: 0.7rem;
+          margin-bottom: 2px;
+        }
+
+        .action-title-big {
+          font-size: 0.9rem;
+        }
+
+        /* Hide resize handles on mobile */
+        .mdj-resize-handle {
+          display: none;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+}
+
+// Expose to window for use in game-master-ui.js
+window.FirstNightMDJ = FirstNightMDJ;
