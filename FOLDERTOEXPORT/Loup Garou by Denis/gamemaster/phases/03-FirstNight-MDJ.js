@@ -122,6 +122,7 @@ class FirstNightMDJ {
     this.actionState = {};
     this.roleStates = {}; // Track which roles are completed
     this.deadPlayerIds = new Set(); // Track players who have been killed
+    this.deathCauses = {}; // Track cause of death for each dead player (playerId -> cause)
 
     // Initialize PlayerRegistry for centralized player data management
     this.playerRegistry = new PlayerRegistry(this.gm?.state?.players || [], this.deadPlayerIds);
@@ -576,6 +577,7 @@ class FirstNightMDJ {
   /**
    * Render legend showing all players with their emoji and color
    * Shows 🎖️ medal next to mayor's name
+   * Shows (Role) for dead players
    */
   renderLegend() {
     const legendContainer = document.getElementById('mdj-legend');
@@ -591,13 +593,19 @@ class FirstNightMDJ {
       const emojiColor = roleData.visual?.roleColor?.emojiColor || 'inherit';
       const textColor = roleData.visual?.roleColor?.textColor || '#ffffff';
       const isMayor = this.mayorId && this.mayorId === p.id;
+      const isDead = this.deadPlayerIds.has(p.id);
+      const roleName = roleData.name || p.role;
+
+      const displayName = isDead
+        ? `${isMayor ? '🎖️ ' : ''}${p.name} (${roleName})`
+        : `${isMayor ? '🎖️ ' : ''}${p.name}`;
 
       return `
         <div class="legend-item">
-          <div class="legend-dot" style="background: ${bgColor};">
-            <span class="legend-emoji" style="color: ${emojiColor};">${emoji}</span>
+          <div class="legend-dot" style="background: ${bgColor}; ${isDead ? 'opacity: 0.5;' : ''}">
+            <span class="legend-emoji" style="color: ${emojiColor};">${isDead ? '💀' : emoji}</span>
           </div>
-          <span class="legend-name">${isMayor ? '🎖️ ' : ''}${p.name}</span>
+          <span class="legend-name">${displayName}</span>
         </div>
       `;
     }).join('');
@@ -616,6 +624,7 @@ class FirstNightMDJ {
    */
   /**
    * Get night summary HTML with comboboxes for special deaths
+   * Includes Montreur_Ours growl detection
    */
   getNightSummaryHtml() {
     const players = this.gm.state.players || [];
@@ -626,8 +635,50 @@ class FirstNightMDJ {
     const deadChaseur = deadPlayers.find(p => p.role === 'Chasseur');
     const deadChevalier = deadPlayers.find(p => p.role === 'Chevalier_Epee_Rouille');
 
-    // Check for Montreur_Ours growl (Montreur_Ours needs to know if it growled)
-    const mountreurOursPlayer = players.find(p => p.role === 'Montreur_Ours');
+    // Check for Montreur_Ours and detect wolves nearby
+    const montreurOursPlayer = alivePlayers.find(p => p.role === 'Montreur_Ours');
+    let montreurOursHtml = '';
+
+    if (montreurOursPlayer) {
+      // Find the bear's position in the players array to check left and right neighbors
+      const idx = players.findIndex(p => p.id === montreurOursPlayer.id);
+      const leftIdx = idx === 0 ? players.length - 1 : idx - 1;
+      const rightIdx = idx === players.length - 1 ? 0 : idx + 1;
+
+      // Check for wolves (skip dead players between)
+      let leftNeighbor = players[leftIdx];
+      let rightNeighbor = players[rightIdx];
+
+      // Skip dead players to find alive neighbors
+      let leftWolfIdx = leftIdx;
+      while (this.deadPlayerIds.has(players[leftWolfIdx].id) && leftWolfIdx !== idx) {
+        leftWolfIdx = leftWolfIdx === 0 ? players.length - 1 : leftWolfIdx - 1;
+      }
+
+      let rightWolfIdx = rightIdx;
+      while (this.deadPlayerIds.has(players[rightWolfIdx].id) && rightWolfIdx !== idx) {
+        rightWolfIdx = rightWolfIdx === players.length - 1 ? 0 : rightWolfIdx + 1;
+      }
+
+      leftNeighbor = players[leftWolfIdx];
+      rightNeighbor = players[rightWolfIdx];
+
+      const leftIsWolf = leftNeighbor && !this.deadPlayerIds.has(leftNeighbor.id) &&
+                         (leftNeighbor.role?.includes('Loup') || leftNeighbor.role?.includes('Wolf'));
+      const rightIsWolf = rightNeighbor && !this.deadPlayerIds.has(rightNeighbor.id) &&
+                          (rightNeighbor.role?.includes('Loup') || rightNeighbor.role?.includes('Wolf'));
+
+      const hasWolfNearby = leftIsWolf || rightIsWolf;
+      const growlText = hasWolfNearby
+        ? '🐻 L\'ours du Montreur d\'Ours grogne ! Ça sent le loup !'
+        : '🐻 Ça ne grogne pas, pas de loup à proximité de l\'ours';
+
+      montreurOursHtml = `
+        <div style="padding:12px; background:rgba(139,69,19,0.2); border:2px solid #8B4513; border-radius:6px; margin-bottom:12px;">
+          <h4 style="margin:0 0 8px 0; color:#D2B48C; font-size:12px;">${growlText}</h4>
+        </div>
+      `;
+    }
 
     let html = '';
 
@@ -660,6 +711,9 @@ class FirstNightMDJ {
         </div>
       `;
     }
+
+    // Montreur_Ours growl detection
+    html += montreurOursHtml;
 
     // Lynch combobox
     const nonWolves = alivePlayers.filter(p => !p.role || (!p.role.includes('Loup') && !p.role.includes('Wolf')));
@@ -695,7 +749,7 @@ class FirstNightMDJ {
 
   /**
    * Render Night Summary - Shows completed actions and deaths
-   * Replaces the role listbox once all roles are done
+   * IMPORTANT: Blue zone (listbox) remains unchanged - just disable clicks
    */
   renderNightSummary() {
     console.log(`[MDJ] 🌙 renderNightSummary() called`);
@@ -703,111 +757,19 @@ class FirstNightMDJ {
 
     if (!listbox) return;
 
-    const players = this.gm.state.players || [];
-    const actions = [];
-    const deaths = [];
+    // Simply disable clicks on blue zone - do NOT modify its content
+    this.disableRoleListbox();
 
-    // Collect all completed actions
-    Object.entries(this.roleStates).forEach(([roleId, state]) => {
-      if (state.completed && state.result?.targets?.length > 0) {
-        const roleData = this.rolesLoader.getRole(roleId);
-        const roleName = roleData?.name || roleId;
-        const emoji = roleData?.emoji || '❓';
-        const action = state.result.action;
-
-        const targets = state.result.targets
-          .filter(t => !t.startsWith('potion-'))
-          .map(id => this.getPlayerName(id))
-          .join(' et ');
-
-        if (action === 'lover' && targets) {
-          actions.push(`${emoji} ${roleName} a touché ${targets}`);
-        } else if (action === 'idol' && targets) {
-          actions.push(`${emoji} ${roleName} a désigné ${targets}`);
-        } else if (action === 'see_role' && targets) {
-          actions.push(`${emoji} ${roleName} a vu ${targets}`);
-        } else if (action === 'protect' && targets) {
-          actions.push(`${emoji} ${roleName} a protégé ${targets}`);
-        } else if (action === 'sniff' && targets) {
-          actions.push(`${emoji} ${roleName} a reniflé ${targets}`);
-        }
-      }
-    });
-
-    // Collect all deaths
-    const deadPlayers = players.filter(p => this.deadPlayerIds.has(p.id));
-    deadPlayers.forEach(p => {
-      const roleData = this.rolesLoader.getRole(p.role);
-      const emoji = roleData?.emoji || '❓';
-
-      let cause = 'Cause inconnue';
-      if (this.roleStates['Grand_Mechant_Loup']?.result?.targets?.includes(p.id)) {
-        cause = 'Dévoré par le Grand Méchant Loup';
-      } else if (this.roleStates['Sorciere']?.result?.targets?.includes(p.id)) {
-        cause = 'Tué par la potion de la Sorcière';
-      } else {
-        cause = 'Dévoré par les Loups';
-      }
-
-      deaths.push({
-        name: p.name,
-        emoji: emoji,
-        cause: cause
-      });
-    });
-
-    const actionsHtml = actions.length > 0
-      ? actions.map(action => `<div style="padding:8px; background:rgba(100,150,200,0.2); border-left:3px solid #81dff7; margin-bottom:6px; font-size:11px; border-radius:2px;">${action}</div>`).join('')
-      : '<div style="padding:12px; text-align:center; color:#aaa; font-size:11px;">Aucune action spéciale</div>';
-
-    const deathsHtml = deaths.length > 0
-      ? deaths.map(d => `
-          <div style="padding:8px; background:rgba(212,102,102,0.2); border-left:3px solid #ff9999; margin-bottom:6px; font-size:11px; border-radius:2px;">
-            <strong>${d.emoji} ${d.name}</strong><br>
-            <span style="color:#ff9999; font-size:10px;">${d.cause}</span>
-          </div>
-        `).join('')
-      : '<div style="padding:12px; text-align:center; color:#aaa; font-size:11px;">Aucune mort cette nuit</div>';
-
-    const html = `
-      <div style="display:flex; flex-direction:column; height:100%; background:rgba(0,0,0,0.3); border-radius:6px; overflow:hidden;">
-        <div style="flex:1; overflow-y:auto; padding:12px;">
-          <div style="margin-bottom:12px;">
-            <h3 style="margin:0 0 8px 0; color:#81dff7; font-size:12px; font-weight:600; border-bottom:2px solid #81dff7; padding-bottom:6px;">
-              📋 Actions de la Nuit
-            </h3>
-            ${actionsHtml}
-          </div>
-
-          <div>
-            <h3 style="margin:0 0 8px 0; color:#ff9999; font-size:12px; font-weight:600; border-bottom:2px solid #ff9999; padding-bottom:6px;">
-              ☠️ Décès
-            </h3>
-            ${deathsHtml}
-          </div>
-        </div>
-
-        <div style="padding:12px; border-top:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.5);">
-          <button id="night-summary-btn-next" class="btn-night-complete"
-                  style="width:100%; padding:12px; background:#4CAF50; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600; font-size:12px;">
-            ✓ Débat et Vote
-          </button>
-        </div>
-      </div>
-    `;
-
-    listbox.innerHTML = html;
-    
     // UPDATE RIGHT PANEL WITH NIGHT SUMMARY
     const titleBig = document.getElementById('action-title-big');
     const actionControls = document.getElementById('action-controls');
     const actionInfo = document.getElementById('action-info');
-    
+
     if (titleBig) {
       titleBig.innerHTML = '🌙 Résumé Nuit 1';
       titleBig.style.background = '#1a3a52';
     }
-    
+
     if (actionControls) {
       actionControls.innerHTML = `
         <div style="padding:12px; color:#ccc; font-size:12px;">
@@ -815,7 +777,7 @@ class FirstNightMDJ {
         </div>
       `;
     }
-    
+
     if (actionInfo) {
       actionInfo.innerHTML = `
         <button id="night-summary-btn-lynch" class="btn-validate-action"
@@ -893,15 +855,6 @@ class FirstNightMDJ {
           this.executeLynch(victimId);
         });
       }
-    }
-
-    // Attach click handler to proceed to voting phase
-    const nextBtn = listbox.querySelector('#night-summary-btn-next');
-    if (nextBtn) {
-      nextBtn.addEventListener('click', () => {
-        console.log('[MDJ] Night summary complete - proceeding to day voting phase');
-        this.startVotingPhase();
-      });
     }
   }
 
@@ -1202,12 +1155,23 @@ class FirstNightMDJ {
       const emoji = roleData?.emoji || '❓';
 
       let cause = 'Cause inconnue';
-      if (this.roleStates['Grand_Mechant_Loup']?.result?.targets?.includes(p.id)) {
-        cause = 'Dévoré par le Grand Méchant Loup';
-      } else if (this.roleStates['Sorciere']?.result?.targets?.includes(p.id)) {
-        cause = 'Tué par la potion';
-      } else {
-        cause = 'Dévoré par les Loups';
+      const deathCause = this.deathCauses[p.id];
+
+      if (deathCause === 'love') {
+        cause = 'Mort d\'amour';
+      } else if (deathCause === 'poison') {
+        cause = 'Tué par la potion de la Sorcière';
+      } else if (deathCause === 'lynch') {
+        cause = 'Lynché par le village';
+      } else if (deathCause === 'wolf') {
+        // Determine which wolf killed them
+        if (this.roleStates['Grand_Mechant_Loup']?.result?.targets?.includes(p.id)) {
+          cause = 'Dévoré par le Grand Méchant Loup';
+        } else if (this.roleStates['Simple_Loup_Garou']?.result?.targets?.includes(p.id)) {
+          cause = 'Dévoré par un Simple Loup Garou';
+        } else {
+          cause = 'Dévoré par les Loups';
+        }
       }
 
       deaths.push({ name: p.name, role: p.role, emoji: emoji, cause: cause });
@@ -1300,6 +1264,7 @@ class FirstNightMDJ {
 
     // Add to dead players
     this.deadPlayerIds.add(victimId);
+    this.deathCauses[victimId] = 'lynch'; // Record lynch as cause
 
     // Update map to show dead player
     const mdjMap = document.getElementById('mdj-live-map');
@@ -1399,6 +1364,7 @@ class FirstNightMDJ {
   /**
    * Initialize role states for Night 2
    * Only include roles that have actual night actions (NightActive)
+   * IMPORTANT: Dead players' roles should NOT be initialized for next night
    */
   initializeNight2RoleStates() {
     this.roleStates = {}; // Clear previous states
@@ -1412,6 +1378,14 @@ class FirstNightMDJ {
 
       const roleData = this.rolesLoader.getRole(roleId);
       if (!roleData) return;
+
+      // Check if the player with this role is alive
+      const playerWithRole = players.find(p => p.role === roleId);
+      if (!playerWithRole) return; // Role not assigned to anyone
+      if (this.deadPlayerIds.has(playerWithRole.id)) {
+        console.log(`[MDJ] Night 2 role SKIPPED: ${roleId} (${roleData.name}) - player ${playerWithRole.name} is dead`);
+        return;
+      }
 
       // For Night 2+: ONLY include roles with explicit NightActive type
       // This excludes Cupidon, Enfant_Sauvage, Chien_Loup, etc.
@@ -1442,12 +1416,21 @@ class FirstNightMDJ {
       return this.startMayorElection();
     }
 
-    // PRIORITY 2: Check if all roles are completed - if so, show summary instead
+    // PRIORITY 2: Check if all roles are completed - if so, DISABLE clicks but keep list visible
     const completedRoleIds = Object.keys(this.roleStates);
     const allCompleted = completedRoleIds.length > 0 && completedRoleIds.every(roleId => this.roleStates[roleId].completed);
 
     if (allCompleted) {
+      // Just disable clicks - zone bleue MUST stay as player list!
+      this.disableRoleListbox();
       return this.renderNightSummary();
+    }
+
+    // ALWAYS SHOW: Re-enable clicks at night phases
+    if (listbox.style.pointerEvents === 'none') {
+      listbox.style.opacity = '1';
+      listbox.style.pointerEvents = 'auto';
+      listbox.style.backgroundColor = 'rgba(0,0,0,0.15)';
     }
 
     // Get all players (alive and dead)
@@ -3854,7 +3837,7 @@ class FirstNightMDJ {
             console.log(`${attackType} ${roleName} killed ${playerName} (${playerId})`);
 
             // Check for cascading Cupidon death
-            // If one lover dies, the other should also die
+            // If one lover dies, the other should also die (but from love, not from the attack)
             if (this.roleStates['Cupidon']?.completed && this.roleStates['Cupidon']?.result?.targets) {
               const lovers = this.roleStates['Cupidon'].result.targets;
               if (lovers.includes(playerId) && lovers.length === 2) {
@@ -3862,8 +3845,19 @@ class FirstNightMDJ {
                 if (otherLoverId && !this.deadPlayerIds.has(otherLoverId)) {
                   this.deadPlayerIds.add(otherLoverId);
                   const otherLoverName = this.getPlayerName(otherLoverId);
+                  this.deathCauses[otherLoverId] = 'love'; // Died from love, not attack
                   console.log(`[MDJ] 💔 Cascading death: ${otherLoverName} (${otherLoverId}) dies with lover ${playerName}`);
                 }
+              }
+            }
+
+            // Record the actual cause of death
+            if (!this.deathCauses[playerId]) {
+              // Only set if not already set (e.g., love death doesn't override)
+              if (action === 'poison') {
+                this.deathCauses[playerId] = 'poison';
+              } else if (action === 'kill') {
+                this.deathCauses[playerId] = 'wolf';
               }
             }
 
@@ -3872,8 +3866,12 @@ class FirstNightMDJ {
               const enfantPlayer = players.find(p => p.role === 'Enfant_Sauvage');
               if (enfantPlayer && !this.deadPlayerIds.has(enfantPlayer.id)) {
                 console.log(`[MDJ] 🐒➡️🐺 Enfant Sauvage ${enfantPlayer.name}'s idol ${playerName} died! Transform to wolf`);
-                // TODO: Change player role and re-render map to show wolf visuals
-                // This will need to update the map to show the Enfant_Sauvage now as a wolf
+                // Change player role to wolf
+                enfantPlayer.role = 'Simple_Loup_Garou';
+                enfantPlayer.camp = 'Loup'; // Change team to Wolf
+                console.log(`[MDJ] ✓ ${enfantPlayer.name} is now a Simple Loup Garou (changed from Enfant Sauvage)`);
+                // Update map to show wolf visuals with new emoji 🐺
+                this.renderLiveMap();
               }
             }
           }
