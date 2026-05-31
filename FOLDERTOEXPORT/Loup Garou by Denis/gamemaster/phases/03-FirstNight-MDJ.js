@@ -296,6 +296,8 @@ class FirstNightMDJ {
     const mapContainer = document.getElementById('mdj-live-map');
     if (!mapContainer) return;
 
+    console.log(`[MDJ] renderLiveMap called - mayorId: ${this.mayorId}`);
+
     const players = this.gm.state.players || [];
     const rolesData = window.ROLES_DATA?.roles || {};
 
@@ -460,12 +462,21 @@ class FirstNightMDJ {
         }
       } else if (p.role === this.selectedRoleId) {
         console.log(`[MDJ] 🫁 Breathing for: ${p.name} (${p.role}) - selectedRoleId: ${this.selectedRoleId}`);
+        isCurrentRole = true;
+      } else {
+        // Debug: show why breathing not applied
+        if (p.role === 'Cupidon' || this.selectedRoleId === 'Cupidon') {
+          console.log(`[MDJ] DEBUG Cupidon: p.role=${p.role}, selectedRoleId=${this.selectedRoleId}, match=${p.role === this.selectedRoleId}`);
+        }
       }
 
       const isDead = this.deadPlayerIds.has(p.id);
       const deadStyle = isDead ? 'filter: grayscale(100%) brightness(0.5); opacity: 0.6;' : '';
 
       const isMayor = this.mayorId && this.mayorId === p.id;
+      if (isMayor) {
+        console.log(`[MDJ] 🎖️ MAYOR BADGE: ${p.name} (${p.id}) - mayorId: ${this.mayorId}`);
+      }
       const displayName = isMayor ? `🎖️ ${p.name}` : p.name;
 
       return `
@@ -732,6 +743,10 @@ class FirstNightMDJ {
       item.addEventListener('click', () => {
         this.selectedMayorId = playerId;
         this.startTimer(); // Restart timer when selecting mayor
+        // Temporarily show badge preview on map
+        this.mayorId = playerId;
+        this.renderLiveMap();
+        this.mayorId = null; // Reset until officially elected
         this.startMayorElection(); // Re-render with updated selection
       });
     });
@@ -814,9 +829,13 @@ class FirstNightMDJ {
    */
   completeMayorElection() {
     console.log('[MDJ] Mayor election complete - proceeding to first night roles');
+    console.log(`[MDJ] ✓ mayorId set to: ${this.mayorId}`);
     this.mayorElectionCompleted = true;
     this.selectedMayorId = null;
     this.selectedLynchVictimId = null; // Clear any previous selection
+
+    // Re-render map with mayor badge
+    this.renderLiveMap();
 
     // Re-render to show role list instead of mayor election
     this.renderRoleListbox();
@@ -1213,6 +1232,10 @@ class FirstNightMDJ {
       if (firstRoleWithAction) {
         this.selectedRoleId = firstRoleWithAction;
         console.log('[FirstNightMDJ] Auto-selected first role (by JSON order) with action:', firstRoleWithAction);
+        // Apply breathing effect ONCE when auto-selecting
+        this.renderLiveMap();
+        this.updateMapForRole();
+        this.restoreCompletedRoleEffects();
       }
     }
 
@@ -2394,8 +2417,8 @@ class FirstNightMDJ {
     if (!actionControls) return;
     const selectedPlayer = this.selectedPlayers[0] || null;
 
-    // Filter out dead players
-    const alivePlayers = this.playerRegistry.getAlive();
+    // Filter out dead players AND the Voyante herself (can't see herself)
+    const alivePlayers = this.playerRegistry.getAlive().filter(p => p.role !== 'Voyante');
 
     const playerListHtml = alivePlayers
       .map((player, idx) => {
@@ -2790,6 +2813,8 @@ class FirstNightMDJ {
         }
 
         this.renderActionButtons();
+        console.log(`[MDJ] Wolf kill - calling renderLiveMap to restore colors immediately`);
+        this.renderLiveMap(); // Full re-render to immediately restore old target colors
         console.log(`[MDJ] Wolf kill - calling updateMapForRole to apply visuals`);
         this.updateMapForRole();
       });
@@ -3027,8 +3052,8 @@ class FirstNightMDJ {
     const corbeauRole = this.rolesLoader.getRole('Corbeau');
     const corbeauBorderColor = corbeauRole?.visual?.affectedColor?.borderColor || bgColor;
 
-    // Filter out dead players
-    const alivePlayers = this.playerRegistry.getAlive();
+    // Filter out dead players AND Corbeau himself (can't steal votes against himself)
+    const alivePlayers = this.playerRegistry.getAlive().filter(p => p.role !== 'Corbeau');
 
     const playerListHtml = alivePlayers
       .map((player, idx) => {
@@ -3316,14 +3341,29 @@ class FirstNightMDJ {
     console.log(`[MDJ] Calling restoreCompletedRoleEffects() to restore borders from other roles`);
     this.restoreCompletedRoleEffects();
 
-    this.renderActionButtons();
-    this.updateSelectedDisplay();
+    const roleData = this.rolesLoader.getRole(roleId);
+
+    // Corbeau vole automatiquement - pas d'interface de sélection
+    if (roleId === 'Corbeau') {
+      console.log(`[MDJ] 🐦‍⬛ Corbeau auto-completing (votes stolen automatically)`);
+      this.actionState = {
+        roleId: 'Corbeau',
+        action: 'steal_votes',
+        roleName: roleData?.name || 'Corbeau',
+        roleEmoji: roleData?.emoji || '🐦‍⬛'
+      };
+      // Delay slightly to allow UI to render, then auto-complete and show night summary
+      setTimeout(() => this.completeRoleAction(), 100);
+    } else {
+      // Normal roles: render action interface
+      this.renderActionButtons();
+      this.updateSelectedDisplay();
+    }
 
     // Restore effects from completed roles
     console.log(`[MDJ] Calling restoreCompletedRoleEffects() to restore previous roles' visuals`);
     this.restoreCompletedRoleEffects();
 
-    const roleData = this.rolesLoader.getRole(roleId);
     if (roleData) {
       console.log(`[MDJ] === ROLE SELECTION COMPLETE: ${roleData.emoji} ${roleData.name} ===`);
     } else {
@@ -3618,8 +3658,8 @@ class FirstNightMDJ {
       const nightActive = nextRoleData?.nightActive || [];
       const actsThisNight = nightActive.length > 0 && nightActive.includes(this.currentNight);
 
-      // Check if at least one player with this role is alive
-      const playerWithRole = players.find(p => p.role === nextRoleId && !this.deadPlayerIds.has(p.id));
+      // Check if at least one player with this role exists (dead or alive - they play their role at night, discover death in morning)
+      const playerWithRole = players.find(p => p.role === nextRoleId);
 
       if (isAssigned && !isCompleted && actsThisNight && playerWithRole) {
         nextRoleWithAction = nextRoleId;
@@ -4829,4 +4869,4 @@ class FirstNightMDJ {
 }
 
 // Expose to window for use in game-master-ui.js
-window.FirstNightMDJ = FirstNigh
+window.FirstNightMDJ = FirstNightMDJ;
