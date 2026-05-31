@@ -3697,7 +3697,9 @@ class FirstNightMDJ {
         this.logger.logMorning(1);
       }
 
-      // Night summary will be shown by renderRoleListbox()
+      // Display night summary
+      this.renderNightSummary();
+
       // User clicks "Débat et Vote" button to proceed to day phase
       // No automatic transition - let user review summary first
     }
@@ -4827,4 +4829,4 @@ class FirstNightMDJ {
 }
 
 // Expose to window for use in game-master-ui.js
-window.FirstNightMDJ = FirstNightMDJ;
+window.FirstNightMDJ = FirstNigh
