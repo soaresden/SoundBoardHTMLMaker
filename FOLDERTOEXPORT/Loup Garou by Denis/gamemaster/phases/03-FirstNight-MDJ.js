@@ -1120,7 +1120,8 @@ class FirstNightMDJ {
     const players = this.gm.state.players || [];
     const actions = [];
     const deaths = [];
-    const aliveNonWolfPlayers = players.filter(p => !this.deadPlayerIds.has(p.id) && !this.playerRegistry.isWolf(p.id));
+    // Lynch can include ANYONE alive, even wolves - removed wolf filter
+    const alivePlayers = players.filter(p => !this.deadPlayerIds.has(p.id));
 
     // Collect actions
     Object.entries(this.roleStates).forEach(([roleId, state]) => {
@@ -1293,7 +1294,7 @@ class FirstNightMDJ {
         <p style="margin: 0 0 8px 0; font-size: 10px; color: #ccc;">Qui sera exécuté aujourd'hui?</p>
         <select id="lynch-target" style="width: 100%; padding: 8px; font-size: 10px; border-radius: 3px; border: 1px solid #555; background: #333; color: #fff; margin-bottom: 8px;">
           <option value="">-- Sélectionner une victime --</option>
-          ${aliveNonWolfPlayers.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+          ${alivePlayers.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
         </select>
       </div>
     `;
@@ -1372,9 +1373,7 @@ class FirstNightMDJ {
       }
     }
 
-    if (listbox) {
-      listbox.innerHTML = '<div style="padding: 12px; text-align: center; color: #95a5a6; font-size: 11px;">Révélation en cours...</div>';
-    }
+    // Zone bleue stays as player list - already disabled by disableRoleListbox()
   }
 
   /**
@@ -2864,9 +2863,13 @@ class FirstNightMDJ {
         const selectedRole = this.rolesLoader.getRole(selectedPlayerObj.role);
 
         // Check for wolves in the 3 neighbors
-        const isLeftWolf = leftPlayer.role.includes('Loup') || leftPlayer.role.includes('Wolf');
-        const isSelectedWolf = selectedPlayerObj.role.includes('Loup') || selectedPlayerObj.role.includes('Wolf');
-        const isRightWolf = rightPlayer.role.includes('Loup') || rightPlayer.role.includes('Wolf');
+        // EXCEPTION: Chien_Loup who chose villageois is NOT a wolf
+        const isChienStayVillager = (p) => p.role === 'Chien_Loup' &&
+          this.roleStates['Chien_Loup']?.result?.targets?.includes('stay_villager');
+
+        const isLeftWolf = (leftPlayer.role.includes('Loup') || leftPlayer.role.includes('Wolf')) && !isChienStayVillager(leftPlayer);
+        const isSelectedWolf = (selectedPlayerObj.role.includes('Loup') || selectedPlayerObj.role.includes('Wolf')) && !isChienStayVillager(selectedPlayerObj);
+        const isRightWolf = (rightPlayer.role.includes('Loup') || rightPlayer.role.includes('Wolf')) && !isChienStayVillager(rightPlayer);
         const wolfCount = (isLeftWolf ? 1 : 0) + (isSelectedWolf ? 1 : 0) + (isRightWolf ? 1 : 0);
 
         console.log(`[MDJ] Renard inspection - 3 neighbors: left=${leftPlayer.name} (${isLeftWolf ? 'wolf' : 'not wolf'}), center=${selectedPlayerObj.name} (${isSelectedWolf ? 'wolf' : 'not wolf'}), right=${rightPlayer.name} (${isRightWolf ? 'wolf' : 'not wolf'}) - Total wolves: ${wolfCount}`);
@@ -3146,18 +3149,24 @@ class FirstNightMDJ {
     // Get protected players for indicator
     const protectedPlayers = this.getProtectedPlayers();
 
-    // Get victim from wolf kill (if already selected)
+    // Get victim from wolf pack kill (LAST victim among all wolves this night)
     let victimName = '???';
     let victimId = null;
+    let lastWolfKill = null;
+    // Check all wolves in order (the order determines who kills last in meute logic)
     for (const roleId of ['Simple_Loup_Garou', 'Grand_Mechant_Loup', 'Loup_Garou_Blanc']) {
       if (this.roleStates[roleId]?.result?.targets?.length > 0) {
-        // targets are stored as player IDs (p0, p1, etc)
-        victimId = this.roleStates[roleId].result.targets[0];
-        // Get player name from ID
-        const player = players.find(p => p.id === victimId);
-        if (player) victimName = player.name;
-        break;
+        // LAST victim is the one to show (in case multiple wolves killed this turn)
+        lastWolfKill = {
+          roleId,
+          victimId: this.roleStates[roleId].result.targets[0]
+        };
       }
+    }
+    if (lastWolfKill) {
+      victimId = lastWolfKill.victimId;
+      const player = players.find(p => p.id === victimId);
+      if (player) victimName = player.name;
     }
 
     const selectedAction = this.selectedPlayers[0];
