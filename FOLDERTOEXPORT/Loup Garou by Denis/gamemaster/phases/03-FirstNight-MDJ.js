@@ -150,6 +150,9 @@ class FirstNightMDJ {
     // Renard power loss tracking
     this.renardDetectedWolves = null; // Track if Renard detected wolves on Night 1 (loses power if not)
 
+    // Sorcière potion tracking (she has 2 potions total: 1 life, 1 death)
+    this.sorcierePotionsUsed = 0; // Increment when used (poison or resurrect) — max 2
+
     // Voting phase tracking
     this.selectedLynchVictimId = null; // Player selected for lynch vote
 
@@ -1341,44 +1344,38 @@ class FirstNightMDJ {
       }
     }
 
-    // 2-column main layout (IMPROVED READABILITY: larger fonts, better contrast)
+    // SEQUENTIAL LAYOUT: 2 major blocks (vertical flow)
     return `
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-        <!-- LEFT COLUMN: Actions -->
-        <div style="border: 2px solid #81dff7; border-radius: 6px; padding: 10px; background: rgba(129,223,247,0.15);">
-          <h4 style="margin: 0 0 10px 0; color: #81dff7; font-size: 13px; font-weight: 700;">📋 Actions</h4>
-          <div style="max-height: 180px; overflow-y: auto;">
-            ${actionsHtml}
-          </div>
-        </div>
-
-        <!-- RIGHT COLUMN: Deaths -->
-        <div style="border: 2px solid #ff6666; border-radius: 6px; padding: 10px; background: rgba(255,102,102,0.15);">
-          <h4 style="margin: 0 0 10px 0; color: #ff6666; font-size: 13px; font-weight: 700;">☠️ Morts</h4>
-          <div style="max-height: 180px; overflow-y: auto;">
-            ${deathsHtml}
-          </div>
+      <!-- BLOCK 1: ACTIONS DES NUITS (Chronological actions) -->
+      <div style="border: 3px solid #00BFFF; border-radius: 8px; padding: 14px; background: rgba(0,191,255,0.12); margin-bottom: 14px;">
+        <h3 style="margin: 0 0 12px 0; color: #00BFFF; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">📋 ACTIONS DE LA NUIT</h3>
+        <div style="max-height: 200px; overflow-y: auto; border-left: 4px solid #00BFFF; padding-left: 10px;">
+          ${actionsHtml}
         </div>
       </div>
 
-      <!-- SPECIAL SECTIONS (Chasseur, Chevalier, etc.) -->
+      <!-- BLOCK 2: REGISTRE DES MORTS (Deaths by night) -->
+      <div style="border: 3px solid #ff4444; border-radius: 8px; padding: 14px; background: rgba(255,68,68,0.12); margin-bottom: 14px;">
+        <h3 style="margin: 0 0 12px 0; color: #ff4444; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">☠️ REGISTRE DES MORTS</h3>
+        <div style="max-height: 200px; overflow-y: auto; border-left: 4px solid #ff4444; padding-left: 10px;">
+          ${deathsHtml}
+        </div>
+      </div>
+
+      <!-- SPECIAL EVENTS SECTION (Chasseur, Chevalier, Montreur d'Ours, Transformations) -->
       ${specialSectionsHtml}
-
-      <!-- MONTREUR D'OURS GROWL (BELOW table, not inside) -->
       ${montreurOursHtml}
-
-      <!-- ENFANT SAUVAGE TRANSFORMATIONS (BELOW table, not inside) -->
       ${transformations.length > 0 ? transformations.map(t => `
-        <div style="padding:8px; margin-bottom:8px; background:rgba(170,34,14,0.1); border-left:3px solid #AA220E; font-size:10px;">
+        <div style="padding:10px; margin-bottom:12px; background:rgba(170,34,14,0.15); border-radius:6px; border-left:4px solid #AA220E; font-size:11px; line-height:1.4;">
           ${t}
         </div>
       `).join('') : ''}
 
       <!-- LYNCH SELECTION -->
-      <div style="border: 1px solid rgba(200,100,200,0.3); border-radius: 4px; padding: 10px; background: rgba(200,100,200,0.05);">
-        <h4 style="margin: 0 0 8px 0; color: #d966ff; font-size: 11px; font-weight: 600;">🪓 Vote du Village - Au Bûcher!</h4>
-        <p style="margin: 0 0 8px 0; font-size: 10px; color: #ccc;">Qui sera exécuté aujourd'hui?</p>
-        <select id="lynch-target" style="width: 100%; padding: 8px; font-size: 10px; border-radius: 3px; border: 1px solid #555; background: #333; color: #fff; margin-bottom: 8px;">
+      <div style="border: 2px solid #d966ff; border-radius: 6px; padding: 12px; background: rgba(217,102,255,0.12); margin-bottom: 12px;">
+        <h4 style="margin: 0 0 10px 0; color: #e0a0ff; font-size: 12px; font-weight: 700; text-transform: uppercase;">🪓 VOTE DU VILLAGE - AU BÛCHER!</h4>
+        <p style="margin: 0 0 8px 0; font-size: 11px; color: #ccc;">Qui sera exécuté ce matin?</p>
+        <select id="lynch-target" style="width: 100%; padding: 8px; font-size: 11px; border-radius: 3px; border: 1px solid #d966ff; background: #1a1a2e; color: #fff; margin-bottom: 8px; font-weight: 500;">
           <option value="">-- Sélectionner une victime --</option>
           ${alivePlayers.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
         </select>
@@ -1477,6 +1474,9 @@ class FirstNightMDJ {
         this.deadPlayerIds.add(this.chevalierCursedWolfId);
         this.deathCauses[this.chevalierCursedWolfId] = 'chevalier';
         console.log(`[MDJ] ⚔️ Chevalier curse applies: ${cursedWolf.name} dies at start of Night 2`);
+
+        // CRITICAL: Check if cursed wolf was a Cupidon lover — trigger cascading death
+        this.checkCupidonCascadingDeath(this.chevalierCursedWolfId);
       }
     }
 
@@ -1540,6 +1540,12 @@ class FirstNightMDJ {
           console.log(`[MDJ] Night ${this.currentNight} Renard SKIPPED: no wolves detected on Night ${this.currentNight - 1}, lost power`);
           return;
         }
+      }
+
+      // CRITICAL: Check if Sorciere used all potions (2 total: 1 life + 1 death)
+      if (roleId === 'Sorciere' && this.sorcierePotionsUsed >= 2) {
+        console.log(`[MDJ] Night ${this.currentNight} Sorciere SKIPPED: used all 2 potions already`);
+        return;
       }
 
       // For Night 2+: Check if this role plays THIS NIGHT
@@ -4128,6 +4134,10 @@ class FirstNightMDJ {
               const enfantPlayer = players.find(p => p.role === 'Enfant_Sauvage');
               if (enfantPlayer && !this.deadPlayerIds.has(enfantPlayer.id)) {
                 console.log(`[MDJ] 🐒➡️🐺 Enfant Sauvage ${enfantPlayer.name}'s idol ${playerName} died! Transform to wolf`);
+
+                // ANIMATION: Flash screen + breathing cycles (🐒→🐺)
+                this.playEnfantSauvageTransformationAnimation(enfantPlayer);
+
                 // Record the transformation
                 this.transformations[enfantPlayer.id] = {
                   from: 'Enfant_Sauvage',
@@ -4160,6 +4170,15 @@ class FirstNightMDJ {
           }
         }
       });
+      // CRITICAL: Increment potion counter
+      this.sorcierePotionsUsed++;
+      console.log(`[MDJ] 🧙‍♀️ Sorciere potions used: ${this.sorcierePotionsUsed}/2`);
+    }
+
+    // CRITICAL: Track Sorciere poison potion usage
+    if (roleId === 'Sorciere' && action === 'poison') {
+      this.sorcierePotionsUsed++;
+      console.log(`[MDJ] 🧙‍♀️ Sorciere potions used: ${this.sorcierePotionsUsed}/2`);
     }
 
     // Clear selections
@@ -4245,6 +4264,80 @@ class FirstNightMDJ {
     const otherLoverName = this.getPlayerName(otherLoverId);
     this.deathCauses[otherLoverId] = 'love'; // Died from love, not from the attack
     console.log(`[MDJ] 💔 Cascading death: ${otherLoverName} (${otherLoverId}) dies with lover ${victimName} (${victimId})`);
+  }
+
+  /**
+   * Play animation for Enfant Sauvage transformation (🐒 → 🐺)
+   * Flash screen + 2 breathing cycles
+   */
+  playEnfantSauvageTransformationAnimation(enfantPlayer) {
+    const mapContainer = document.getElementById('mdj-live-map');
+    if (!mapContainer) return;
+
+    // Find the player's avatar point on map
+    const playerPoint = mapContainer.querySelector(`[data-player-id="${enfantPlayer.id}"]`);
+    if (!playerPoint) return;
+
+    const emoji = playerPoint.querySelector('.mdj-point-emoji');
+    if (!emoji) return;
+
+    // 1. FLASH SCREEN
+    const flashEl = document.createElement('div');
+    flashEl.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.8);
+      pointer-events: none;
+      animation: flashFade 0.4s ease-out;
+      z-index: 9999;
+    `;
+
+    // Add animation keyframes if not already present
+    if (!document.getElementById('enfant-animation-styles')) {
+      const style = document.createElement('style');
+      style.id = 'enfant-animation-styles';
+      style.textContent = `
+        @keyframes flashFade {
+          0% { opacity: 1; }
+          100% { opacity: 0; }
+        }
+        @keyframes breatheTransform {
+          0% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.1); opacity: 0.7; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    document.body.appendChild(flashEl);
+    setTimeout(() => flashEl.remove(), 400);
+
+    // 2. BREATHING CYCLES: 🐒→🐺 (2x)
+    const originalEmoji = '🐒';
+    const wolfEmoji = '🐺';
+    let cycleCount = 0;
+    const maxCycles = 2;
+
+    const breathingInterval = setInterval(() => {
+      if (cycleCount >= maxCycles) {
+        clearInterval(breathingInterval);
+        emoji.textContent = wolfEmoji; // End on wolf emoji
+        emoji.style.animation = 'none';
+        return;
+      }
+
+      // Alternate emoji every 300ms
+      const isWolfPhase = (cycleCount % 2 === 1);
+      emoji.textContent = isWolfPhase ? wolfEmoji : originalEmoji;
+      emoji.style.animation = 'breatheTransform 0.6s ease-in-out';
+      cycleCount++;
+    }, 600);
+
+    console.log(`[MDJ] 🎬 Animation: ${enfantPlayer.name} transforms from 🐒 to 🐺 (2 cycles)`);
   }
 
   /**
