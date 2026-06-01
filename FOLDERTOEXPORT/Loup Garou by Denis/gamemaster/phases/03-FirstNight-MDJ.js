@@ -187,6 +187,19 @@ class FirstNightMDJ {
   }
 
   /**
+   * Quick save: Save game state after ANY action
+   * Called after every player selection, role action, etc.
+   */
+  quickSave() {
+    if (this.gm && typeof this.gm.saveState === 'function') {
+      this.gm.saveState();
+    }
+    if (window.gameUI && typeof window.gameUI.saveGameStateToCache === 'function') {
+      window.gameUI.saveGameStateToCache();
+    }
+  }
+
+  /**
    * Helper: Get all protected players (Salvateur protection)
    * Returns Set of player IDs that are protected
    */
@@ -872,16 +885,17 @@ class FirstNightMDJ {
 
           console.log('[MDJ] Lynch execution for:', victimId);
 
-          // Check if Chasseur needs to shoot first
+          // Check if LYNCHED VICTIM is Chasseur - he can shoot before dying!
           const players = this.gm.state.players || [];
-          const deadChaseur = players.find(p => this.deadPlayerIds.has(p.id) && p.role === 'Chasseur');
+          const lynchVictim = players.find(p => p.id === victimId);
           const chasseurTargetSelect = document.getElementById('chasseur-target');
 
-          if (deadChaseur && chasseurTargetSelect && !this.chasseurHasShot) {
+          // CRITICAL: If victim is Chasseur and has not shot yet, let him shoot first!
+          if (lynchVictim && lynchVictim.role === 'Chasseur' && !this.chasseurHasShot && chasseurTargetSelect) {
             const chasseurTargetId = chasseurTargetSelect.value;
-            if (chasseurTargetId) {
+            if (chasseurTargetId && chasseurTargetId !== '') {
               // Chasseur shoots first (only ONE shot per game!)
-              console.log('[MDJ] 🏹 Chasseur shoots:', chasseurTargetId);
+              console.log(`[MDJ] 🏹 ${lynchVictim.name} (Chasseur) shoots before dying: ${this.getPlayerName(chasseurTargetId)}`);
               this.deadPlayerIds.add(chasseurTargetId);
               // CRITICAL: Mark the cause of death for Chasseur's victim
               this.deathCauses[chasseurTargetId] = 'chasseur';
@@ -1419,6 +1433,28 @@ class FirstNightMDJ {
     this.deadPlayerIds.add(victimId);
     this.deathCauses[victimId] = 'lynch'; // Record lynch as cause
 
+    // CRITICAL: Check for cascading Cupidon death (if lynched player is a lover)
+    this.checkCupidonCascadingDeath(victimId);
+
+    // CRITICAL: Check for Enfant Sauvage idol death - transform to wolf if idol is lynched
+    if (this.roleStates['Enfant_Sauvage']?.completed && this.roleStates['Enfant_Sauvage']?.result?.targets?.includes(victimId)) {
+      const enfantPlayer = players.find(p => p.role === 'Enfant_Sauvage');
+      if (enfantPlayer && !this.deadPlayerIds.has(enfantPlayer.id)) {
+        console.log(`[MDJ] 🐒➡️🐺 Enfant Sauvage ${enfantPlayer.name}'s idol ${victim.name} was LYNCHED! Transform to wolf`);
+
+        // Record the transformation
+        this.transformations[enfantPlayer.id] = {
+          from: 'Enfant_Sauvage',
+          to: 'Simple_Loup_Garou',
+          reason: `idol ${victim.name} lynché au bûcher`
+        };
+        // Change player role to wolf
+        enfantPlayer.role = 'Simple_Loup_Garou';
+        enfantPlayer.camp = 'Loup'; // Change team to Wolf
+        console.log(`[MDJ] ✓ ${enfantPlayer.name} is now a Simple Loup Garou (transformed from Enfant Sauvage)`);
+      }
+    }
+
     // Update map to show dead player
     const mdjMap = document.getElementById('mdj-live-map');
     if (mdjMap) {
@@ -1473,6 +1509,13 @@ class FirstNightMDJ {
       if (continueBtn) {
         continueBtn.addEventListener('click', () => {
           console.log('[MDJ] Moving to Night 2');
+          // Save state before moving to Night 2
+          if (this.gm && typeof this.gm.saveState === 'function') {
+            this.gm.saveState();
+          }
+          if (window.gameUI && typeof window.gameUI.saveGameStateToCache === 'function') {
+            window.gameUI.saveGameStateToCache();
+          }
           this.startNight2();
         });
       }
@@ -2070,6 +2113,9 @@ class FirstNightMDJ {
     this.updateMapForCupidon();
 
     console.log('[MDJ] Cupidon lovers:', this.selectedPlayers);
+
+    // Save after every Cupidon selection
+    this.quickSave();
   }
 
   /**
@@ -2842,6 +2888,9 @@ class FirstNightMDJ {
         actionInfo.querySelector('.btn-validate-action')?.addEventListener('click',
           () => this.completeRoleAction());
       }
+
+      // Save after Chien_Loup choice
+      this.quickSave();
     });
 
     wolfBtn?.addEventListener('click', () => {
@@ -2884,6 +2933,9 @@ class FirstNightMDJ {
         actionInfo.querySelector('.btn-validate-action')?.addEventListener('click',
           () => this.completeRoleAction());
       }
+
+      // Save after Chien_Loup choice
+      this.quickSave();
     });
 
     if (actionInfo) {
@@ -3310,6 +3362,9 @@ class FirstNightMDJ {
         this.renderLiveMap(); // Full re-render to immediately restore old target colors
         console.log(`[MDJ] Wolf kill - calling updateMapForRole to apply visuals`);
         this.updateMapForRole();
+
+        // Save after every wolf kill selection
+        this.quickSave();
       });
     });
 
@@ -3464,6 +3519,9 @@ class FirstNightMDJ {
           }
         }
       }
+
+      // Save after Sorciere life potion action
+      this.quickSave();
     });
 
     // Do-nothing button
@@ -3480,6 +3538,9 @@ class FirstNightMDJ {
 
       this.renderActionButtons();
       console.log(`[MDJ] 🧙‍♀️ Sorciere: Ne rien faire`);
+
+      // Save after Sorciere action
+      this.quickSave();
     });
 
     // Combobox for kill selection
@@ -3537,6 +3598,9 @@ class FirstNightMDJ {
         this.renderActionButtons();
         this.updateMapForRole();
         console.log(`[MDJ] 🧙‍♀️ Sorciere visuals applied for ${playerName}`);
+
+        // Save after Sorciere death potion selection
+        this.quickSave();
       });
     }
 
@@ -4014,6 +4078,9 @@ class FirstNightMDJ {
     this.renderActionButtons();
     this.updateMapForRole();
 
+    // Save after every player selection
+    this.quickSave();
+
     // Check if we have enough selections
     if (targetCount === 0) {
       this.completeRoleAction();
@@ -4228,6 +4295,15 @@ class FirstNightMDJ {
     this.updateProgressCount();
 
     console.log(`[MDJ] Role ${roleId} completed. Looking for next role...`);
+
+    // CRITICAL: Save game state to cache after every action
+    if (this.gm && typeof this.gm.saveState === 'function') {
+      this.gm.saveState();
+    }
+    if (window.gameUI && typeof window.gameUI.saveGameStateToCache === 'function') {
+      window.gameUI.saveGameStateToCache();
+      console.log('[MDJ] ✓ Game state saved to cache');
+    }
 
     // Find next role with action and auto-select it
     const orderedRoles = this.rolesLoader.getOrderedRoleIds();
