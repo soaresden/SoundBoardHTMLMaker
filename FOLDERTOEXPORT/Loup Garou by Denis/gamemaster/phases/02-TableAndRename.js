@@ -58,7 +58,15 @@ function renderTableAndRename(gameUI) {
 
     return `
       <div class="gm-player-point" data-player-id="${p.id}" style="left: ${p.tableX}px; top: ${p.tableY}px; position:absolute; cursor:grab; ${deadStyle}" draggable="true" title="${p.name}${isDead ? ' (MORT)' : ''}">
-        <div class="gm-point-dot" style="${isDead ? 'background:#000000; border-color:#555555;' : ''}"></div>
+        <div class="gm-point-dot" style="${isDead ? 'background:#000000; border-color:#555555;' : ''}">
+          <!-- 6 petits points de drag indicator -->
+          <div style="position:absolute; top:-8px; left:50%; transform:translateX(-50%); width:2px; height:2px; background:#81dff7; border-radius:50%;"></div>
+          <div style="position:absolute; bottom:-8px; left:50%; transform:translateX(-50%); width:2px; height:2px; background:#81dff7; border-radius:50%;"></div>
+          <div style="position:absolute; left:-8px; top:50%; transform:translateY(-50%); width:2px; height:2px; background:#81dff7; border-radius:50%;"></div>
+          <div style="position:absolute; right:-8px; top:50%; transform:translateY(-50%); width:2px; height:2px; background:#81dff7; border-radius:50%;"></div>
+          <div style="position:absolute; top:-5px; left:-5px; width:2px; height:2px; background:#81dff7; border-radius:50%;"></div>
+          <div style="position:absolute; bottom:-5px; right:-5px; width:2px; height:2px; background:#81dff7; border-radius:50%;"></div>
+        </div>
         <div class="gm-point-name">${deadIcon}${p.name}</div>
       </div>
     `;
@@ -177,24 +185,52 @@ function setupDragDrop(gameUI) {
   let draggedPlayerId = null;
   let offsetX = 0;
   let offsetY = 0;
+  let isTouching = false;
 
+  const updatePosition = (x, y) => {
+    if (!draggedPoint || !draggedPlayerId) return;
+
+    const rect = container.getBoundingClientRect();
+    const containerX = x - rect.left - offsetX;
+    const containerY = y - rect.top - offsetY;
+
+    const maxX = rect.width - 16;
+    const maxY = rect.height - 16;
+    const finalX = Math.max(0, Math.min(containerX, maxX));
+    const finalY = Math.max(0, Math.min(containerY, maxY));
+
+    draggedPoint.style.left = `${finalX}px`;
+    draggedPoint.style.top = `${finalY}px`;
+  };
+
+  const endDrag = () => {
+    if (!draggedPoint || !draggedPlayerId) return;
+
+    draggedPoint.style.opacity = '1';
+    const player = gameUI.gm.state.players.find(p => p.id === draggedPlayerId);
+    if (player) {
+      player.tableX = parseFloat(draggedPoint.style.left);
+      player.tableY = parseFloat(draggedPoint.style.top);
+      gameUI.gm.saveState();
+    }
+    draggedPoint = null;
+    draggedPlayerId = null;
+    isTouching = false;
+  };
+
+  // ===== SOURIS (drag-drop HTML5) =====
   document.querySelectorAll('.gm-player-point').forEach(point => {
     point.addEventListener('dragstart', (e) => {
       draggedPoint = point;
       draggedPlayerId = point.dataset.playerId;
       const rect = point.getBoundingClientRect();
-      const containerRect = container.getBoundingClientRect();
       offsetX = e.clientX - rect.left;
       offsetY = e.clientY - rect.top;
       e.dataTransfer.effectAllowed = 'move';
       point.style.opacity = '0.5';
     });
 
-    point.addEventListener('dragend', () => {
-      point.style.opacity = '1';
-      draggedPoint = null;
-      draggedPlayerId = null;
-    });
+    point.addEventListener('dragend', endDrag);
   });
 
   container.addEventListener('dragover', (e) => {
@@ -205,24 +241,34 @@ function setupDragDrop(gameUI) {
   container.addEventListener('drop', (e) => {
     e.preventDefault();
     if (!draggedPoint || !draggedPlayerId) return;
-
-    const rect = container.getBoundingClientRect();
-    const x = e.clientX - rect.left - offsetX;
-    const y = e.clientY - rect.top - offsetY;
-
-    const maxX = rect.width - 16;
-    const maxY = rect.height - 16;
-    const finalX = Math.max(0, Math.min(x, maxX));
-    const finalY = Math.max(0, Math.min(y, maxY));
-
-    draggedPoint.style.left = `${finalX}px`;
-    draggedPoint.style.top = `${finalY}px`;
-
-    const player = gameUI.gm.state.players.find(p => p.id === draggedPlayerId);
-    if (player) {
-      player.tableX = finalX;
-      player.tableY = finalY;
-      gameUI.gm.saveState();
-    }
+    updatePosition(e.clientX, e.clientY);
+    endDrag();
   });
+
+  // ===== TACTILE (pour écrans tactiles / tablette) =====
+  document.querySelectorAll('.gm-player-point').forEach(point => {
+    point.addEventListener('touchstart', (e) => {
+      draggedPoint = point;
+      draggedPlayerId = point.dataset.playerId;
+      isTouching = true;
+      const touch = e.touches[0];
+      const rect = point.getBoundingClientRect();
+      offsetX = touch.clientX - rect.left;
+      offsetY = touch.clientY - rect.top;
+      point.style.opacity = '0.5';
+      e.preventDefault();
+    }, { passive: false });
+  });
+
+  document.addEventListener('touchmove', (e) => {
+    if (!isTouching || !draggedPoint) return;
+    const touch = e.touches[0];
+    updatePosition(touch.clientX, touch.clientY);
+    e.preventDefault();
+  }, { passive: false });
+
+  document.addEventListener('touchend', (e) => {
+    if (!isTouching) return;
+    endDrag();
+  }, { passive: false });
 }
