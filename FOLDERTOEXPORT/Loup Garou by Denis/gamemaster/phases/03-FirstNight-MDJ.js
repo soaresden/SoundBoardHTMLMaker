@@ -161,6 +161,10 @@ class FirstNightMDJ {
 
     // Initialize role states
     this.initializeRoleStates();
+
+    // CRITICAL: Store reference to this MDJ instance so other phases can reuse processLynch()
+    this.gm.mdj = this;
+    console.log('[FirstNightMDJ] ✓ Stored MDJ instance in gm.mdj for all phases');
   }
 
   /**
@@ -954,7 +958,9 @@ class FirstNightMDJ {
         <h3 style="margin: 0 0 8px 0; color: #FFD700; font-size: 14px;">👑 Élection du Maire</h3>
         <p style="margin: 0; font-size: 11px; color: #aaa;">Tous les joueurs</p>
       </div>
-      ${playerListHtml}
+      <div style="max-height: 600px; overflow-y: auto;">
+        ${playerListHtml}
+      </div>
     `;
 
     // Attach click handlers - ANY player can be selected
@@ -1092,9 +1098,10 @@ class FirstNightMDJ {
         <h3 style="margin: 0 0 8px 0; color: #e74c3c; font-size: 14px;">🗳️ Vote du Jour</h3>
         <p style="margin: 0; font-size: 11px; color: #aaa;">Sélectionnez le joueur à éliminer:</p>
       </div>
-      <select class="day-vote-combobox" style="width: 100%; padding: 8px; margin: 8px 12px; font-size: 0.9rem; background: rgba(0,0,0,0.3); color: white; border: 1px solid #e74c3c; border-radius: 3px;">
-        <option value="">-- Choisir --</option>
-        ${voteComboboxHtml}
+      <div style="max-height: 600px; overflow-y: auto; padding: 8px 12px;">
+        <select class="day-vote-combobox" style="width: 100%; padding: 8px; margin: 0; font-size: 0.9rem; background: rgba(0,0,0,0.3); color: white; border: 1px solid #e74c3c; border-radius: 3px;">
+          <option value="">-- Choisir --</option>
+          ${voteComboboxHtml}
       </select>
     `;
 
@@ -1316,12 +1323,13 @@ class FirstNightMDJ {
       : '<div style="padding:6px; text-align:center; color:#666; font-size:9px; font-style:italic;">Aucune mort</div>';
 
     // Check for special role deaths that need handling
-    // CRITICAL: Only show Chasseur revenge box if:
-    // 1) He died THIS night (not from previous nights)
-    // 2) He hasn't already used his ONE SHOT
-    const chasseurPlayer = players.find(p => p.role === 'Chasseur' && this.deadPlayerIds.has(p.id));
-    const deadChaseur = chasseurPlayer && deadThisNight.includes(chasseurPlayer.id) && !this.chasseurHasShot
-      ? deaths.find(d => d.role === 'Chasseur')
+    // CRITICAL: Show Chasseur revenge box if:
+    // 1) He died THIS night (not from previous nights), OR
+    // 2) He's ALIVE and might be lynched (hasn't shot yet)
+    const chasseurDeadThisNight = players.find(p => p.role === 'Chasseur' && deadThisNight.includes(p.id) && !this.chasseurHasShot);
+    const chasseurAliveNotShot = players.find(p => p.role === 'Chasseur' && !this.deadPlayerIds.has(p.id) && !this.chasseurHasShot);
+    const deadChaseur = (chasseurDeadThisNight || chasseurAliveNotShot)
+      ? (chasseurDeadThisNight || chasseurAliveNotShot)
       : null;
     const deadChevalier = deaths.find(d => d.role === 'Chevalier_Epee_Rouille');
     const deadMaire = deaths.find(d => d.role === 'Maire'); // TODO: implement Maire
@@ -1420,21 +1428,55 @@ class FirstNightMDJ {
   }
 
   /**
-   * Execute lynch - kill player and reveal role
+   * REUSABLE: Process lynch victim - returns all death data
+   * Can be called from ANY phase (Night 1, 2, Day, etc.)
+   * Returns: {victim, victimRole, cascadeDeaths, enfantSauvageTransformed}
    */
-  executeLynch(victimId) {
+  processLynchVictim(victimId) {
     const players = this.gm.state.players || [];
     const victim = players.find(p => p.id === victimId);
     const victimRole = this.rolesLoader.getRole(victim.role);
 
     console.log(`[MDJ] 🔥 ${victim.name} lynched - role revealed: ${victim.role}`);
 
+    // Track cascade deaths
+    const deadBeforeCascade = new Set(this.deadPlayerIds);
+
     // Add to dead players
     this.deadPlayerIds.add(victimId);
-    this.deathCauses[victimId] = 'lynch'; // Record lynch as cause
+    this.deathCauses[victimId] = 'lynch';
 
-    // CRITICAL: Check for cascading Cupidon death (if lynched player is a lover)
+    // Check cascading Cupidon death
     this.checkCupidonCascadingDeath(victimId);
+
+    // Find cascade deaths
+    const cascadeDeaths = [];
+    this.deadPlayerIds.forEach(id => {
+      if (!deadBeforeCascade.has(id) && id !== victimId) {
+        cascadeDeaths.push(id);
+      }
+    });
+
+    // Check Enfant Sauvage transformation
+    let enfantSauvageTransformed = null;
+    if (this.roleStates['Enfant_Sauvage']?.completed && this.roleStates['Enfant_Sauvage']?.result?.targets?.includes(victimId)) {
+      const enfantPlayer = players.find(p => p.role === 'Enfant_Sauvage');
+      if (enfantPlayer && !this.deadPlayerIds.has(enfantPlayer.id)) {
+        enfantSauvageTransformed = enfantPlayer;
+      }
+    }
+
+    return {victim, victimRole, cascadeDeaths, enfantSauvageTransformed};
+  }
+
+  /**
+   * Execute lynch - kill player and reveal role
+   * NIGHT 1 SPECIFIC: Uses processLynchVictim() and displays UI
+   */
+  executeLynch(victimId) {
+    const result = this.processLynchVictim(victimId);
+    const {victim, victimRole, cascadeDeaths, enfantSauvageTransformed} = result;
+    const players = this.gm.state.players || [];
 
     // CRITICAL: Check for Enfant Sauvage idol death - transform to wolf if idol is lynched
     if (this.roleStates['Enfant_Sauvage']?.completed && this.roleStates['Enfant_Sauvage']?.result?.targets?.includes(victimId)) {
@@ -1476,8 +1518,12 @@ class FirstNightMDJ {
     const actionControls = document.getElementById('action-controls');
     const actionInfo = document.getElementById('action-info');
 
+    // Check if victim is Chasseur and can shoot
+    const isChaseur = victim.role === 'Chasseur';
+    const chasseurCanShoot = isChaseur && !this.chasseurHasShot;
+
     if (actionControls) {
-      actionControls.innerHTML = `
+      let html = `
         <div style="padding: 16px; text-align: center; background: rgba(52,73,94,0.3); border-radius: 4px; border: 2px solid #34495e;">
           <div style="font-size: 40px; margin-bottom: 12px;">
             💀
@@ -1491,33 +1537,160 @@ class FirstNightMDJ {
           <div style="color: ${victimRole?.visual?.roleColor?.textColor || '#fff'}; font-weight: bold; font-size: 14px;">
             ${victimRole?.emoji || '❓'} ${victimRole?.name || '?'}
           </div>
+      `;
+
+      // Display cascade deaths (lovers who died with victim)
+      if (cascadeDeaths.length > 0) {
+        cascadeDeaths.forEach(cascadeVictimId => {
+          const cascadeVictim = players.find(p => p.id === cascadeVictimId);
+          const cascadeVictimRole = this.rolesLoader.getRole(cascadeVictim.role);
+          html += `
+            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.2);">
+              <div style="font-size: 32px; margin-bottom: 8px;">💔</div>
+              <div style="color: #ffb3ba; font-weight: bold; font-size: 15px; margin-bottom: 6px;">
+                ${cascadeVictim.name}
+              </div>
+              <div style="color: #ffcccc; font-size: 11px; margin-bottom: 3px;">
+                aussi mort (amoureux)
+              </div>
+              <div style="color: ${cascadeVictimRole?.visual?.roleColor?.textColor || '#ffb3ba'}; font-weight: bold; font-size: 12px;">
+                ${cascadeVictimRole?.emoji || '❓'} ${cascadeVictimRole?.name || '?'}
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      // Display Enfant Sauvage transformation
+      if (enfantSauvageTransformed) {
+        html += `
+          <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(170,34,14,0.4);">
+            <div style="font-size: 32px; margin-bottom: 8px;">🐒➡️🐺</div>
+            <div style="color: #e0a0a0; font-weight: bold; font-size: 15px; margin-bottom: 6px;">
+              ${enfantSauvageTransformed.name}
+            </div>
+            <div style="color: #ffcccc; font-size: 11px; margin-bottom: 3px;">
+              rendu fou par la mort de son idole, est devenu loup!
+            </div>
+          </div>
+        `;
+      }
+
+      // If Chasseur and can shoot, show combobox first
+      if (chasseurCanShoot) {
+        const alivePlayers = players.filter(p => !this.deadPlayerIds.has(p.id) && p.id !== victimId);
+        const validTargets = alivePlayers.filter(p => p.role && (p.role.includes('Loup') || p.role.includes('Wolf')));
+
+        html += `
+          <div style="margin-top: 16px; padding: 12px; background: rgba(210,180,140,0.2); border: 2px solid #D4A574; border-radius: 6px;">
+            <h4 style="margin:0 0 8px 0; color:#D4A574; font-size:12px;">🏹 ${victim.name} peut tirer avant de mourir!</h4>
+            <p style="margin:0 0 8px 0; color:#ddd; font-size:11px;">Choisir sa cible parmi les loups:</p>
+            <select id="chasseur-revenge-target" style="width:100%; padding:6px; background:#333; color:#fff; border:1px solid #666; border-radius:3px; font-size:11px;">
+              <option value="">-- Pas de tir --</option>
+              ${validTargets.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+            </select>
+          </div>
+        `;
+      } else {
+        html += `
           <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1); color: #95a5a6; font-size: 11px;">
             Rendormez-vous, 2ème Nuit!
           </div>
+        `;
+      }
+
+      html += `
         </div>
       `;
+      actionControls.innerHTML = html;
     }
 
     if (actionInfo) {
-      actionInfo.innerHTML = `
-        <button id="btn-continue-night2" style="width: 100%; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px;">
-          ✓ Continuer vers Nuit 2
-        </button>
-      `;
+      if (chasseurCanShoot) {
+        actionInfo.innerHTML = `
+          <button id="btn-chasseur-shoot" style="width: 100%; padding: 12px; background: #D4A574; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px; margin-bottom: 8px;">
+            🏹 Tirer!
+          </button>
+          <button id="btn-skip-shot" style="width: 100%; padding: 12px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px;">
+            ⏭️ Ne pas tirer
+          </button>
+        `;
 
-      const continueBtn = actionInfo.querySelector('#btn-continue-night2');
-      if (continueBtn) {
-        continueBtn.addEventListener('click', () => {
-          console.log('[MDJ] Moving to Night 2');
-          // Save state before moving to Night 2
-          if (this.gm && typeof this.gm.saveState === 'function') {
-            this.gm.saveState();
+        const shootBtn = actionInfo.querySelector('#btn-chasseur-shoot');
+        const skipBtn = actionInfo.querySelector('#btn-skip-shot');
+
+        const executeShot = () => {
+          const targetSelect = document.getElementById('chasseur-revenge-target');
+          const targetId = targetSelect?.value;
+
+          if (targetId) {
+            const targetPlayer = players.find(p => p.id === targetId);
+            console.log(`[MDJ] 🏹 ${victim.name} (Chasseur) shoots: ${targetPlayer.name}`);
+            this.deadPlayerIds.add(targetId);
+            this.deathCauses[targetId] = 'chasseur';
+            this.chasseurHasShot = true;
+            this.checkCupidonCascadingDeath(targetId);
+          } else {
+            console.log(`[MDJ] 🏹 ${victim.name} (Chasseur) chooses not to shoot`);
+            this.chasseurHasShot = true;
           }
-          if (window.gameUI && typeof window.gameUI.saveGameStateToCache === 'function') {
-            window.gameUI.saveGameStateToCache();
+
+          // Now show continue button
+          showContinueButton();
+        };
+
+        const showContinueButton = () => {
+          actionInfo.innerHTML = `
+            <button id="btn-continue-night2" style="width: 100%; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px;">
+              ✓ Continuer vers Nuit 2
+            </button>
+          `;
+
+          const continueBtn = actionInfo.querySelector('#btn-continue-night2');
+          if (continueBtn) {
+            continueBtn.addEventListener('click', () => {
+              console.log('[MDJ] Moving to Night 2');
+              if (this.gm && typeof this.gm.saveState === 'function') {
+                this.gm.saveState();
+              }
+              if (window.gameUI && typeof window.gameUI.saveGameStateToCache === 'function') {
+                window.gameUI.saveGameStateToCache();
+              }
+              this.startNight2();
+            });
           }
-          this.startNight2();
-        });
+        };
+
+        if (shootBtn) {
+          shootBtn.addEventListener('click', executeShot);
+        }
+        if (skipBtn) {
+          skipBtn.addEventListener('click', () => {
+            console.log(`[MDJ] 🏹 ${victim.name} (Chasseur) skips shooting`);
+            this.chasseurHasShot = true;
+            showContinueButton();
+          });
+        }
+      } else {
+        actionInfo.innerHTML = `
+          <button id="btn-continue-night2" style="width: 100%; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px;">
+            ✓ Continuer vers Nuit 2
+          </button>
+        `;
+
+        const continueBtn = actionInfo.querySelector('#btn-continue-night2');
+        if (continueBtn) {
+          continueBtn.addEventListener('click', () => {
+            console.log('[MDJ] Moving to Night 2');
+            if (this.gm && typeof this.gm.saveState === 'function') {
+              this.gm.saveState();
+            }
+            if (window.gameUI && typeof window.gameUI.saveGameStateToCache === 'function') {
+              window.gameUI.saveGameStateToCache();
+            }
+            this.startNight2();
+          });
+        }
       }
     }
 
