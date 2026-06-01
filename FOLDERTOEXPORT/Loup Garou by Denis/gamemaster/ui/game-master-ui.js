@@ -10,6 +10,9 @@ class GameMasterUI {
     this.activeTab = 'game';
     console.log('[GameMaster UI] Constructor called');
 
+    // Restaurer l'état depuis le cache localStorage
+    this.restoreGameStateFromCache();
+
     this.roleToCardFile = {
       'Villageois': '99-Villageois',
       'Voyante': 'Voyante',
@@ -99,6 +102,56 @@ class GameMasterUI {
     this.setupOverlayResize(overlay);
     this.setupOverlayDrag(overlay);
     console.log('[GameMaster] Overlay created');
+  }
+
+  // ========================================
+  // CACHE LOCALSTORAGE - Sauvegarde automatique
+  // ========================================
+  saveGameStateToCache() {
+    try {
+      const cacheData = {
+        timestamp: new Date().toISOString(),
+        state: this.gm.state,
+        currentPhase: this.gm.currentPhase,
+        gameMode: this.gm.gameMode
+      };
+      localStorage.setItem('LoupsGarous_GameState', JSON.stringify(cacheData));
+      console.log('[Cache] ✓ État sauvegardé en cache');
+    } catch (e) {
+      console.warn('[Cache] ⚠️ Impossible de sauvegarder en cache:', e);
+    }
+  }
+
+  restoreGameStateFromCache() {
+    try {
+      const cached = localStorage.getItem('LoupsGarous_GameState');
+      if (cached) {
+        const cacheData = JSON.parse(cached);
+        if (cacheData.state && this.gm) {
+          this.gm.state = cacheData.state;
+          this.gm.currentPhase = cacheData.currentPhase || 'CardSelection';
+          this.gm.gameMode = cacheData.gameMode || null;
+          console.log('[Cache] ✓ État restauré depuis le cache', {
+            phase: this.gm.currentPhase,
+            joueurs: Object.keys(this.gm.state.players).length,
+            timestamp: cacheData.timestamp
+          });
+        }
+      } else {
+        console.log('[Cache] Aucune sauvegarde trouvée');
+      }
+    } catch (e) {
+      console.warn('[Cache] ⚠️ Erreur lors de la restauration du cache:', e);
+    }
+  }
+
+  clearGameStateCache() {
+    try {
+      localStorage.removeItem('LoupsGarous_GameState');
+      console.log('[Cache] ✓ Cache vidé');
+    } catch (e) {
+      console.warn('[Cache] ⚠️ Impossible de vider le cache:', e);
+    }
   }
 
   attachEventListeners() {
@@ -439,106 +492,8 @@ class GameMasterUI {
         draggedIndex = null;
       });
 
-      // DRAGOVER sur vignette - permet le drop
-      vignette.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        if (draggedIndex !== null) {
-          console.log(`➡️ DRAGOVER vignette ${idx} (target: ${vignette.dataset.zone})`);
-        }
-      });
-
-      // DROP: Réorganiser les joueurs
-      vignette.addEventListener('drop', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        if (draggedIndex === null || draggedElement === null) {
-          return;
-        }
-
-        const players = gm.state.players;
-        const draggedPlayer = players[draggedIndex];
-        const tableType = gm.state.tableType || 'circle';
-
-        // MODE SIMPLE (CERCLE): Simple réorganisation de liste
-        if (tableType === 'circle') {
-          const targetIndex = Array.from(vignettes).indexOf(vignette);
-
-          if (draggedIndex === targetIndex) {
-            draggedElement = null;
-            draggedIndex = null;
-            return;
-          }
-
-          // Réorganiser les joueurs
-          players.splice(draggedIndex, 1);
-          const newTarget = draggedIndex < targetIndex ? targetIndex - 1 : targetIndex;
-          players.splice(newTarget, 0, draggedPlayer);
-        }
-        // MODE RECTANGLE: Avec zones
-        else {
-          const targetZone = vignette.dataset.zone;
-          const draggedZone = draggedElement?.dataset.zone;
-          const targetZoneContainer = vignette.closest('.gm-zone-vignettes');
-          const zoneVignettes = Array.from(targetZoneContainer?.querySelectorAll('.gm-player-vignette') || []);
-
-          const isHorizontal = targetZone === 'top' || targetZone === 'bottom';
-          let targetIndexInZone = zoneVignettes.indexOf(vignette);
-          let shouldInsertAfter;
-
-          const rect = vignette.getBoundingClientRect();
-          if (isHorizontal) {
-            const midpoint = rect.left + rect.width / 2;
-            shouldInsertAfter = e.clientX > midpoint;
-          } else {
-            const midpoint = rect.top + rect.height / 2;
-            shouldInsertAfter = e.clientY > midpoint;
-          }
-
-          if (shouldInsertAfter) {
-            targetIndexInZone += 1;
-          }
-
-          const zoneConfig = gm.state.zoneConfig || { top: 0, left: 0, right: 0, bottom: 0 };
-          let zoneStart = 0;
-          if (targetZone === 'left') {
-            zoneStart = zoneConfig.top;
-          } else if (targetZone === 'right') {
-            zoneStart = zoneConfig.top + zoneConfig.left;
-          } else if (targetZone === 'bottom') {
-            zoneStart = zoneConfig.top + zoneConfig.left + zoneConfig.right;
-          }
-
-          let targetIndex = zoneStart + targetIndexInZone;
-
-          if (draggedZone === targetZone && draggedIndex < targetIndex) {
-            targetIndex -= 1;
-          }
-
-          if (draggedIndex === targetIndex) {
-            draggedElement = null;
-            draggedIndex = null;
-            return;
-          }
-
-          players.splice(draggedIndex, 1);
-          players.splice(targetIndex, 0, draggedPlayer);
-
-          if (draggedZone !== targetZone && draggedZone && targetZone) {
-            if (gm.state.zoneConfig[draggedZone] > 0) {
-              gm.state.zoneConfig[draggedZone]--;
-            }
-            gm.state.zoneConfig[targetZone]++;
-          }
-        }
-
-        // Recalculer les positions
-        this.recalculateCirclePositions(players);
-
-        gm.saveState();
-        this.render();
-      });
+      // NOTE: dragover et drop sont maintenant gérés UNIQUEMENT au niveau du conteneur playersList
+      // pour éviter les conflits entre la ligne d'insertion visuelle et la logique de drop réelle
 
       // INPUT: Mettre à jour le nom en live sur la map
       const nameInput = vignette.querySelector('.gm-player-name-input-place');
@@ -571,6 +526,7 @@ class GameMasterUI {
         // BLUR: Sauvegarder l'état quand on quitte le champ
         nameInput.addEventListener('blur', (e) => {
           gm.saveState();
+          this.saveGameStateToCache();
         });
       }
     });
@@ -782,6 +738,7 @@ class GameMasterUI {
 
         console.log(`✅ DROP complete - saving and re-rendering`);
         gm.saveState();
+        this.saveGameStateToCache();
         this.render();
 
         draggedElement = null;
@@ -793,28 +750,159 @@ class GameMasterUI {
       });
     });
 
-    // Permettre le drop sur le conteneur principal - IMPORTANT pour que le DROP se déclenche
+    // Permettre le drop sur le conteneur principal + mettre à jour la ligne d'insertion
     playersList.addEventListener('dragover', (e) => {
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
+
       if (draggedIndex !== null) {
-        console.log(`📍 DRAGOVER on playersList`);
+        // Supprimer l'ancienne ligne
+        document.querySelectorAll('.gm-insertion-line').forEach(l => l.remove());
+
+        // Trouver la vignette la plus proche
+        const vignettes = Array.from(playersList.querySelectorAll('.gm-player-vignette'));
+        let insertBeforeVignette = null;
+
+        // Obtenir le nom du joueur dragué
+        const draggedId = vignettes[draggedIndex]?.dataset.playerId;
+        const draggedPlayer = this.gm.state.players.find(p => p.id === draggedId);
+        const draggedName = draggedPlayer?.name || '?';
+
+        // Trouver la première vignette qui est EN DESSOUS de la souris (sauf celle qu'on drag)
+        for (let i = 0; i < vignettes.length; i++) {
+          // Ignorer la vignette qu'on est en train de draguer
+          if (i === draggedIndex) continue;
+
+          const rect = vignettes[i].getBoundingClientRect();
+          const midpoint = rect.top + rect.height / 2;
+          const isBelow = e.clientY < midpoint;
+
+          if (isBelow) {
+            insertBeforeVignette = vignettes[i];
+            const targetId = vignettes[i].dataset.playerId;
+            const targetPlayer = this.gm.state.players.find(p => p.id === targetId);
+            const targetName = targetPlayer?.name || '?';
+            console.log(`[DRAG] ${draggedName} → insérer AVANT ${targetName} (souris Y=${e.clientY}, midpoint=${Math.round(midpoint)})`);
+            break;
+          }
+        }
+
+        if (!insertBeforeVignette) {
+          console.log(`[DRAG] ${draggedName} → insérer À LA FIN`);
+        }
+
+        // Créer nouvelle ligne
+        const line = document.createElement('div');
+        line.className = 'gm-insertion-line';
+        line.style.cssText = `
+          height: 8px;
+          background: linear-gradient(90deg, transparent, #00FF88, transparent);
+          border: 2px solid #00FF88;
+          border-radius: 4px;
+          margin: 4px 0;
+          opacity: 1;
+          box-shadow: 0 0 20px #00FF88, inset 0 0 10px #00FF88;
+          animation: pulse-glow 1.5s infinite;
+          pointer-events: none;
+        `;
+
+        if (insertBeforeVignette) {
+          playersList.insertBefore(line, insertBeforeVignette);
+        } else {
+          // Insérer à la fin si on est en dessous de tout
+          playersList.appendChild(line);
+        }
       }
     });
 
-    // DROP sur le conteneur principal - fallback si on lâche en dehors des zones
+    // DROP sur le conteneur principal - réorganiser les joueurs
     playersList.addEventListener('drop', (e) => {
       e.preventDefault();
       e.stopPropagation();
 
       if (draggedIndex === null || draggedElement === null) {
-        console.log(`❌ DROP on playersList - draggedIndex or draggedElement is null`);
+        console.log(`❌ DROP - draggedIndex or draggedElement is null`);
         return;
       }
 
-      console.log(`💧 DROP on playersList (fallback)`);
-      // Le DROP réel a probablement déjà été traité par une zone
-      // Ceci est juste un fallback
+      // Nettoyer la ligne d'insertion
+      document.querySelectorAll('.gm-insertion-line').forEach(l => l.remove());
+
+      const players = gm.state.players;
+      const draggedPlayer = players[draggedIndex];
+      const vignettes = Array.from(playersList.querySelectorAll('.gm-player-vignette'));
+
+      // Trouver l'index cible en utilisant la MÊME logique que le dragover
+      let targetIndex = vignettes.length;
+      for (let i = 0; i < vignettes.length; i++) {
+        if (i === draggedIndex) continue;
+        const rect = vignettes[i].getBoundingClientRect();
+        if (e.clientY < rect.top + rect.height / 2) {
+          targetIndex = i;
+          break;
+        }
+      }
+
+      // Ajuster si nécessaire (le draggedIndex disparaîtra de la liste)
+      if (draggedIndex < targetIndex && draggedIndex !== null) {
+        targetIndex--;
+      }
+
+      if (draggedIndex === targetIndex) {
+        console.log(`📍 Pas de changement de position`);
+        draggedElement = null;
+        draggedIndex = null;
+        return;
+      }
+
+      // Réorganiser
+      console.log(`✅ DROP: ${draggedPlayer.name} position ${draggedIndex} → ${targetIndex}`);
+      players.splice(draggedIndex, 1);
+      players.splice(targetIndex, 0, draggedPlayer);
+
+      // Recalculer les positions sur la map
+      const tableType = gm.state.tableType || 'circle';
+      this.recalculateCirclePositions(players);
+
+      // EFFET DE REPULSION: Les autres points s'écartent
+      const draggedPlayerId = draggedPlayer.id;
+      const draggedPoint = document.querySelector(`.gm-player-point[data-player-id="${draggedPlayerId}"]`);
+      if (draggedPoint && tableType === 'circle') {
+        const dragX = parseFloat(draggedPoint.style.left) + 8;
+        const dragY = parseFloat(draggedPoint.style.top) + 8;
+
+        document.querySelectorAll('.gm-player-point').forEach(point => {
+          if (point.dataset.playerId === draggedPlayerId) return;
+
+          const pointX = parseFloat(point.style.left) + 8;
+          const pointY = parseFloat(point.style.top) + 8;
+          const dist = Math.hypot(dragX - pointX, dragY - pointY);
+
+          if (dist < 40) {
+            const angle = Math.atan2(pointY - dragY, pointX - dragX);
+            const force = (40 - dist) / 40 * 2;
+
+            const newX = pointX + Math.cos(angle) * force;
+            const newY = pointY + Math.sin(angle) * force;
+
+            point.style.left = (newX - 8) + 'px';
+            point.style.top = (newY - 8) + 'px';
+
+            const player = gm.state.players.find(p => p.id === point.dataset.playerId);
+            if (player) {
+              player.tableX = newX - 8;
+              player.tableY = newY - 8;
+            }
+          }
+        });
+      }
+
+      gm.saveState();
+      this.saveGameStateToCache();
+      this.render();
+
+      draggedElement = null;
+      draggedIndex = null;
     });
 
     playersList.addEventListener('dragleave', (e) => {

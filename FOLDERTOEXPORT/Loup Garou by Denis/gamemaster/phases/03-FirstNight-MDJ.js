@@ -305,6 +305,24 @@ class FirstNightMDJ {
       }
     });
 
+    // CRITICAL: Initialize ALL WOLF ROLES regardless of orderedRoles
+    // Simple_Loup_Garou, Grand_Mechant_Loup, Loup_Garou_Blanc need to be in roleStates
+    // so their kills are saved and can be retrieved by Sorciere
+    assignedRoleIds.forEach(roleId => {
+      // Only if not already initialized above
+      if (this.roleStates[roleId]) return;
+
+      // Check if this is a wolf role
+      if (roleId && (roleId.includes('Loup') || roleId.includes('Wolf'))) {
+        console.log(`[MDJ] Initializing wolf role: ${roleId}`);
+        this.roleStates[roleId] = {
+          completed: false,
+          selected: false,
+          result: null
+        };
+      }
+    });
+
   }
 
   /**
@@ -1267,7 +1285,7 @@ class FirstNightMDJ {
         : '🐻 Ça ne grogne pas, pas de loup à proximité de l\'ours';
 
       montreurOursHtml = `
-        <div style="padding:8px; margin-bottom:8px; background:rgba(139,69,19,0.1); border-left:3px solid #8B4513; font-size:10px;">
+        <div style="padding:4px 6px; margin-bottom:4px; background:rgba(139,69,19,0.08); border-left:2px solid #8B4513; font-size:9px; line-height:1.3;">
           ${growlText}
         </div>
       `;
@@ -1276,12 +1294,12 @@ class FirstNightMDJ {
     // CRITICAL: Montreur_Ours and transformations are NOT in actions table - they go BELOW
     // IMPROVED: Much better readability with larger fonts, better contrast, and proper styling
     const actionsHtml = actions.length > 0
-      ? actions.map(a => `<div style="padding:10px; margin-bottom:8px; font-size:13px; line-height:1.4; background:rgba(129,223,247,0.15); border-radius:4px; border-left:4px solid #00BFFF; color:#e0f5ff;">${a}</div>`).join('')
-      : '<div style="padding:12px; text-align:center; color:#888; font-size:12px; font-style:italic;">Aucune action</div>';
+      ? actions.map(a => `<div style="padding:4px 6px; margin-bottom:4px; font-size:10px; line-height:1.3; background:rgba(129,223,247,0.1); border-radius:2px; border-left:2px solid #00BFFF; color:#b0e8ff;">${a}</div>`).join('')
+      : '<div style="padding:6px; text-align:center; color:#666; font-size:9px; font-style:italic;">Aucune action</div>';
 
     const deathsHtml = deaths.length > 0
-      ? deaths.map(d => `<div style="padding:10px; margin-bottom:8px; font-size:13px; line-height:1.4; background:rgba(255,102,102,0.15); border-radius:4px; border-left:4px solid #ff4444;"><strong style="color:#ffcccc; font-size:14px;">${d.emoji} ${d.name}</strong><br><span style="color:#ffaaaa; font-size:12px;">${d.cause}</span></div>`).join('')
-      : '<div style="padding:12px; text-align:center; color:#888; font-size:12px; font-style:italic;">Aucune mort</div>';
+      ? deaths.map(d => `<div style="padding:4px 6px; margin-bottom:4px; font-size:10px; line-height:1.3; background:rgba(255,102,102,0.1); border-radius:2px; border-left:2px solid #ff4444;"><strong style="color:#ffaaaa; font-size:10px;">${d.emoji} ${d.name}</strong><br><span style="color:#ff8888; font-size:9px;">${d.cause}</span></div>`).join('')
+      : '<div style="padding:6px; text-align:center; color:#666; font-size:9px; font-style:italic;">Aucune mort</div>';
 
     // Check for special role deaths that need handling
     // CRITICAL: Only show Chasseur revenge box if:
@@ -1301,11 +1319,10 @@ class FirstNightMDJ {
       const alivePlayers = players.filter(p => !this.deadPlayerIds.has(p.id));
       const playerOptions = alivePlayers.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
       specialSectionsHtml += `
-        <div style="border: 1px solid rgba(200,150,100,0.3); border-radius: 4px; padding: 10px; background: rgba(200,150,100,0.05); margin-bottom: 12px;">
-          <h4 style="margin: 0 0 8px 0; color: #d4a574; font-size: 11px; font-weight: 600;">🏹 Chasseur Mort - Vengeance</h4>
-          <p style="margin: 0 0 8px 0; font-size: 10px; color: #ccc;">Le Chasseur a pu tirer avant de mourir. Qui visait-il?</p>
-          <select id="chasseur-target" style="width: 100%; padding: 6px; font-size: 10px; border-radius: 3px; border: 1px solid #555; background: #333; color: #fff;">
-            <option value="">-- Sélectionner une cible --</option>
+        <div style="border: 1px solid rgba(200,150,100,0.3); border-radius: 3px; padding: 6px; background: rgba(200,150,100,0.05); margin-bottom: 6px;">
+          <div style="color: #d4a574; font-size: 9px; font-weight: 600; margin-bottom: 3px;">🏹 Chasseur - Vengeance</div>
+          <select id="chasseur-target" style="width: 100%; padding: 4px; font-size: 9px; border-radius: 2px; border: 1px solid #555; background: #333; color: #fff;">
+            <option value="">-- Cible --</option>
             ${playerOptions}
           </select>
         </div>
@@ -1335,50 +1352,55 @@ class FirstNightMDJ {
           console.log(`[MDJ] ⚔️ Chevalier cursed wolf: ${wolfName} will die NEXT night`);
 
           specialSectionsHtml += `
-            <div style="border: 2px solid #FFD700; border-radius: 6px; padding: 12px; background: rgba(255,215,0,0.15); margin-bottom: 12px;">
-              <h4 style="margin: 0 0 8px 0; color: #FFD700; font-size: 12px; font-weight: 700;">⚔️ Chevalier Malédiction</h4>
-              <p style="margin: 0; font-size: 12px; color: #ffeb99;">🐺 ${wolfName} (loup à gauche) mourra demain nuit...</p>
+            <div style="border: 1px solid #FFD700; border-radius: 3px; padding: 6px; background: rgba(255,215,0,0.08); margin-bottom: 6px;">
+              <div style="color: #FFD700; font-size: 9px; font-weight: 700;">⚔️ ${wolfName} maudit</div>
             </div>
           `;
         }
       }
     }
 
-    // SEQUENTIAL LAYOUT: 2 major blocks (vertical flow)
+    // STYLIZED COMPACT LAYOUT: Dark mode with purple/pink accents
     return `
-      <!-- BLOCK 1: ACTIONS DES NUITS (Chronological actions) -->
-      <div style="border: 3px solid #00BFFF; border-radius: 8px; padding: 14px; background: rgba(0,191,255,0.12); margin-bottom: 14px;">
-        <h3 style="margin: 0 0 12px 0; color: #00BFFF; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">📋 ACTIONS DE LA NUIT</h3>
-        <div style="max-height: 200px; overflow-y: auto; border-left: 4px solid #00BFFF; padding-left: 10px;">
-          ${actionsHtml}
-        </div>
-      </div>
+      <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 6px; padding: 10px; border: 1px solid rgba(201,124,255,0.2);">
+        <!-- 2 Columns: Actions & Morts -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+          <!-- ACTIONS -->
+          <div style="border: 1px solid rgba(0,191,255,0.3); border-radius: 4px; padding: 8px; background: linear-gradient(135deg, rgba(0,191,255,0.08) 0%, rgba(0,100,150,0.06) 100%);">
+            <div style="color: #4dd0e1; font-size: 10px; font-weight: 700; margin-bottom: 5px; text-transform: uppercase; text-shadow: 0 0 10px rgba(77,208,225,0.3);">📋 Actions</div>
+            <div style="max-height: 110px; overflow-y: auto;">
+              ${actionsHtml}
+            </div>
+          </div>
 
-      <!-- BLOCK 2: REGISTRE DES MORTS (Deaths by night) -->
-      <div style="border: 3px solid #ff4444; border-radius: 8px; padding: 14px; background: rgba(255,68,68,0.12); margin-bottom: 14px;">
-        <h3 style="margin: 0 0 12px 0; color: #ff4444; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">☠️ REGISTRE DES MORTS</h3>
-        <div style="max-height: 200px; overflow-y: auto; border-left: 4px solid #ff4444; padding-left: 10px;">
-          ${deathsHtml}
+          <!-- MORTS -->
+          <div style="border: 1px solid rgba(255,68,68,0.3); border-radius: 4px; padding: 8px; background: linear-gradient(135deg, rgba(255,68,68,0.08) 0%, rgba(150,30,30,0.06) 100%);">
+            <div style="color: #ff6b6b; font-size: 10px; font-weight: 700; margin-bottom: 5px; text-transform: uppercase; text-shadow: 0 0 10px rgba(255,107,107,0.3);">☠️ Morts</div>
+            <div style="max-height: 110px; overflow-y: auto;">
+              ${deathsHtml}
+            </div>
+          </div>
         </div>
-      </div>
 
-      <!-- SPECIAL EVENTS SECTION (Chasseur, Chevalier, Montreur d'Ours, Transformations) -->
-      ${specialSectionsHtml}
-      ${montreurOursHtml}
-      ${transformations.length > 0 ? transformations.map(t => `
-        <div style="padding:10px; margin-bottom:12px; background:rgba(170,34,14,0.15); border-radius:6px; border-left:4px solid #AA220E; font-size:11px; line-height:1.4;">
-          ${t}
+        <!-- SPECIAL EVENTS -->
+        <div style="margin-bottom: 8px; font-size: 10px;">
+          ${specialSectionsHtml}
+          ${montreurOursHtml}
+          ${transformations.length > 0 ? transformations.map(t => `
+            <div style="padding:5px 6px; margin-bottom:4px; background: linear-gradient(90deg, rgba(170,34,14,0.15) 0%, rgba(100,20,10,0.08) 100%); border-radius:3px; border-left:3px solid #d9534f; font-size:10px; line-height:1.3; color:#e0a0a0;">
+              ${t}
+            </div>
+          `).join('') : ''}
         </div>
-      `).join('') : ''}
 
-      <!-- LYNCH SELECTION -->
-      <div style="border: 2px solid #d966ff; border-radius: 6px; padding: 12px; background: rgba(217,102,255,0.12); margin-bottom: 12px;">
-        <h4 style="margin: 0 0 10px 0; color: #e0a0ff; font-size: 12px; font-weight: 700; text-transform: uppercase;">🪓 VOTE DU VILLAGE - AU BÛCHER!</h4>
-        <p style="margin: 0 0 8px 0; font-size: 11px; color: #ccc;">Qui sera exécuté ce matin?</p>
-        <select id="lynch-target" style="width: 100%; padding: 8px; font-size: 11px; border-radius: 3px; border: 1px solid #d966ff; background: #1a1a2e; color: #fff; margin-bottom: 8px; font-weight: 500;">
-          <option value="">-- Sélectionner une victime --</option>
-          ${alivePlayers.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
-        </select>
+        <!-- LYNCH SELECTION -->
+        <div style="border: 1px solid rgba(201,124,255,0.4); border-radius: 4px; padding: 8px; background: linear-gradient(135deg, rgba(201,124,255,0.12) 0%, rgba(150,50,200,0.08) 100%);">
+          <div style="color: #e0a0ff; font-size: 10px; font-weight: 700; margin-bottom: 4px; text-transform: uppercase; text-shadow: 0 0 10px rgba(224,160,255,0.3);">🪓 Au Bûcher</div>
+          <select id="lynch-target" style="width: 100%; padding: 6px; font-size: 11px; border-radius: 4px; border: 1px solid #e0a0ff; background: #1a1a2e; color: #fff; font-weight: 600;">
+            <option value="" style="background: #1a1a2e; color: #fff;">-- Sélectionner --</option>
+            ${alivePlayers.map(p => `<option value="${p.id}" style="background: #1a1a2e; color: #fff;">${p.name}</option>`).join('')}
+          </select>
+        </div>
       </div>
     `;
   }
@@ -3321,24 +3343,35 @@ class FirstNightMDJ {
     // Get protected players for indicator
     const protectedPlayers = this.getProtectedPlayers();
 
-    // Get victim from wolf pack kill (LAST victim among all wolves this night)
+    // Get victim from wolf pack kill (FIRST victim = the one killed by Simple_Loup_Garou)
     let victimName = '???';
     let victimId = null;
-    let lastWolfKill = null;
-    // Check all wolves in order (the order determines who kills last in meute logic)
+    let firstWolfKill = null;
+
+    console.log('[MDJ] Sorciere - roleStates keys:', Object.keys(this.roleStates));
+    console.log('[MDJ] Sorciere - Simple_Loup_Garou state:', this.roleStates['Simple_Loup_Garou']?.result);
+    console.log('[MDJ] Sorciere - Grand_Mechant_Loup state:', this.roleStates['Grand_Mechant_Loup']?.result);
+
+    // Check all wolves in order - take FIRST kill (Simple_Loup_Garou kills first in sequence)
     for (const roleId of ['Simple_Loup_Garou', 'Grand_Mechant_Loup', 'Loup_Garou_Blanc']) {
       if (this.roleStates[roleId]?.result?.targets?.length > 0) {
-        // LAST victim is the one to show (in case multiple wolves killed this turn)
-        lastWolfKill = {
-          roleId,
-          victimId: this.roleStates[roleId].result.targets[0]
-        };
+        // FIRST victim is the one to show (the primary wolf kill)
+        if (!firstWolfKill) {
+          firstWolfKill = {
+            roleId,
+            victimId: this.roleStates[roleId].result.targets[0]
+          };
+          console.log(`[MDJ] Sorciere - Found firstWolfKill from ${roleId}:`, firstWolfKill.victimId);
+        }
       }
     }
-    if (lastWolfKill) {
-      victimId = lastWolfKill.victimId;
+    if (firstWolfKill) {
+      victimId = firstWolfKill.victimId;
       const player = players.find(p => p.id === victimId);
       if (player) victimName = player.name;
+      console.log(`[MDJ] Sorciere - Victim:`, victimName, victimId);
+    } else {
+      console.log('[MDJ] Sorciere - NO WOLF KILL FOUND!');
     }
 
     const selectedAction = this.selectedPlayers[0];
