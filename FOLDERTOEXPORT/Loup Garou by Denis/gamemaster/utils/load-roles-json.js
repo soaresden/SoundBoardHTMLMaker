@@ -236,7 +236,7 @@ async function loadSelectedRolesFromJSON(selectedRoleIds) {
       }
 
       try {
-        const response = await fetch(`gamemaster/roles/${fileName}.json?t=${Date.now()}`);
+        const response = await fetch(`./gamemaster/roles/${fileName}.json?t=${Date.now()}`);
         if (!response.ok) {
           console.warn(`❌ Impossible de charger ${fileName}.json`);
           continue;
