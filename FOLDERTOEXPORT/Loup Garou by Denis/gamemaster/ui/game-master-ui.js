@@ -1119,7 +1119,74 @@ class GameMasterUI {
   }
 
   setupOverlayResize(overlay) {
-    // À implémenter si nécessaire
+    const resizeHandle = document.getElementById('gmResizeOverlay');
+    if (!resizeHandle) return;
+
+    let isResizing = false;
+    let startX = 0;
+    let startY = 0;
+    let startWidth = 0;
+    let startHeight = 0;
+
+    const startResize = (clientX, clientY) => {
+      isResizing = true;
+      startX = clientX;
+      startY = clientY;
+      startWidth = overlay.offsetWidth;
+      startHeight = overlay.offsetHeight;
+      overlay.style.userSelect = 'none';
+      resizeHandle.style.opacity = '0.8';
+    };
+
+    const doResize = (clientX, clientY) => {
+      if (isResizing) {
+        const deltaX = clientX - startX;
+        const deltaY = clientY - startY;
+
+        const newWidth = Math.max(300, startWidth + deltaX);
+        const newHeight = Math.max(200, startHeight + deltaY);
+
+        overlay.style.width = newWidth + 'px';
+        overlay.style.height = newHeight + 'px';
+      }
+    };
+
+    const endResize = () => {
+      isResizing = false;
+      overlay.style.userSelect = 'auto';
+      resizeHandle.style.opacity = '0.3';
+    };
+
+    // SOURIS
+    resizeHandle.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      startResize(e.clientX, e.clientY);
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      doResize(e.clientX, e.clientY);
+    });
+
+    document.addEventListener('mouseup', () => {
+      endResize();
+    });
+
+    // TACTILE
+    resizeHandle.addEventListener('touchstart', (e) => {
+      const touch = e.touches[0];
+      startResize(touch.clientX, touch.clientY);
+    }, { passive: true });
+
+    document.addEventListener('touchmove', (e) => {
+      if (isResizing) {
+        const touch = e.touches[0];
+        doResize(touch.clientX, touch.clientY);
+      }
+    }, { passive: true });
+
+    document.addEventListener('touchend', () => {
+      endResize();
+    }, { passive: true });
   }
 
   setupOverlayDrag(overlay) {
