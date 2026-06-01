@@ -78,7 +78,6 @@ function generateIndex() {
     // Créer l'index
     const index = {
       description: "Index dynamique - Généré automatiquement au démarrage du serveur",
-      generatedAt: new Date().toISOString(),
       totalRoles: rolesList.length,
       roles: rolesList.map(({ id, file }) => ({ id, file }))
     };

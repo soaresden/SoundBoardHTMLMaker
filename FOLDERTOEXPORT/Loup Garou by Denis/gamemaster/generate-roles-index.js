@@ -113,7 +113,6 @@ async function generateIndex() {
     // Créer l'index
     const index = {
       description: "Index dynamique des fichiers de rôles - Généré automatiquement par generate-roles-index.js",
-      generatedAt: new Date().toISOString(),
       totalRoles: rolesList.length,
       roles: rolesList.map(({ id, file }) => ({ id, file }))
     };
@@ -128,7 +127,6 @@ async function generateIndex() {
     console.log('\n✅ Index généré avec succès!');
     console.log(`📄 Fichier: ${INDEX_FILE}`);
     console.log(`📊 Rôles: ${index.totalRoles}`);
-    console.log(`⏰ Généré: ${index.generatedAt}`);
 
   } catch (error) {
     console.error('❌ Erreur lors de la génération:', error.message);
