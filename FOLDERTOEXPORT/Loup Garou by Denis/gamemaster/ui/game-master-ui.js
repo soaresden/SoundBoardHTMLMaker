@@ -11,7 +11,7 @@ class GameMasterUI {
     console.log('[GameMaster UI] Constructor called');
 
     this.roleToCardFile = {
-      'Villageois_Villageois': 'Villageois_Villageois',
+      'Villageois': '99-Villageois',
       'Voyante': 'Voyante',
       'Chasseur': 'Chasseur',
       'Sorciere': 'Sorciere',
@@ -19,7 +19,7 @@ class GameMasterUI {
       'Petite_Fille': 'Petite_Fille',
       'Ancien': 'Ancien',
       'Bouc_Emissaire': 'Bouc_Emissaire',
-      'Corbeau': 'Corbeau',
+      'Corbeau': '97-Corbeau',
       'Montreur_Ours': 'Montreur_Ours',
       'Salvateur': 'Salvateur',
       'Servante_Devouee': 'Servante_Devouee',
@@ -48,8 +48,7 @@ class GameMasterUI {
       'Chien_Loup': 'Chien_Loup',
       'Comedien': 'Comedien',
       'Juge_Begue': 'Juge_Begue',
-      'Necromancien': 'Necromancien',
-      'Villageois_Villageois': 'Simple_Villageois',
+      'Necromancien': 'Necromancien'
     };
 
     this.init();

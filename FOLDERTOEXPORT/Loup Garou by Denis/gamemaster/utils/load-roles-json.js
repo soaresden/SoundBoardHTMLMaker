@@ -19,7 +19,7 @@ let ROLE_FILE_MAPPING = {
   'Salvateur': '09-Salvateur',
   'Voleur': '10-Voleur',
   'Renard': '12-Renard',
-  'Corbeau': '13-Corbeau',
+  'Corbeau': '97-Corbeau',
   'Servante_Devouee': '14-Servante_Devouee',
   'Joueur_Flute': '15-Joueur_Flute',
   'Ankou': '16-Ankou',
@@ -65,7 +65,7 @@ let ROLE_FILE_MAPPING = {
   'Trois_Freres': '57-Trois_Freres',
   'Montreur_Ours': '58-Montreur_Ours',
   'Petite_Fille': '98-Petite_Fille',
-  'Villageois': '99-Villageois_Villageois'
+  'Villageois': '99-Villageois'
 };
 
 const CACHE_KEY = 'LoupsGarous_RolesJSON_Cache';

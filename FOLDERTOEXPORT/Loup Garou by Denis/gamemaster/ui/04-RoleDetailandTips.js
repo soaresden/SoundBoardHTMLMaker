@@ -11,7 +11,7 @@ const ROLES_ACTION_ONLY_TIPS = new Set([
 
 // Rôles sans action du tout
 const ROLES_WITHOUT_ACTION_TIPS = new Set([
-  'Villageois_Villageois', 'Corbeau', 'Salvateur'
+  'Villageois', 'Corbeau', 'Salvateur'
 ]);
 
 // CSS pour l'animation breathe du joueur en cours

@@ -42,7 +42,7 @@ function renderChooseCard(gameUI) {
 
   // Emojis pour tous les rôles
   const roleEmojis = {
-    'Villageois_Villageois': '👨', 'Simple_Loup_Garou': '🐺', 'Sorciere': '🧙‍♀️', 'Voyante': '🔮',
+    'Villageois': '👨', 'Simple_Loup_Garou': '🐺', 'Sorciere': '🧙‍♀️', 'Voyante': '🔮',
     'Cupidon': '💘', 'Ancien': '👴', 'Petite_Fille': '👧', 'Chasseur': '🏹', 'Voleur': '🏴‍☠️',
     'Idiot_Village': '🤡', 'Bouc_Emissaire': '🐐', 'Salvateur': '💪', 'Joueur_Flute': '🪕', 'Corbeau': '🐦',
     'Renard': '🦊', 'Enfant_Sauvage': '🧒', 'Deux_Soeurs': '👭', 'Trois_Freres': '👬', 'Pyromane': '🔥',

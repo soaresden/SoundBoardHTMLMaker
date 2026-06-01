@@ -32,7 +32,7 @@ class RolesLoader {
         '31-Pyromane', '32-Infect_Pere_Loups', '33-Grand_Mechant_Loup', '34-Simple_Loup_Garou', '35-Loup_Garou_Voyant',
         '36-Loup_Garou_Blanc', '37-Tireur', '38-Juge_Begue', '39-Chasseur', '40-Chevalier_Epee_Rouille',
         '41-Fils_Lune', '42-Louveteau', '43-Lepreux', '44-Savant_Fou', '45-Ange_Dechu',
-        '46-Gros_Dur', '47-Humain_Maudit', '48-Porteur_Amulette', '49-Villageois_Villageois', '50-Bouc_Emissaire',
+        '46-Gros_Dur', '47-Humain_Maudit', '48-Porteur_Amulette', '49-Villageois', '50-Bouc_Emissaire',
         '51-Idiot_Village', '52-Cultiste', '53-Capitaine', '54-President', '55-Deux_Soeurs',
         '56-Trois_Freres', '57-Montreur_Ours'
       ];

@@ -100,7 +100,7 @@ class RevealSequential {
     if (rolesToAssign.length === 0) {
       console.error('[RevealSequential] ❌ No roles selected! Using default villagers');
       players.forEach((player, index) => {
-        player.role = 'Villageois_Villageois';
+        player.role = 'Villageois';
       });
       return;
     }
@@ -120,7 +120,7 @@ class RevealSequential {
         console.log(`[RevealSequential]   ✓ ${player.name} ← ${rolesToAssign[index]}`);
       } else {
         console.warn(`[RevealSequential]   ⚠️ Not enough roles, using fallback for ${player.name}`);
-        player.role = 'Villageois_Villageois';
+        player.role = 'Villageois';
       }
     });
 

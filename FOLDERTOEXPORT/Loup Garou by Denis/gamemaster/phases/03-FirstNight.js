@@ -27,7 +27,7 @@ const ROLES_WITH_NIGHT_ACTION = new Set([
 // Rôles qui N'ONT PAS d'action la nuit (juste assignation 1/1)
 const ROLES_WITHOUT_ACTION = new Set([
   // NoAction roles
-  'Villageois_Villageois', 'Bouc_Emissaire', 'Idiot_Village', 'Cultiste',
+  'Villageois', 'Bouc_Emissaire', 'Idiot_Village', 'Cultiste',
   'Capitaine', 'President', 'Deux_Soeurs', 'Trois_Freres', 'Montreur_Ours',
   // PostMortem roles (agissent seulement quand ils meurent)
   'Chasseur', 'Chevalier_Epee_Rouille', 'Fils_Lune', 'Louveteau', 'Lepreux', 'Savant_Fou',
