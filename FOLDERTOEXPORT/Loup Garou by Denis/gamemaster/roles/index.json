@@ -1,5 +1,5 @@
 {
-  "description": "Index dynamique des fichiers de rôles - Généré automatiquement par generate-roles-index.js",
+  "description": "Index dynamique - Généré automatiquement au démarrage du serveur",
   "totalRoles": 57,
   "roles": [
     {

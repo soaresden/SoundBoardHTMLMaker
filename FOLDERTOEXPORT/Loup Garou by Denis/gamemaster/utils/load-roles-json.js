@@ -76,7 +76,7 @@ async function loadRolesIndexDynamically() {
   try {
     console.log('[LoadRolesJSON] 📂 Tentative de chargement de gamemaster/roles/index.json...');
     console.log('[LoadRolesJSON] URL complète:', new URL('gamemaster/roles/index.json', window.location.href).href);
-    const response = await fetch('gamemaster/roles/index.json?t=' + Date.now());
+    const response = await fetch('./gamemaster/roles/index.json?t=' + Date.now());
     console.log('[LoadRolesJSON] Réponse:', response.status, response.statusText);
 
     if (!response.ok) {

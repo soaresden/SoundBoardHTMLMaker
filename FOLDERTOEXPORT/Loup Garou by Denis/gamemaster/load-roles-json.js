@@ -40,7 +40,7 @@ class RolesLoader {
       // Charger chaque rôle
       for (const roleFile of roleFiles) {
         try {
-          const response = await fetch(`gamemaster/roles/${roleFile}.json`);
+          const response = await fetch(`./gamemaster/roles/${roleFile}.json`);
           if (response.ok) {
             const roleData = await response.json();
             const roleId = roleData.id;
@@ -82,7 +82,7 @@ class RolesLoader {
     }
 
     try {
-      const response = await fetch(`gamemaster/roles/${roleId}.json`);
+      const response = await fetch(`./gamemaster/roles/${roleId}.json`);
       if (response.ok) {
         const roleData = await response.json();
         this.roles[roleId] = roleData;
