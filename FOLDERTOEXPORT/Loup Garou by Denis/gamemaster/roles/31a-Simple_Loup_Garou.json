@@ -3,6 +3,10 @@
   "name": "Simple Loup Garou",
   "emoji": "🐺",
   "camp": "Loups-Garous",
+  "isWolf": true,
+  "ui": {
+    "selectionRenderer": "wolfKill"
+  },
   "pouvoir": "Connaît les autres loups-garous. La nuit, tuez ensemble un villageois.",
   "visual": {
     "roleColor": {

@@ -3,6 +3,9 @@
   "name": "Salvateur",
   "emoji": "🖖",
   "camp": "Village",
+  "ui": {
+    "selectionRenderer": "salvateur"
+  },
   "description": "Rôle: Salvateur",
   "actions": {
     "ToutesNuits": {

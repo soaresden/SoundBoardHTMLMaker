@@ -3,6 +3,10 @@
   "name": "Grand Mechant Loup",
   "emoji": "🐺",
   "camp": "Loups",
+  "isWolf": true,
+  "ui": {
+    "selectionRenderer": "wolfKill"
+  },
   "description": "Rôle: Grand_Mechant_Loup",
   "actions": {
     "ToutesNuits": {

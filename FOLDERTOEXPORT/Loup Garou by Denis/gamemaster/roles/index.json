@@ -1,7 +1,11 @@
 {
   "description": "Index dynamique - Généré automatiquement au démarrage du serveur",
-  "totalRoles": 57,
+  "totalRoles": 58,
   "roles": [
+    {
+      "id": "template",
+      "file": "00-template"
+    },
     {
       "id": "Cupidon",
       "file": "01-Cupidon"

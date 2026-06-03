@@ -3,6 +3,7 @@
   "name": "Infect Pere Loups",
   "emoji": "🐺",
   "camp": "Seul",
+  "isWolf": true,
   "description": "Rôle: Infect_Pere_Loups",
   "actions": {
     "ToutesNuits": {

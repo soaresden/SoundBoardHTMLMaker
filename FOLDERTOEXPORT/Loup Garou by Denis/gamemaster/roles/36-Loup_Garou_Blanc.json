@@ -3,6 +3,10 @@
   "name": "Loup Garou Blanc",
   "emoji": "🐺",
   "camp": "Seul",
+  "isWolf": true,
+  "ui": {
+    "selectionRenderer": "wolfKill"
+  },
   "description": "Rôle: Loup_Garou_Blanc",
   "actions": {
     "ToutesNuitsPaires": {
@@ -25,4 +29,3 @@
   "actionType": "NightActive",
   "tips": "Cachez votre nature lupine - paraissez villageois à tous les yeux."
 }
-

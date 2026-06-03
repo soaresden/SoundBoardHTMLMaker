@@ -3,6 +3,9 @@
   "name": "Voyante",
   "emoji": "👁️",
   "camp": "Village",
+  "ui": {
+    "selectionRenderer": "voyante"
+  },
   "description": "Rôle: Voyante",
   "actions": {
     "ToutesNuits": {

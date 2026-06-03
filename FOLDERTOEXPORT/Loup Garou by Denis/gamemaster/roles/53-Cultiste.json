@@ -3,6 +3,7 @@
   "name": "Cultiste",
   "emoji": "🕷️",
   "camp": "Loups",
+  "isWolf": true,
   "description": "Rôle: Cultiste",
   "actions": {
     "NoAction": {

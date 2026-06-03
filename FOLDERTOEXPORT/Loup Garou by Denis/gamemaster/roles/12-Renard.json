@@ -3,6 +3,9 @@
   "name": "Renard",
   "emoji": "🦊",
   "camp": "Village",
+  "ui": {
+    "selectionRenderer": "renard"
+  },
   "description": "Rôle: Renard",
   "actions": {
     "ToutesNuits": {

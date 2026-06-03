@@ -3,6 +3,7 @@
   "name": "Loup Garou Voyant",
   "emoji": "🐺",
   "camp": "Loups",
+  "isWolf": true,
   "description": "Rôle: Loup_Garou_Voyant",
   "actions": {
     "ToutesNuits": {

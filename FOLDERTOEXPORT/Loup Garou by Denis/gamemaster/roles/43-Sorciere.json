@@ -3,6 +3,9 @@
   "name": "Sorciere",
   "emoji": "🧙‍♀️",
   "camp": "Village",
+  "ui": {
+    "selectionRenderer": "sorciere"
+  },
   "description": "Rôle: Sorcière",
   "actions": {
     "ToutesNuits": {

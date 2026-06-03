@@ -3,6 +3,10 @@
   "name": "Chien Loup",
   "emoji": "🐕",
   "camp": "Village",
+  "isWolf": true,
+  "ui": {
+    "selectionRenderer": "chienLoup"
+  },
   "description": "Rôle: Chien_Loup",
   "actions": {
     "DebutPartie": {

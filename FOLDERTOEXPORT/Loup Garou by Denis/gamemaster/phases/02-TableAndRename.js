@@ -67,7 +67,7 @@ function renderTableAndRename(gameUI) {
     ` : '';
 
     return `
-      <div class="gm-player-point" data-player-id="${p.id}" style="left: ${p.tableX}px; top: ${p.tableY}px; position:absolute; cursor:grab; ${deadStyle}; width:16px; height:16px; display:flex; align-items:center; justify-content:center;" draggable="true" title="${p.name}${isDead ? ' (MORT)' : ''}">
+      <div class="gm-player-point" data-player-id="${p.id}" style="left: ${p.tableX}px; top: ${p.tableY}px; position:absolute; cursor:grab; touch-action:none; ${deadStyle}; width:16px; height:16px; display:flex; align-items:center; justify-content:center;" title="${p.name}${isDead ? ' (MORT)' : ''}">
         ${dragIndicators}
         <!-- Point central -->
         <div class="gm-point-dot" style="${isDead ? 'background:#000000; border-color:#555555;' : ''}"></div>
@@ -237,8 +237,37 @@ function setupVignetteDragSync(gameUI) {
       draggedPlayerId = vignette.dataset.playerId;
       vignette.style.opacity = '0.5';
       vignette.style.border = '2px solid #81dff7';
-    }, { passive: true });
+      e.preventDefault();
+    }, { passive: false });
   });
+
+  // Suivi tactile: memoriser la position du doigt pour le reordonnancement
+  let lastTouchY = 0;
+  document.addEventListener('touchmove', (e) => {
+    if (!draggedVignette || e.touches.length === 0) return;
+    lastTouchY = e.touches[0].clientY;
+    e.preventDefault();
+  }, { passive: false });
+
+  document.addEventListener('touchend', () => {
+    if (!draggedVignette || !draggedPlayerId) return;
+    const draggedIdx = Array.from(document.querySelectorAll('.gm-player-vignette')).indexOf(draggedVignette);
+    const targetIdx = getNearestVignetteIndex(lastTouchY);
+    if (draggedIdx !== targetIdx && targetIdx >= 0) {
+      const players = gm.state.players;
+      const draggedPlayer = players.find(p => p.id === draggedPlayerId);
+      const draggedPlayerIdx = players.indexOf(draggedPlayer);
+      players.splice(draggedPlayerIdx, 1);
+      players.splice(targetIdx, 0, draggedPlayer);
+      gm.saveState();
+      gameUI.render();
+      return;
+    }
+    draggedVignette.style.opacity = '1';
+    draggedVignette.style.border = 'none';
+    draggedVignette = null;
+    draggedPlayerId = null;
+  }, { passive: false });
 
   document.addEventListener('mousemove', (e) => {
     if (!draggedVignette) return;
@@ -293,14 +322,6 @@ function setupVignetteDragSync(gameUI) {
     if (svg) svg.innerHTML = '';
   });
 
-  document.addEventListener('touchend', () => {
-    if (draggedVignette) {
-      draggedVignette.style.opacity = '1';
-      draggedVignette.style.border = 'none';
-      draggedVignette = null;
-      draggedPlayerId = null;
-    }
-  }, { passive: true });
 }
 
 function setupSimpleDrag(gameUI) {
@@ -360,19 +381,22 @@ function setupSimpleDrag(gameUI) {
       offset.y = touch.clientY - rect.top;
       dragging = { el: point, id: point.dataset.playerId };
       point.style.opacity = '0.7';
-    }, { passive: true });
+      e.preventDefault();
+    }, { passive: false });
   });
 
   // Événements globaux
   document.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
   document.addEventListener('mouseup', onEnd);
 
+  // passive:false pour bloquer le scroll de la page pendant le drag tactile
   document.addEventListener('touchmove', (e) => {
     if (dragging && e.touches.length > 0) {
       const touch = e.touches[0];
       onMove(touch.clientX, touch.clientY);
+      e.preventDefault();
     }
-  }, { passive: true });
+  }, { passive: false });
 
-  document.addEventListener('touchend', onEnd, { passive: true });
+  document.addEventListener('touchend', onEnd, { passive: false });
 }

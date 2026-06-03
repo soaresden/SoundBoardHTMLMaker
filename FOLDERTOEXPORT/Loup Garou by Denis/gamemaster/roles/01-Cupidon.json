@@ -3,6 +3,9 @@
   "name": "Cupidon",
   "emoji": "💘",
   "camp": "Village",
+  "ui": {
+    "selectionRenderer": "cupidonLover"
+  },
   "pouvoir": "Désigne deux amoureux lors de la première nuit. Si l'un meurt, l'autre meurt également.",
   "visual": {
     "roleColor": {

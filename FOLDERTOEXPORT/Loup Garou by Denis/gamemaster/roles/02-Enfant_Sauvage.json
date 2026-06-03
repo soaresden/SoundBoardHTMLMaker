@@ -3,6 +3,9 @@
   "name": "Enfant Sauvage",
   "emoji": "🐒",
   "camp": "Village",
+  "ui": {
+    "selectionRenderer": "enfantSauvage"
+  },
   "pouvoir": "Désigne son idole au début de la partie. Si elle meurt, l'enfant devient un loup-garou.",
   "visual": {
     "roleColor": {

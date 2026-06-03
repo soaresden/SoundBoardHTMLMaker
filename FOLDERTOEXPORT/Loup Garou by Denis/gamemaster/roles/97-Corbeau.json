@@ -3,6 +3,9 @@
   "name": "Corbeau",
   "emoji": "🐦‍⬛",
   "camp": "Village",
+  "ui": {
+    "selectionRenderer": "corbeau"
+  },
   "description": "Rôle: Corbeau",
   "actions": {
     "ToutesNuits": {

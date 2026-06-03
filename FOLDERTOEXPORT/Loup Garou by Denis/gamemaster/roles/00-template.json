@@ -1,0 +1,144 @@
+{
+  // =====================================================================
+  //  00-template.json — MODELE DE REFERENCE D'UN ROLE (Loup Garou by Denis)
+  // ---------------------------------------------------------------------
+  //  Ce fichier est COMMENTE (format JSONC) et sert UNIQUEMENT de reference.
+  //  Il n'est PAS charge par le jeu (il n'est pas liste dans index.json),
+  //  donc les // commentaires ici ne cassent rien. Pour creer un vrai role,
+  //  copiez ce squelette dans un fichier "NN-Nom_Du_Role.json" SANS commentaires
+  //  (JSON strict) et ajoutez-le a index.json.
+  //
+  //  OBJECTIF DE STANDARDISATION : toute la logique specifique d'un role doit
+  //  pouvoir etre decrite ici (balises), pour eviter le hardcoding par
+  //  "switch(roleId)" dans le JS. Les balises marquees [PILOTE] sont celles
+  //  lues par le moteur ; les balises [INFO] sont descriptives.
+  // =====================================================================
+
+  // --- IDENTITE -------------------------------------------------------
+  "id": "Nom_Du_Role",          // [PILOTE] identifiant unique = nom de fichier sans prefixe/extension. Doit matcher player.role
+  "name": "Nom Affiche",        // [PILOTE] libelle affiche dans l'UI
+  "emoji": "🎭",                 // [PILOTE] emoji affiche sur la carte / listes
+  "description": "Phrase courte de presentation du role.", // [INFO]
+  "pouvoir": "Description detaillee du pouvoir, pour l'aide MDJ.",     // [INFO] texte d'aide
+
+  // --- CAMP / CONDITION DE VICTOIRE -----------------------------------
+  // [PILOTE] Pilote la barre de victoire et le calcul des camps.
+  //  Valeurs reconnues : "Village" | "Loups" (alias "Loups-Garous") | "Seul"
+  //  "Seul" = camp solo (compte comme une faction individuelle : Loup Blanc,
+  //  Joueur de Flute, Tueur en Serie, Pyromane, Ange, etc.)
+  "camp": "Village",
+
+  // [PILOTE] true => considere comme loup pour : reveil chaque nuit, detection
+  //  voisinage (Montreur d'Ours), cibles du Loup Blanc, parite de victoire.
+  //  Remplace la detection fragile par "le nom contient 'Loup'".
+  //  Mettre true meme pour un loup dont le nom ne contient pas "Loup"
+  //  (ex: Cultiste, Infect Pere des Loups si cote loups).
+  "isWolf": false,
+
+  // --- QUAND LE ROLE AGIT ---------------------------------------------
+  // [PILOTE] type d'activite global :
+  //  "NightActive" = agit la nuit | "DayActive" = agit le jour |
+  //  "NoActions"   = aucun pouvoir actif (villageois simple)
+  "actionType": "NightActive",
+
+  // [PILOTE] Liste EXPLICITE des nuits ou le role se reveille (1-indexe).
+  //  - [1]                      => uniquement la 1ere nuit (ex: Cupidon, Voleur)
+  //  - [1,2,3,4,5,6,7,8,9,10]   => toutes les nuits (ex: Voyante, Sorciere, loups)
+  //  - [2,4,6,8,10]             => nuits paires (ex: Loup Garou Blanc)
+  //  - []  ou absent            => non gere par "nuit" (voir actions[].phase)
+  //  NB : si isWolf=true, le role se reveille de toute facon chaque nuit.
+  "nightActive": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+
+  // [PILOTE] Duree de vie de la bordure de couleur posee sur un joueur affecte :
+  //  "current_night" = effacee a la fin de la nuit (ex: victime sorciere)
+  //  "next_night"    = persiste jusqu'a la nuit suivante (ex: malediction Chevalier)
+  //  "until_death"   = jusqu'a la mort du joueur (ex: protection permanente)
+  //  "game"          = toute la partie (ex: amoureux de Cupidon)
+  //  absent          = pas de bordure persistante
+  "borderLifetime": "current_night",
+
+  // --- ACTIONS ---------------------------------------------------------
+  // [PILOTE] Dictionnaire des "blocs d'action". La CLE est un nom de phase
+  //  lisible (libre) ; ce qui compte pour le moteur c'est le contenu.
+  //  Vous pouvez avoir plusieurs blocs (ex: un effet de nuit + un PostMortem).
+  "actions": {
+
+    // Bloc d'action principal. Le nom de cle est indicatif ; utilisez l'un de :
+    //  "ToutesNuits", "ToutesNuitsPaires", "TousLesJours", "UneFoisPartie",
+    //  "DebutPartie", "PostMortem", "SpecialDeath", "NoAction".
+    "ToutesNuits": {
+      "enabled": true,           // [PILOTE] false => bloc ignore
+
+      // [PILOTE] "type" = COMPORTEMENT. C'est LA balise qui doit remplacer le
+      //  hardcoding "switch(roleId)". Le moteur choisit le rendu/effet selon ce type.
+      //  Catalogue actuel (voir ROLE_SCHEMA.md pour le detail) :
+      //   discover, protect, potions, hunt, huntSelectively, kill, extraKill,
+      //   bonusKill, lover, charm, mark, spy, countEnemies, silence, visit,
+      //   changeRole, roleSwap, roleSwapDead, resurrect, seduce, convert, arson,
+      //   shoot, secondVote, doubleVote, killOnDeath, postDeathEffect,
+      //   pauseWolfKill, turnOnWolfKill, chooseSide, dividePlayers, bless,
+      //   senseConnection, controlAction, talkToDead, twinCommunication,
+      //   tankProtection, amuletProtection, surviveDayKill, dieOnTie,
+      //   winOnFirstDeath, vultureCondition, curse, randomEvent, noAction
+      "type": "discover",
+
+      // [PILOTE] quand le bloc est actif (vocabulaire moteur) :
+      //  "everyNight", "everyNightFrom2", "everyNightFirst3", "everyOtherNight",
+      //  "firstNight", "gameStart", "everyDay", "dayVote", "onDeath",
+      //  "gameProgress", "anyTime", "none"
+      "phase": "everyNight",
+
+      // [PILOTE] nombre de cibles a selectionner.
+      //  { "count": 1 } = une cible | { "count": 2 } = deux (ex: Cupidon)
+      //  {} ou absent = pas de selection simple de cible (ex: potions sorciere)
+      "targets": { "count": 1 },
+
+      // [PILOTE] cle de stockage du resultat dans l'etat de partie.
+      //  Convention : <role>Selection / <role>Kill / <role>Protection ...
+      "stateKey": "roleSelection"
+    },
+
+    // Exemple d'un second bloc : effet au moment de la mort (Chasseur, etc.)
+    "PostMortem": {
+      "enabled": false,
+      "type": "killOnDeath",
+      "phase": "onDeath",
+      "targets": { "count": 1 },
+      "stateKey": "roleKillOnDeath"
+    }
+  },
+
+  // --- BOUTONS D'ACTION MDJ (optionnel) -------------------------------
+  // [PILOTE] Boutons proposes au Maitre du Jeu pour ce role (ex: 2 potions
+  //  de la sorciere). Si absent, le moteur genere un bouton par defaut.
+  //  Chaque entree : id (interne), icon (emoji), label (texte bouton).
+  "mdj_night_actions": [
+    { "id": "action_id", "icon": "✨", "label": "Texte du bouton" }
+  ],
+
+  // --- UI / RENDU (balise de standardisation du dispatch) -------------
+  // [PILOTE] Remplace le "switch(roleId)" de renderActionButtons.
+  //  Indique quel composant de selection afficher. Valeurs reconnues :
+  //   "cupidonLover" | "enfantSauvage" | "chienLoup" | "voyante" |
+  //   "salvateur" | "renard" | "wolfKill" | "sorciere" | "corbeau" | "generic"
+  //  Si absent : le moteur retombe sur "generic" (boutons d'action standard).
+  "ui": {
+    "selectionRenderer": "generic"
+  },
+
+  // --- VISUEL (couleurs) ----------------------------------------------
+  // [PILOTE] Couleurs du role sur la carte et des bordures d'effet.
+  "visual": {
+    "roleColor": {
+      "fondColor": "#888888",    // couleur de fond de la pastille du role
+      "emojiColor": "#FFFFFF",   // couleur de l'emoji
+      "textColor": "#FFFFFF"     // (optionnel) couleur du nom
+    },
+    "affectedColor": {           // (optionnel) couleur de la bordure posee sur une cible
+      "borderColor": "#FFD700"
+    }
+  },
+
+  // --- CONSEILS MDJ ----------------------------------------------------
+  "tips": "Conseils d'animation pour le Maitre du Jeu concernant ce role." // [INFO]
+}

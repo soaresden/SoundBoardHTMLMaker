@@ -3,6 +3,7 @@
   "name": "Louveteau",
   "emoji": "🐶",
   "camp": "Loups",
+  "isWolf": true,
   "description": "Rôle: Louveteau",
   "actions": {
     "PostMortem": {
