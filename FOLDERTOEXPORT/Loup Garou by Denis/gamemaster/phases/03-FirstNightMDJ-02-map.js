@@ -193,11 +193,19 @@ Object.assign(FirstNightMDJ.prototype, {
       }
       const displayName = isMayor ? `🎖️ ${p.name}` : p.name;
 
+      // Badge "tueur" : emoji de la cause de mort, affiche a cote du mort
+      const killerEmojiMap = { wolf: '🐺', poison: '🧙‍♀️', lynch: '🪓', chasseur: '🏹', chevalier: '⚔️', love: '💔' };
+      const killerEmoji = isDead ? (killerEmojiMap[this.deathCauses && this.deathCauses[p.id]] || '') : '';
+      const killerBadge = killerEmoji
+        ? `<span class="mdj-killer-badge" title="Tué par : ${this.deathCauses[p.id]}" style="position:absolute; top:-9px; right:-9px; font-size:12px; line-height:1; background:rgba(0,0,0,0.75); border:1px solid rgba(255,255,255,0.25); border-radius:50%; padding:2px; z-index:5; filter:none; opacity:1;">${killerEmoji}</span>`
+        : '';
+
       return `
         <div class="mdj-player-point ${isCurrentRole ? 'breathing' : ''}" data-player-id="${p.id}" data-player-name="${p.name}" data-original-emoji="${emoji}"
              style="left: ${x}px; top: ${y}px; position: absolute; ${deadStyle}">
-          <div class="mdj-point-dot" style="background: ${bgColor}; --affected-border: ${affectedBorderColor};">
+          <div class="mdj-point-dot" style="background: ${bgColor}; --affected-border: ${affectedBorderColor}; position: relative;">
             <span class="mdj-point-emoji" style="color: ${emojiColor};">${isDead ? '💀' : emoji}</span>
+            ${killerBadge}
             <span class="mdj-point-name" style="top: ${nameTop}; left: ${nameLeft}; text-align: ${p.textAlign};">${isDead ? '💀' : ''} ${displayName}</span>
           </div>
         </div>

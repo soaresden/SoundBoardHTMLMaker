@@ -489,8 +489,8 @@ Object.assign(FirstNightMDJ.prototype, {
         console.log(`[MDJ] Renard inspection - 3 neighbors: left=${leftPlayer.name} (${isLeftWolf ? 'wolf' : 'not wolf'}), center=${selectedPlayerObj.name} (${isSelectedWolf ? 'wolf' : 'not wolf'}), right=${rightPlayer.name} (${isRightWolf ? 'wolf' : 'not wolf'}) - Total wolves: ${wolfCount}`);
 
         const wolfDetectionMessage = wolfCount === 0
-          ? '<div style="color: #ff6b6b; font-size: 0.7rem; font-weight: 700; margin-top: 8px; padding: 6px; background: rgba(255,107,107,0.2); border-radius: 3px;">⚠️ Il perd son pouvoir prochaine nuit</div>'
-          : `<div style="color: #4ecdc4; font-size: 0.7rem; font-weight: 700; margin-top: 8px; padding: 6px; background: rgba(78,205,196,0.2); border-radius: 3px;">🐺 ${wolfCount} loup${wolfCount > 1 ? 's' : ''} détecté${wolfCount > 1 ? 's' : ''}</div>`;
+          ? '<div style="color: #ff9e6b; font-size: 0.72rem; font-weight: 700; margin-top: 8px; padding: 6px; background: rgba(255,140,80,0.2); border-radius: 3px;">🦊 Ça ne sent rien… aucun loup à proximité (le Renard perd son flair dès la nuit prochaine)</div>'
+          : `<div style="color: #4ecdc4; font-size: 0.72rem; font-weight: 700; margin-top: 8px; padding: 6px; background: rgba(78,205,196,0.2); border-radius: 3px;">🐺 Ça sent le loup ! ${wolfCount} loup${wolfCount > 1 ? 's' : ''} à proximité</div>`;
 
         controlsHtml = `
           <div style="display: flex; justify-content: space-around; align-items: center; gap: 10px; width: 100%;">
@@ -810,26 +810,15 @@ Object.assign(FirstNightMDJ.prototype, {
     const isVictimProtected = victimId && protectedPlayers.has(victimId);
     const protectionLabel = isVictimProtected ? ' <span style="color: #ff9999; font-weight: bold;">(immunisé)</span>' : '';
 
-    const lifePotionHtml = hasVictim ? `
+    // Potion de VIE: seulement s'il y a une victime ET si elle n'a pas deja ete utilisee
+    const lifePotionHtml = (hasVictim && !this.sorciereLifeUsed) ? `
         <button class="potion-btn life-potion ${selectedAction === 'potion-life' ? 'selected' : ''}" style="background: ${selectedAction === 'potion-life' ? bgColor + '50' : bgColor + '30'}; border: 2px solid ${bgColor};">
           ${resurrectIcon} Potion Vie - La sauver
         </button>` : '';
 
-    actionControls.innerHTML = `
-      <div class="sorciere-controls">
-        <div style="color: white; font-size: 0.8rem; margin-bottom: 10px; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 4px; border-left: 3px solid ${bgColor};">
-          <strong>💀 Victime des Loups:</strong><br>
-          <span style="font-size: 0.9rem; font-weight: bold; color: #ffaaaa;">${displayVictimName}${protectionLabel}</span>
-        </div>
-
-        ${lifePotionHtml}
-
-        <button class="potion-btn do-nothing-btn ${selectedAction === 'do-nothing' ? 'selected' : ''}" style="background: ${selectedAction === 'do-nothing' ? 'rgba(100,100,100,0.5)' : 'rgba(100,100,100,0.3)'}; border: 2px solid #999;">
-          ⏭️ Ne rien faire
-        </button>
-
+    // Potion de MORT: combobox seulement si pas deja utilisee
+    const poisonHtml = (!this.sorcierePoisonUsed) ? `
         <div style="color: #aaa; font-size: 0.7rem; margin: 8px 0; text-align: center;">─── ou ───</div>
-
         <div style="color: white; font-size: 0.75rem; margin-bottom: 8px; padding: 6px; background: rgba(0,0,0,0.2); border-radius: 4px;">
           Empoisonner un joueur:
         </div>
@@ -849,7 +838,21 @@ Object.assign(FirstNightMDJ.prototype, {
               return `<option value="${p.id}" ${isSelected ? 'selected' : ''}>${p.name}${protectedLabel}</option>`;
             }).join('');
           })()}
-        </select>
+        </select>` : '';
+
+    actionControls.innerHTML = `
+      <div class="sorciere-controls">
+        <div style="color: white; font-size: 0.8rem; margin-bottom: 10px; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 4px; border-left: 3px solid ${bgColor};">
+          <strong>💀 Victime des Loups:</strong><br>
+          <span style="font-size: 0.9rem; font-weight: bold; color: #ffaaaa;">${displayVictimName}${protectionLabel}</span>
+        </div>
+
+        ${lifePotionHtml}
+
+        <button class="potion-btn do-nothing-btn ${selectedAction === 'do-nothing' ? 'selected' : ''}" style="background: ${selectedAction === 'do-nothing' ? 'rgba(100,100,100,0.5)' : 'rgba(100,100,100,0.3)'}; border: 2px solid #999;">
+          ⏭️ Ne rien faire
+        </button>
+        ${poisonHtml}
       </div>
     `;
 

@@ -642,6 +642,30 @@ Object.assign(FirstNightMDJ.prototype, {
         this.lastSalvateurProtected = this.selectedPlayers[0];
         console.log(`[MDJ] Salvateur protected ${this.getPlayerName(this.lastSalvateurProtected)} - can't protect same person next night`);
       }
+
+      // CRITICAL: Renard — s'il ne renifle AUCUN loup, il perd son pouvoir (ne se reveille plus).
+      // On detecte les loups parmi le joueur cible + ses 2 voisins vivants.
+      if (roleId === 'Renard' && this.selectedPlayers.length > 0) {
+        const ps = this.gm?.state?.players || [];
+        const centerId = this.selectedPlayers[0];
+        const idx = ps.findIndex(p => p.id === centerId);
+        let wolves = 0;
+        if (idx !== -1) {
+          const aliveNeighbor = (start, dir) => {
+            let i = start, n = ps.length;
+            for (let k = 0; k < n; k++) {
+              i = (i + dir + n) % n;
+              if (i === idx) break;
+              if (!this.deadPlayerIds.has(ps[i].id)) return ps[i];
+            }
+            return null;
+          };
+          const trio = [ps[idx], aliveNeighbor(idx, -1), aliveNeighbor(idx, +1)].filter(Boolean);
+          wolves = trio.filter(p => this.isWolfRoleId(p.role)).length;
+        }
+        this.renardDetectedWolves = wolves > 0;
+        console.log(`[MDJ] 🦊 Renard a reniflé ${wolves} loup(s) → ${this.renardDetectedWolves ? 'garde' : 'PERD'} son pouvoir`);
+      }
     }
 
     // Track dead players from kill actions
@@ -731,15 +755,17 @@ Object.assign(FirstNightMDJ.prototype, {
           }
         }
       });
-      // CRITICAL: Increment potion counter
+      // CRITICAL: Increment potion counter + flag potion de VIE utilisee
       this.sorcierePotionsUsed++;
-      console.log(`[MDJ] 🧙‍♀️ Sorciere potions used: ${this.sorcierePotionsUsed}/2`);
+      this.sorciereLifeUsed = true;
+      console.log(`[MDJ] 🧙‍♀️ Sorciere potion VIE utilisee (${this.sorcierePotionsUsed}/2)`);
     }
 
     // CRITICAL: Track Sorciere poison potion usage
     if (roleId === 'Sorciere' && action === 'poison') {
       this.sorcierePotionsUsed++;
-      console.log(`[MDJ] 🧙‍♀️ Sorciere potions used: ${this.sorcierePotionsUsed}/2`);
+      this.sorcierePoisonUsed = true;
+      console.log(`[MDJ] 🧙‍♀️ Sorciere potion MORT utilisee (${this.sorcierePotionsUsed}/2)`);
     }
 
     // Clear selections

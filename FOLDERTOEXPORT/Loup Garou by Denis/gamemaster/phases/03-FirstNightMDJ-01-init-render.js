@@ -395,6 +395,57 @@ Object.assign(FirstNightMDJ.prototype, {
         ${soloHtml}
       </div>
     `;
+
+    // Detection de fin de partie
+    this.maybeShowVictory(village, loups, solos, alive.length);
+  }
+,
+
+  /**
+   * Determine s'il y a un vainqueur et affiche l'overlay (une seule fois).
+   */
+  maybeShowVictory(village, loups, solos, aliveCount) {
+    if (this.victoryShown) return;
+    const soloNames = Object.keys(solos);
+    const soloCount = soloNames.length;
+    let win = null; // {label, sub, color}
+
+    if (aliveCount === 0) {
+      win = { label: 'Tout le monde est mort', sub: 'Aucun camp ne l\'emporte', color: '#888' };
+    } else if (loups === 0 && soloCount === 0 && village > 0) {
+      win = { label: 'VICTOIRE DES VILLAGEOIS !', sub: 'Plus aucun loup en vie', color: '#4dd0e1', emoji: '\u{1F3D8}\uFE0F' };
+    } else if (village === 0 && soloCount === 0 && loups > 0) {
+      win = { label: 'VICTOIRE DES LOUPS-GAROUS !', sub: 'Le village est decime', color: '#ff6b6b', emoji: '\u{1F43A}' };
+    } else if (loups === 0 && village === 0 && soloCount === 1) {
+      win = { label: `VICTOIRE : ${soloNames[0]} !`, sub: 'Dernier survivant de son camp', color: '#e0a0ff', emoji: '\u{1F3AD}' };
+    } else if (loups > 0 && village > 0 && loups >= village && soloCount === 0) {
+      win = { label: 'VICTOIRE DES LOUPS-GAROUS !', sub: 'Parite atteinte : les loups controlent le village', color: '#ff6b6b', emoji: '\u{1F43A}' };
+    }
+    if (!win) return;
+    this.victoryShown = true;
+    this.showVictoryOverlay(win);
+  }
+,
+
+  showVictoryOverlay(win) {
+    if (document.getElementById('mdj-victory-overlay')) return;
+    const ov = document.createElement('div');
+    ov.id = 'mdj-victory-overlay';
+    ov.style.cssText = 'position:fixed; inset:0; z-index:99999; display:flex; flex-direction:column; align-items:center; justify-content:center; background:rgba(0,0,0,0.86); backdrop-filter:blur(3px); animation:mdjVictoryFade 0.5s ease;';
+    ov.innerHTML = `
+      <style>
+        @keyframes mdjVictoryFade { from { opacity:0; } to { opacity:1; } }
+        @keyframes mdjVictoryPop { 0% { transform:scale(0.6); opacity:0; } 60% { transform:scale(1.08); } 100% { transform:scale(1); opacity:1; } }
+      </style>
+      <div style="text-align:center; animation:mdjVictoryPop 0.6s cubic-bezier(.2,.9,.3,1.3); padding:32px 40px; border:3px solid ${win.color}; border-radius:18px; background:linear-gradient(135deg, rgba(20,20,40,0.95), rgba(35,25,55,0.95)); box-shadow:0 0 60px ${win.color}66;">
+        <div style="font-size:64px; margin-bottom:8px;">${win.emoji || '\u{1F3C6}'}</div>
+        <div style="font-size:34px; font-weight:900; color:${win.color}; letter-spacing:1px; text-shadow:0 0 18px ${win.color}88;">${win.label}</div>
+        <div style="font-size:15px; color:#ddd; margin-top:10px;">${win.sub}</div>
+        <button id="mdj-victory-close" style="margin-top:22px; padding:12px 28px; font-size:15px; font-weight:700; color:#fff; background:${win.color}; border:none; border-radius:10px; cursor:pointer; box-shadow:0 4px 14px ${win.color}55;">Fermer</button>
+      </div>
+    `;
+    document.body.appendChild(ov);
+    ov.querySelector('#mdj-victory-close')?.addEventListener('click', () => ov.remove());
   }
 
 });
