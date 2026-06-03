@@ -781,15 +781,13 @@ Object.assign(FirstNightMDJ.prototype, {
 
     // Check all wolves in order - take FIRST kill (Simple_Loup_Garou kills first in sequence)
     for (const roleId of this.getWolfKillRoleIds()) {
-      if (this.roleStates[roleId]?.result?.targets?.length > 0) {
-        // FIRST victim is the one to show (the primary wolf kill)
-        if (!firstWolfKill) {
-          firstWolfKill = {
-            roleId,
-            victimId: this.roleStates[roleId].result.targets[0]
-          };
-          console.log(`[MDJ] Sorciere - Found firstWolfKill from ${roleId}:`, firstWolfKill.victimId);
-        }
+      const st = this.roleStates[roleId];
+      if (!st?.result || st.result.action !== 'kill') continue; // ignorer Chien-Loup (join_wolves) etc.
+      const t = st.result.targets && st.result.targets[0];
+      if (!t || !players.some(p => p.id === t)) continue;       // doit etre un vrai joueur
+      if (!firstWolfKill) {
+        firstWolfKill = { roleId, victimId: t };
+        console.log(`[MDJ] Sorciere - Found firstWolfKill from ${roleId}:`, t);
       }
     }
     if (firstWolfKill) {

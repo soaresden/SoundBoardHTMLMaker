@@ -286,7 +286,7 @@ class GameMasterUI {
             const color = colors[idx % colors.length];
             const initials = p.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || `J${idx + 1}`;
             return `
-              <div class="gm-player-vignette" data-player-id="${p.id}" draggable="true" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:3px 2px; background:linear-gradient(135deg, ${color}20, ${color}10); border:1px solid ${color}60; border-radius:5px; margin:1px; cursor:grab; transition:all 0.15s; flex-shrink:0; min-width:58px; text-align:center; box-shadow:0 1px 4px ${color}30; user-select:none;">
+              <div class="gm-player-vignette" data-player-id="${p.id}" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:3px 2px; background:linear-gradient(135deg, ${color}20, ${color}10); border:1px solid ${color}60; border-radius:5px; margin:1px; cursor:grab; transition:all 0.15s; flex-shrink:0; min-width:58px; text-align:center; box-shadow:0 1px 4px ${color}30; user-select:none;">
                 <div style="display:flex; align-items:center; justify-content:center; width:24px; height:24px; background:linear-gradient(135deg, ${color}, ${color}dd); border-radius:50%; font-size:10px; font-weight:700; color:white; line-height:1; box-shadow:inset 0 1px 2px rgba(0,0,0,0.2);">${initials}</div>
                 <div style="font-size:7px; font-weight:600; color:#e8e8f0; line-height:1; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.name.substring(0, 10)}</div>
                 <input type="text" class="gm-player-name-input-place" data-player-id="${p.id}" value="${p.name}" placeholder="Nom..." style="width:100%; padding:0.5px 1px; border:0.5px solid ${color}40; background:rgba(0,0,0,0.6); border-radius:2px; color:#fff; text-align:center; font-size:6.5px; font-weight:500;" onclick="event.stopPropagation();">
@@ -323,7 +323,7 @@ class GameMasterUI {
               const playerIdx = players.indexOf(p) + 1;
               const shortName = p.name.substring(0, 10);
               return `
-                <div class="gm-player-vignette" data-player-id="${p.id}" data-zone="${zoneName}" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:2px 3px; background:transparent; border:none; margin:1px; cursor:grab; transition:all 0.2s; flex-shrink:0; user-select:none; line-height:1.1; min-width:50px; text-align:center;" draggable="true" title="${p.name}">
+                <div class="gm-player-vignette" data-player-id="${p.id}" data-zone="${zoneName}" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:2px 3px; background:transparent; border:none; margin:1px; cursor:grab; transition:all 0.2s; flex-shrink:0; user-select:none; line-height:1.1; min-width:50px; text-align:center;" title="${p.name}">
                   <div style="font-weight:700; color:#81dff7; line-height:1; font-size:8px;">J${playerIdx}</div>
                   <div style="color:#e8e8f0; font-size:7px; word-break:break-word; width:100%;">${shortName}</div>
                 </div>
@@ -353,7 +353,7 @@ class GameMasterUI {
               const playerIdx = players.indexOf(p) + 1;
               const shortName = p.name.substring(0, 10);
               return `
-                <div class="gm-player-vignette" data-player-id="${p.id}" data-zone="${zoneName}" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:2px 3px; background:transparent; border:none; margin:0; cursor:grab; user-select:none; line-height:1.1; flex-shrink:0; text-align:center;" draggable="true" title="${p.name}">
+                <div class="gm-player-vignette" data-player-id="${p.id}" data-zone="${zoneName}" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:2px 3px; background:transparent; border:none; margin:0; cursor:grab; user-select:none; line-height:1.1; flex-shrink:0; text-align:center;" title="${p.name}">
                   <div style="font-weight:700; color:#81dff7; line-height:1; font-size:8px;">J${playerIdx}</div>
                   <div style="color:#e8e8f0; font-size:7px; word-break:break-word;">${shortName}</div>
                 </div>
@@ -376,7 +376,7 @@ class GameMasterUI {
               const playerIdx = players.indexOf(p) + 1;
               const shortName = p.name.substring(0, 10);
               return `
-                <div class="gm-player-vignette" data-player-id="${p.id}" data-zone="${zoneName}" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:2px 3px; background:transparent; border:none; margin:1px; cursor:grab; transition:all 0.2s; flex-shrink:0; user-select:none; line-height:1.1; text-align:center;" draggable="true" title="${p.name}">
+                <div class="gm-player-vignette" data-player-id="${p.id}" data-zone="${zoneName}" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:2px 3px; background:transparent; border:none; margin:1px; cursor:grab; transition:all 0.2s; flex-shrink:0; user-select:none; line-height:1.1; text-align:center;" title="${p.name}">
                   <div style="font-weight:700; color:#81dff7; line-height:1; font-size:8px;">J${playerIdx}</div>
                   <div style="color:#e8e8f0; font-size:7px; word-break:break-word;">${shortName}</div>
                 </div>
@@ -457,459 +457,126 @@ class GameMasterUI {
 
   attachPlayerControlEvents() {
     const gm = this.gm;
+    const self = this;
     const playersList = document.getElementById('gmPlayersList');
     if (!playersList) return;
 
-    const vignettes = playersList.querySelectorAll('.gm-player-vignette');
-    let draggedElement = null;
-    let draggedIndex = null;
-
-    vignettes.forEach((vignette, idx) => {
+    // --- Edition des noms (live + sauvegarde) ---
+    playersList.querySelectorAll('.gm-player-vignette').forEach(vignette => {
       const playerId = vignette.dataset.playerId;
-
-      // DRAGSTART: Marquer l'élément en cours de déplacement
-      vignette.addEventListener('dragstart', (e) => {
-        draggedElement = vignette;
-        draggedIndex = idx;
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/html', vignette.innerHTML);
-        // Feedback visuel du drag
-        vignette.style.opacity = '0.6';
-        vignette.style.transform = 'scale(1.05)';
-        vignette.style.boxShadow = '0 4px 12px rgba(255,255,255,0.3)';
-      });
-
-      // DRAGEND: Nettoyer le drag et animations
-      vignette.addEventListener('dragend', (e) => {
-        vignette.style.opacity = '1';
-        vignette.style.transform = 'scale(1)';
-        vignette.style.backgroundColor = 'rgba(81,116,219,0.1)';
-
-        // Nettoyer tous les indicateurs de drop
-        document.querySelectorAll('.gm-drop-indicator').forEach(ind => ind.remove());
-
-        draggedElement = null;
-        draggedIndex = null;
-      });
-
-      // NOTE: dragover et drop sont maintenant gérés UNIQUEMENT au niveau du conteneur playersList
-      // pour éviter les conflits entre la ligne d'insertion visuelle et la logique de drop réelle
-
-      // INPUT: Mettre à jour le nom en live sur la map
       const nameInput = vignette.querySelector('.gm-player-name-input-place');
-      if (nameInput) {
-        nameInput.addEventListener('input', (e) => {
-          const newName = e.target.value;
-          const player = gm.state.players.find(p => p.id === playerId);
+      if (!nameInput) return;
+      nameInput.addEventListener('input', (e) => {
+        const player = gm.state.players.find(p => p.id === playerId);
+        if (!player) return;
+        player.name = e.target.value;
+        const nameEl = document.querySelector(`.gm-player-point[data-player-id="${playerId}"] .gm-point-name`);
+        if (nameEl) nameEl.textContent = e.target.value;
+      });
+      nameInput.addEventListener('blur', () => { gm.saveState(); self.saveGameStateToCache(); });
+    });
 
-          if (player) {
-            player.name = newName;
+    // --- Reordonnancement par glisser (Pointer Events: souris + tactile unifies) ---
+    let dragEl = null, pointerId = null, startX = 0, startY = 0, active = false;
+    const THRESH = 6;
 
-            // Mettre à jour le nom sur la map
-            const mapPoint = document.querySelector(`.gm-player-point[data-player-id="${playerId}"]`);
-            if (mapPoint) {
-              const nameElement = mapPoint.querySelector('.gm-point-name');
-              if (nameElement) {
-                nameElement.textContent = newName;
-              }
-            }
+    const renumber = () => {
+      playersList.querySelectorAll('.gm-player-vignette').forEach((v, i) => {
+        const lbl = v.querySelector('div:first-child');
+        if (lbl && /^J\s*\d+/.test((lbl.textContent || '').trim())) lbl.textContent = `J${i + 1}`;
+      });
+    };
 
-            // Mettre à jour le label J1, J2, etc. aussi (optionnel, mais bonne UX)
-            const jLabel = vignette.querySelector('div:first-child');
-            if (jLabel) {
-              const jIdx = Array.from(playersList.querySelectorAll('.gm-player-vignette')).indexOf(vignette);
-              jLabel.textContent = `J${jIdx + 1}`;
-            }
-          }
-        });
+    const containerUnder = (x, y) => {
+      const el = document.elementFromPoint(x, y);
+      if (!el) return null;
+      return el.closest('.gm-zone-vignettes') || (el.closest('#gmPlayersList') ? playersList : null);
+    };
 
-        // BLUR: Sauvegarder l'état quand on quitte le champ
-        nameInput.addEventListener('blur', (e) => {
-          gm.saveState();
-          this.saveGameStateToCache();
-        });
+    const onMove = (e) => {
+      if (!dragEl) return;
+      const x = e.clientX, y = e.clientY;
+      if (!active) {
+        if (Math.hypot(x - startX, y - startY) < THRESH) return;
+        active = true;
+        dragEl.style.pointerEvents = 'none'; // pour que elementFromPoint voie les cibles dessous (capture conserve les events)
+        dragEl.style.opacity = '0.6';
+        dragEl.style.transform = 'scale(1.06)';
+        dragEl.style.boxShadow = '0 6px 16px rgba(129,223,247,0.55)';
+        dragEl.style.zIndex = '1000';
       }
-    });
-
-    // Dragover sur chaque conteneur de zone pour montrer l'indicateur
-    document.querySelectorAll('.gm-zone-vignettes').forEach(zoneContainer => {
-      zoneContainer.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-
-        if (draggedIndex === null) {
-          console.log(`⚠️ DRAGOVER on zone but draggedIndex is null`);
-          return;
-        }
-
-        const zone = zoneContainer.dataset.zone;
-        const isHorizontal = zone === 'top' || zone === 'bottom';
-        const vignettes = Array.from(zoneContainer.querySelectorAll('.gm-player-vignette'));
-
-        // Nettoyer les anciens indicateurs
-        document.querySelectorAll('.gm-drop-indicator').forEach(ind => ind.remove());
-
-        // Trouver quelle vignette est la plus proche de la souris
-        let insertIndex = vignettes.length;
-        let closestVignette = null;
-
-        if (isHorizontal) {
-          // Pour zones horizontales: comparer X
-          let closestDistance = Infinity;
-          vignettes.forEach((v, idx) => {
-            const rect = v.getBoundingClientRect();
-            const midpoint = rect.left + rect.width / 2;
-            const distance = Math.abs(e.clientX - midpoint);
-
-            if (distance < closestDistance) {
-              closestDistance = distance;
-              closestVignette = v;
-              insertIndex = e.clientX < midpoint ? idx : idx + 1;
-            }
-          });
-          console.log(`  - Horizontal: closest vignette at index ${insertIndex}, distance ${closestDistance.toFixed(2)}px`);
-        } else {
-          // Pour zones verticales: comparer Y
-          let closestDistance = Infinity;
-          vignettes.forEach((v, idx) => {
-            const rect = v.getBoundingClientRect();
-            const midpoint = rect.top + rect.height / 2;
-            const distance = Math.abs(e.clientY - midpoint);
-
-            if (distance < closestDistance) {
-              closestDistance = distance;
-              closestVignette = v;
-              insertIndex = e.clientY < midpoint ? idx : idx + 1;
-            }
-          });
-          console.log(`  - Vertical: closest vignette at index ${insertIndex}, distance ${closestDistance.toFixed(2)}px`);
-        }
-
-        // Créer et insérer l'indicateur
-        const indicator = document.createElement('div');
-        indicator.className = 'gm-drop-indicator';
-
-        if (isHorizontal) {
-          // Ligne VERTICALE (2px wide, full height) pour zones horizontales
-          indicator.style.cssText = `
-            width: 2px !important;
-            min-width: 2px;
-            max-width: 2px;
-            height: 45px;
-            background: #66d999;
-            flex-shrink: 0 !important;
-            flex-grow: 0 !important;
-            margin: 0 -1px;
-            display: flex;
-          `;
-          console.log(`  - Created VERTICAL indicator (2px wide, 45px tall)`);
-        } else {
-          // Ligne HORIZONTALE (full width, 2px tall) pour zones verticales
-          indicator.style.cssText = `
-            height: 2px !important;
-            min-height: 2px;
-            max-height: 2px;
-            width: 100%;
-            background: #66d999;
-            flex-shrink: 0 !important;
-            flex-grow: 0 !important;
-            margin: -1px 0;
-            display: flex;
-          `;
-          console.log(`  - Created HORIZONTAL indicator (full width, 2px tall)`);
-        }
-
-        if (closestVignette && insertIndex > vignettes.indexOf(closestVignette)) {
-          closestVignette.parentNode.insertBefore(indicator, closestVignette.nextSibling);
-          console.log(`  - Inserted indicator AFTER vignette at index ${vignettes.indexOf(closestVignette)}`);
-        } else if (closestVignette) {
-          closestVignette.parentNode.insertBefore(indicator, closestVignette);
-          console.log(`  - Inserted indicator BEFORE vignette at index ${vignettes.indexOf(closestVignette)}`);
-        } else {
-          zoneContainer.appendChild(indicator);
-          console.log(`  - Appended indicator at end of zone`);
-        }
-      });
-
-      zoneContainer.addEventListener('drop', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        if (draggedIndex === null || draggedElement === null) {
-          console.log(`❌ DROP on zone container - draggedIndex or draggedElement is null`);
-          return;
-        }
-
-        const zone = zoneContainer.dataset.zone;
-        console.log(`💧 DROP on zone container ${zone}`);
-
-        const vignettes = Array.from(zoneContainer.querySelectorAll('.gm-player-vignette'));
-        const draggedZone = draggedElement?.dataset.zone;
-        const isHorizontal = zone === 'top' || zone === 'bottom';
-
-        const players = gm.state.players;
-        const draggedPlayer = players[draggedIndex];
-
-        console.log(`  - Dragged: ${draggedPlayer.name} (index ${draggedIndex}, zone ${draggedZone}) → ${zone}`);
-
-        // Trouver l'index d'insertion dans la zone
-        let insertIndex = vignettes.length;
-
-        // Calculer où insérer basé sur la position de la souris
-        if (vignettes.length > 0) {
-          let closestDistance = Infinity;
-          vignettes.forEach((v, idx) => {
-            const rect = v.getBoundingClientRect();
-            let distance;
-
-            if (isHorizontal) {
-              const midpoint = rect.left + rect.width / 2;
-              distance = Math.abs(e.clientX - midpoint);
-            } else {
-              const midpoint = rect.top + rect.height / 2;
-              distance = Math.abs(e.clientY - midpoint);
-            }
-
-            if (distance < closestDistance) {
-              closestDistance = distance;
-              if (isHorizontal) {
-                insertIndex = e.clientX < rect.left + rect.width / 2 ? idx : idx + 1;
-              } else {
-                insertIndex = e.clientY < rect.top + rect.height / 2 ? idx : idx + 1;
-              }
-            }
-          });
-        }
-
-        // Convertir l'index de zone en index global dans players[]
-        const zoneConfig = gm.state.zoneConfig || { top: 0, left: 0, right: 0, bottom: 0 };
-        let zoneStart = 0;
-        if (zone === 'left') {
-          zoneStart = zoneConfig.top;
-        } else if (zone === 'right') {
-          zoneStart = zoneConfig.top + zoneConfig.left;
-        } else if (zone === 'bottom') {
-          zoneStart = zoneConfig.top + zoneConfig.left + zoneConfig.right;
-        }
-
-        let targetIndex = zoneStart + insertIndex;
-
-        // SI c'est un cross-zone move, ajuster le calcul
-        if (draggedZone !== zone && draggedZone && zone) {
-          console.log(`  - Cross-zone: adjusting targetIndex from ${targetIndex}`);
-          // Retirer le joueur de la zone source du calcul
-          const draggedZoneStart = draggedZone === 'left' ? zoneConfig.top :
-                                   draggedZone === 'right' ? zoneConfig.top + zoneConfig.left :
-                                   draggedZone === 'bottom' ? zoneConfig.top + zoneConfig.left + zoneConfig.right : 0;
-
-          // Si le joueur était avant la zone cible, l'index change
-          if (draggedIndex < zoneStart) {
-            targetIndex -= 1; // Le joueur qu'on retire est avant la zone cible
-          }
-          console.log(`  - Adjusted targetIndex to ${targetIndex}`);
-        } else if (draggedZone === zone && draggedIndex < targetIndex) {
-          // Same zone move
-          targetIndex -= 1;
-        }
-
-        console.log(`  - Insert at zone index ${insertIndex}, global index ${targetIndex}, draggedIndex ${draggedIndex}`);
-
-        // Éviter les mouvements inutiles
-        if (draggedIndex === targetIndex) {
-          console.log(`  ⏭️ Same position, skipping`);
-          draggedElement = null;
-          draggedIndex = null;
-          return;
-        }
-
-        // Supprimer et réinsérer le joueur à la nouvelle position
-        console.log(`  🔄 Moving player from index ${draggedIndex} to ${targetIndex}`);
-        players.splice(draggedIndex, 1);
-        players.splice(targetIndex, 0, draggedPlayer);
-
-        // SI on a dragué entre zones différentes, mettre à jour zoneConfig
-        if (draggedZone !== zone && draggedZone && zone) {
-          console.log(`  🔀 Cross-zone move: ${draggedZone} → ${zone}`);
-          if (gm.state.zoneConfig[draggedZone] > 0) {
-            gm.state.zoneConfig[draggedZone]--;
-          }
-          gm.state.zoneConfig[zone]++;
-        }
-
-        console.log(`✅ DROP complete - saving and re-rendering`);
-        gm.saveState();
-        this.saveGameStateToCache();
-        this.render();
-
-        draggedElement = null;
-        draggedIndex = null;
-      });
-
-      zoneContainer.addEventListener('dragleave', (e) => {
-        document.querySelectorAll('.gm-drop-indicator').forEach(ind => ind.remove());
-      });
-    });
-
-    // Permettre le drop sur le conteneur principal + mettre à jour la ligne d'insertion
-    playersList.addEventListener('dragover', (e) => {
       e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-
-      if (draggedIndex !== null) {
-        // Supprimer l'ancienne ligne
-        document.querySelectorAll('.gm-insertion-line').forEach(l => l.remove());
-
-        // Trouver la vignette la plus proche
-        const vignettes = Array.from(playersList.querySelectorAll('.gm-player-vignette'));
-        let insertBeforeVignette = null;
-
-        // Obtenir le nom du joueur dragué
-        const draggedId = vignettes[draggedIndex]?.dataset.playerId;
-        const draggedPlayer = this.gm.state.players.find(p => p.id === draggedId);
-        const draggedName = draggedPlayer?.name || '?';
-
-        // Trouver la première vignette qui est EN DESSOUS de la souris (sauf celle qu'on drag)
-        for (let i = 0; i < vignettes.length; i++) {
-          // Ignorer la vignette qu'on est en train de draguer
-          if (i === draggedIndex) continue;
-
-          const rect = vignettes[i].getBoundingClientRect();
-          const midpoint = rect.top + rect.height / 2;
-          const isBelow = e.clientY < midpoint;
-
-          if (isBelow) {
-            insertBeforeVignette = vignettes[i];
-            const targetId = vignettes[i].dataset.playerId;
-            const targetPlayer = this.gm.state.players.find(p => p.id === targetId);
-            const targetName = targetPlayer?.name || '?';
-            console.log(`[DRAG] ${draggedName} → insérer AVANT ${targetName} (souris Y=${e.clientY}, midpoint=${Math.round(midpoint)})`);
-            break;
-          }
-        }
-
-        if (!insertBeforeVignette) {
-          console.log(`[DRAG] ${draggedName} → insérer À LA FIN`);
-        }
-
-        // Créer nouvelle ligne
-        const line = document.createElement('div');
-        line.className = 'gm-insertion-line';
-        line.style.cssText = `
-          height: 8px;
-          background: linear-gradient(90deg, transparent, #00FF88, transparent);
-          border: 2px solid #00FF88;
-          border-radius: 4px;
-          margin: 4px 0;
-          opacity: 1;
-          box-shadow: 0 0 20px #00FF88, inset 0 0 10px #00FF88;
-          animation: pulse-glow 1.5s infinite;
-          pointer-events: none;
-        `;
-
-        if (insertBeforeVignette) {
-          playersList.insertBefore(line, insertBeforeVignette);
-        } else {
-          // Insérer à la fin si on est en dessous de tout
-          playersList.appendChild(line);
-        }
+      const container = containerUnder(x, y) || dragEl.parentNode;
+      const zone = container && container.dataset ? container.dataset.zone : null;
+      const horizontal = zone === 'top' || zone === 'bottom';
+      const siblings = [...container.querySelectorAll('.gm-player-vignette')].filter(v => v !== dragEl);
+      let before = null;
+      for (const sib of siblings) {
+        const r = sib.getBoundingClientRect();
+        const mid = horizontal ? r.left + r.width / 2 : r.top + r.height / 2;
+        const pos = horizontal ? x : y;
+        if (pos < mid) { before = sib; break; }
       }
+      if (before) container.insertBefore(dragEl, before);
+      else container.appendChild(dragEl);
+      renumber();
+    };
+
+    const onUp = () => {
+      if (!dragEl) return;
+      const wasActive = active;
+      try { dragEl.releasePointerCapture(pointerId); } catch (_) {}
+      dragEl.style.pointerEvents = '';
+      dragEl.style.opacity = '';
+      dragEl.style.transform = '';
+      dragEl.style.boxShadow = '';
+      dragEl.style.zIndex = '';
+      dragEl = null; active = false; pointerId = null;
+      if (wasActive) self.commitTableOrder();
+    };
+
+    playersList.querySelectorAll('.gm-player-vignette').forEach(vignette => {
+      vignette.style.touchAction = 'none';
+      vignette.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('.gm-player-name-input-place')) return; // laisser editer le nom
+        dragEl = vignette; pointerId = e.pointerId;
+        startX = e.clientX; startY = e.clientY; active = false;
+        try { vignette.setPointerCapture(e.pointerId); } catch (_) {}
+      });
+      vignette.addEventListener('pointermove', onMove);
+      vignette.addEventListener('pointerup', onUp);
+      vignette.addEventListener('pointercancel', onUp);
     });
+  }
 
-    // DROP sur le conteneur principal - réorganiser les joueurs
-    playersList.addEventListener('drop', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
+  /**
+   * Commit du nouvel ordre apres un glisser: lit l'ordre DOM des vignettes,
+   * reconstruit gm.state.players (et zoneConfig en mode zones), puis re-render.
+   */
+  commitTableOrder() {
+    const gm = this.gm;
+    const playersList = document.getElementById('gmPlayersList');
+    if (!playersList) return;
+    const ids = [...playersList.querySelectorAll('.gm-player-vignette')].map(v => v.dataset.playerId);
+    const byId = new Map(gm.state.players.map(p => [p.id, p]));
+    const newOrder = ids.map(id => byId.get(id)).filter(Boolean);
+    gm.state.players.forEach(p => { if (!ids.includes(p.id)) newOrder.push(p); });
+    gm.state.players = newOrder;
 
-      if (draggedIndex === null || draggedElement === null) {
-        console.log(`❌ DROP - draggedIndex or draggedElement is null`);
-        return;
-      }
+    // Mode zones: recalculer zoneConfig depuis le DOM
+    const zoneEls = playersList.querySelectorAll('.gm-zone-vignettes');
+    if (zoneEls.length) {
+      const cfg = { top: 0, left: 0, right: 0, bottom: 0 };
+      zoneEls.forEach(z => { const zn = z.dataset.zone; if (zn in cfg) cfg[zn] = z.querySelectorAll('.gm-player-vignette').length; });
+      gm.state.zoneConfig = cfg;
+    } else if (typeof this.recalculateCirclePositions === 'function') {
+      // Mode cercle: recalculer les positions de la map de setup selon le nouvel ordre
+      this.recalculateCirclePositions(gm.state.players);
+    }
 
-      // Nettoyer la ligne d'insertion
-      document.querySelectorAll('.gm-insertion-line').forEach(l => l.remove());
-
-      const players = gm.state.players;
-      const draggedPlayer = players[draggedIndex];
-      const vignettes = Array.from(playersList.querySelectorAll('.gm-player-vignette'));
-
-      // Trouver l'index cible en utilisant la MÊME logique que le dragover
-      let targetIndex = vignettes.length;
-      for (let i = 0; i < vignettes.length; i++) {
-        if (i === draggedIndex) continue;
-        const rect = vignettes[i].getBoundingClientRect();
-        if (e.clientY < rect.top + rect.height / 2) {
-          targetIndex = i;
-          break;
-        }
-      }
-
-      // Ajuster si nécessaire (le draggedIndex disparaîtra de la liste)
-      if (draggedIndex < targetIndex && draggedIndex !== null) {
-        targetIndex--;
-      }
-
-      if (draggedIndex === targetIndex) {
-        console.log(`📍 Pas de changement de position`);
-        draggedElement = null;
-        draggedIndex = null;
-        return;
-      }
-
-      // Réorganiser
-      console.log(`✅ DROP: ${draggedPlayer.name} position ${draggedIndex} → ${targetIndex}`);
-      players.splice(draggedIndex, 1);
-      players.splice(targetIndex, 0, draggedPlayer);
-
-      // Recalculer les positions sur la map
-      const tableType = gm.state.tableType || 'circle';
-      this.recalculateCirclePositions(players);
-
-      // EFFET DE REPULSION: Les autres points s'écartent
-      const draggedPlayerId = draggedPlayer.id;
-      const draggedPoint = document.querySelector(`.gm-player-point[data-player-id="${draggedPlayerId}"]`);
-      if (draggedPoint && tableType === 'circle') {
-        const dragX = parseFloat(draggedPoint.style.left) + 8;
-        const dragY = parseFloat(draggedPoint.style.top) + 8;
-
-        document.querySelectorAll('.gm-player-point').forEach(point => {
-          if (point.dataset.playerId === draggedPlayerId) return;
-
-          const pointX = parseFloat(point.style.left) + 8;
-          const pointY = parseFloat(point.style.top) + 8;
-          const dist = Math.hypot(dragX - pointX, dragY - pointY);
-
-          if (dist < 40) {
-            const angle = Math.atan2(pointY - dragY, pointX - dragX);
-            const force = (40 - dist) / 40 * 2;
-
-            const newX = pointX + Math.cos(angle) * force;
-            const newY = pointY + Math.sin(angle) * force;
-
-            point.style.left = (newX - 8) + 'px';
-            point.style.top = (newY - 8) + 'px';
-
-            const player = gm.state.players.find(p => p.id === point.dataset.playerId);
-            if (player) {
-              player.tableX = newX - 8;
-              player.tableY = newY - 8;
-            }
-          }
-        });
-      }
-
-      gm.saveState();
-      this.saveGameStateToCache();
-      this.render();
-
-      draggedElement = null;
-      draggedIndex = null;
-    });
-
-    playersList.addEventListener('dragleave', (e) => {
-      if (e.target === playersList) {
-        document.querySelectorAll('.gm-drop-indicator').forEach(ind => ind.remove());
-      }
-    });
+    gm.saveState();
+    this.saveGameStateToCache();
+    this.render();
   }
 
   attachTableSetupFooterEvents() {

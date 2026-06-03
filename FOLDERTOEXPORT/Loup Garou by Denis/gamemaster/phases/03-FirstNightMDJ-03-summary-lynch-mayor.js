@@ -543,8 +543,12 @@ Object.assign(FirstNightMDJ.prototype, {
     // This is used to show Chasseur revenge box only if he died THIS night
     const deadThisNight = [];
     for (const roleId of this.getDeathDealingRoleIds()) {
-      if (this.roleStates[roleId]?.completed && this.roleStates[roleId]?.result?.targets?.length > 0) {
-        deadThisNight.push(...this.roleStates[roleId].result.targets.filter(t => !t.startsWith('potion-')));
+      const st = this.roleStates[roleId];
+      if (st?.completed && st?.result?.targets?.length > 0) {
+        // Ne garder que de VRAIS ids joueurs (exclut potion-*, join_wolves, stay_villager, etc.)
+        deadThisNight.push(...st.result.targets.filter(t =>
+          typeof t === 'string' && !t.startsWith('potion-') && players.some(pp => pp.id === t)
+        ));
       }
     }
     // Also add Chasseur revenge kills from THIS night summary

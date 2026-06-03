@@ -255,8 +255,8 @@ Object.assign(FirstNightMDJ.prototype, {
       // Only if not already initialized above
       if (this.roleStates[roleId]) return;
 
-      // Check if this is a wolf role
-      if (roleId && (roleId.includes('Loup') || roleId.includes('Wolf'))) {
+      // Check if this is a wolf role qui agit CETTE nuit (ex: Loup Blanc seulement nuits paires)
+      if (this.isWolfRoleId(roleId) && this.roleActsThisNight(roleId)) {
         console.log(`[MDJ] Initializing wolf role: ${roleId}`);
         this.roleStates[roleId] = {
           completed: false,
@@ -371,12 +371,12 @@ Object.assign(FirstNightMDJ.prototype, {
     const villagePct = Math.round((village / total) * 100);
     let status = '';
     if (loups === 0 && village > 0) {
-      status = '<span style="color:#4dd0e1; font-weight:700;">\u{1F3C6} Village en tete — plus aucun loup</span>';
+      status = '<span style="color:#4dd0e1; font-weight:700;">\u{1F3C6} Village vainqueur — plus aucun loup</span>';
     } else if (loups >= village) {
-      status = '<span style="color:#ff6b6b; font-weight:700;">\u{1F43A} Loups en position de victoire (parite)</span>';
+      status = '<span style="color:#ff6b6b; font-weight:700;">\u{1F43A} Loups vainqueurs — parite atteinte</span>';
     } else {
-      const reste = village - loups;
-      status = `<span style="color:#ccc;">Encore ${reste} villageois d'avance avant la parite</span>`;
+      const reste = village - loups; // nb d'eliminations cote Village pour atteindre la parite (= victoire Loups)
+      status = `<span style="color:#ffb38a;">\u{1F43A} Parite des Loups dans <b>${reste}</b> elimination${reste>1?'s':''} cote Village</span>`;
     }
     const soloHtml = Object.keys(solos).length > 0
       ? `<div style="font-size:9px; color:#e0a0ff; margin-top:4px;">Camps solo en vie : ${Object.entries(solos).map(([n,c]) => `${n} (${c})`).join(', ')}</div>`

@@ -946,10 +946,9 @@ Object.assign(FirstNightMDJ.prototype, {
     const allCompleted = Object.entries(this.roleStates).every(([roleId, state]) => {
       const playerWithRole = players.find(p => p.role === roleId);
       const isAlive = playerWithRole && !this.deadPlayerIds.has(playerWithRole.id);
-
-      // If player is dead, consider role "completed" (don't wait for them)
-      // Otherwise check if actually completed
-      return !isAlive || state.completed;
+      // Role qui n'agit pas cette nuit (ex: Loup Blanc nuit impaire) => ne pas attendre
+      const acts = this.roleActsThisNight(roleId);
+      return !isAlive || !acts || state.completed;
     });
 
     console.log(`[MDJ] checkIfNightComplete: checking completion status`);
@@ -958,7 +957,7 @@ Object.assign(FirstNightMDJ.prototype, {
       .filter(([roleId, s]) => {
         const playerWithRole = players.find(p => p.role === roleId);
         const isAlive = playerWithRole && !this.deadPlayerIds.has(playerWithRole.id);
-        return isAlive && !s.completed;
+        return isAlive && this.roleActsThisNight(roleId) && !s.completed;
       })
       .map(([id]) => id);
     console.log(`[MDJ]   - Pending roles (alive players only):`, pendingRoles);
