@@ -573,22 +573,10 @@ Object.assign(FirstNightMDJ.prototype, {
 
     const roleData = this.rolesLoader.getRole(roleId);
 
-    // Corbeau vole automatiquement - pas d'interface de sélection
-    if (roleId === 'Corbeau') {
-      console.log(`[MDJ] 🐦‍⬛ Corbeau auto-completing (votes stolen automatically)`);
-      this.actionState = {
-        roleId: 'Corbeau',
-        action: 'steal_votes',
-        roleName: roleData?.name || 'Corbeau',
-        roleEmoji: roleData?.emoji || '🐦‍⬛'
-      };
-      // Delay slightly to allow UI to render, then auto-complete and show night summary
-      setTimeout(() => this.completeRoleAction(), 100);
-    } else {
-      // Normal roles: render action interface
-      this.renderActionButtons();
-      this.updateSelectedDisplay();
-    }
+    // Tous les roles (Corbeau inclus) affichent leur interface de selection.
+    // Le Corbeau est appele chaque nuit pour designer la cible des 2 votes (indicateur de couleur).
+    this.renderActionButtons();
+    this.updateSelectedDisplay();
 
     // Restore effects from completed roles
     console.log(`[MDJ] Calling restoreCompletedRoleEffects() to restore previous roles' visuals`);

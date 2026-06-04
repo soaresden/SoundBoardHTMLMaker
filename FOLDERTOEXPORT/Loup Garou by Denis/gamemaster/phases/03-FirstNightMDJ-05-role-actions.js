@@ -467,8 +467,18 @@ Object.assign(FirstNightMDJ.prototype, {
       const selectedPlayerObj = players.find(p => p.id === selectedPlayer);
       if (selectedPlayerObj) {
         const selectedIdx = players.indexOf(selectedPlayerObj);
-        const leftIdx = (selectedIdx - 1 + players.length) % players.length;
-        const rightIdx = (selectedIdx + 1) % players.length;
+        // Voisins VIVANTS: si le voisin immediat est mort, on prend le suivant vivant
+        const aliveNeighborIdx = (dir) => {
+          let i = selectedIdx;
+          for (let k = 0; k < players.length; k++) {
+            i = (i + dir + players.length) % players.length;
+            if (i === selectedIdx) break;
+            if (!this.deadPlayerIds.has(players[i].id)) return i;
+          }
+          return (selectedIdx + dir + players.length) % players.length;
+        };
+        const leftIdx = aliveNeighborIdx(-1);
+        const rightIdx = aliveNeighborIdx(+1);
 
         const leftPlayer = players[leftIdx];
         const rightPlayer = players[rightIdx];
