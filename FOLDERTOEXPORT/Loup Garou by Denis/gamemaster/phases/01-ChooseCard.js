@@ -62,7 +62,7 @@ function renderChooseCard(gameUI) {
     'Simple_Loup_Garou', 'Sorciere', 'Salvateur', 'Petite_Fille',
     'Chasseur', 'Cupidon', 'Enfant_Sauvage', 'Chevalier_Epee_Rouille',
     'Montreur_Ours', 'Renard', 'Chien_Loup', 'Corbeau',
-    'Loup_Garou_Blanc', 'Voyante', 'Grand_Mechant_Loup'
+    'Loup_Garou_Blanc', 'Voyante', 'Grand_Mechant_Loup', 'Villageois'
   ]);
 
   // Extensions avec ordre

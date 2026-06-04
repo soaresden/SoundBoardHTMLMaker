@@ -20,6 +20,13 @@ function renderWindowsButtons() {
 }
 
 function attachWindowsButtonsEvents(gameUI) {
+  // Anti double-attache: le render se rejoue souvent et empilait les listeners
+  // (cliquer "Réduire" appelait toggleMinimized plusieurs fois -> aucun effet net).
+  const _hdr = document.getElementById('gmHeader');
+  if (_hdr) {
+    if (_hdr.dataset.winBtnsBound === '1') return;
+    _hdr.dataset.winBtnsBound = '1';
+  }
   // Bouton Reset
   document.getElementById('gmBtnReset')?.addEventListener('click', () => {
     if (confirm('Êtes-vous sûr? Cela réinitialisera le jeu.')) {
