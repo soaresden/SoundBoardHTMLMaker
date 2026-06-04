@@ -476,8 +476,8 @@ class GameMasterUI {
       nameInput.addEventListener('blur', () => { gm.saveState(); self.saveGameStateToCache(); });
     });
 
-    // --- Reordonnancement par glisser (Pointer Events: souris + tactile unifies) ---
-    let dragEl = null, pointerId = null, startX = 0, startY = 0, active = false;
+    // --- Reordonnancement par glisser (Pointer Events robustes + map temps reel) ---
+    let dragEl = null, startX = 0, startY = 0, active = false, rafPending = false;
     const THRESH = 6;
 
     const renumber = () => {
@@ -493,13 +493,34 @@ class GameMasterUI {
       return el.closest('.gm-zone-vignettes') || (el.closest('#gmPlayersList') ? playersList : null);
     };
 
+    // Met a jour la map (colonne gauche) en direct selon l'ordre courant du DOM
+    const liveSyncMap = () => {
+      if (rafPending) return;
+      rafPending = true;
+      requestAnimationFrame(() => {
+        rafPending = false;
+        const list = document.getElementById('gmPlayersList');
+        if (!list) return;
+        const ids = [...list.querySelectorAll('.gm-player-vignette')].map(v => v.dataset.playerId);
+        const byId = new Map(gm.state.players.map(p => [p.id, p]));
+        const order = ids.map(id => byId.get(id)).filter(Boolean);
+        gm.state.players.forEach(p => { if (!ids.includes(p.id)) order.push(p); });
+        gm.state.players = order;
+        if ((gm.state.tableType || 'circle') === 'circle' && typeof self.recalculateCirclePositions === 'function') {
+          self.recalculateCirclePositions(gm.state.players);
+        }
+        const left = document.getElementById('gmLeftColumn');
+        if (left) left.innerHTML = renderLiveMap(self);
+      });
+    };
+
     const onMove = (e) => {
       if (!dragEl) return;
       const x = e.clientX, y = e.clientY;
       if (!active) {
         if (Math.hypot(x - startX, y - startY) < THRESH) return;
         active = true;
-        dragEl.style.pointerEvents = 'none'; // pour que elementFromPoint voie les cibles dessous (capture conserve les events)
+        dragEl.style.pointerEvents = 'none';
         dragEl.style.opacity = '0.6';
         dragEl.style.transform = 'scale(1.06)';
         dragEl.style.boxShadow = '0 6px 16px rgba(129,223,247,0.55)';
@@ -520,18 +541,17 @@ class GameMasterUI {
       if (before) container.insertBefore(dragEl, before);
       else container.appendChild(dragEl);
       renumber();
+      liveSyncMap();
     };
 
     const onUp = () => {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onUp);
       if (!dragEl) return;
       const wasActive = active;
-      try { dragEl.releasePointerCapture(pointerId); } catch (_) {}
-      dragEl.style.pointerEvents = '';
-      dragEl.style.opacity = '';
-      dragEl.style.transform = '';
-      dragEl.style.boxShadow = '';
-      dragEl.style.zIndex = '';
-      dragEl = null; active = false; pointerId = null;
+      dragEl.style.pointerEvents = ''; dragEl.style.opacity = ''; dragEl.style.transform = ''; dragEl.style.boxShadow = ''; dragEl.style.zIndex = '';
+      dragEl = null; active = false;
       if (wasActive) self.commitTableOrder();
     };
 
@@ -539,13 +559,11 @@ class GameMasterUI {
       vignette.style.touchAction = 'none';
       vignette.addEventListener('pointerdown', (e) => {
         if (e.target.closest('.gm-player-name-input-place')) return; // laisser editer le nom
-        dragEl = vignette; pointerId = e.pointerId;
-        startX = e.clientX; startY = e.clientY; active = false;
-        try { vignette.setPointerCapture(e.pointerId); } catch (_) {}
+        dragEl = vignette; startX = e.clientX; startY = e.clientY; active = false;
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', onUp);
+        document.addEventListener('pointercancel', onUp);
       });
-      vignette.addEventListener('pointermove', onMove);
-      vignette.addEventListener('pointerup', onUp);
-      vignette.addEventListener('pointercancel', onUp);
     });
   }
 
@@ -1025,7 +1043,7 @@ class GameMasterUI {
       // Restaurer
       this.minimized = false;
       overlay.style.width = '650px';
-      overlay.style.height = '650px';
+      overlay.style.height = '620px';
       overlay.style.bottom = 'auto';
       overlay.style.top = '100px';
       overlay.style.left = '320px';

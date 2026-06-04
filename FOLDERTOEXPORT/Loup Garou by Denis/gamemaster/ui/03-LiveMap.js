@@ -85,8 +85,10 @@ function renderLiveMap(gameUI) {
     });
   }
 
-  // Initialiser la config de zones si pas encore présente
-  if (tableType !== 'circle' && !gm.state.zoneConfig) {
+  // Initialiser la config de zones si absente OU si le NOMBRE de joueurs a change
+  // (zoneConfig perime d'une partie precedente). On NE recalcule PAS sur une simple
+  // edition manuelle (l'utilisateur peut mettre 0 dans une zone si il veut).
+  if (tableType !== 'circle' && (!gm.state.zoneConfig || gm.state.zoneConfigForCount !== players.length)) {
     // Distribution intelligente basée sur le nombre de joueurs
     const playerCount = players.length;
     let distribution;
@@ -102,6 +104,7 @@ function renderLiveMap(gameUI) {
     }
 
     gm.state.zoneConfig = distribution;
+    gm.state.zoneConfigForCount = players.length;
   }
 
   // Pour mode rectangle: calculer et mettre à jour les positions basées sur les zones
@@ -275,12 +278,12 @@ function renderLiveMap(gameUI) {
         ${tableType !== 'circle' ? `
           <div style="padding:6px 4px; display:flex; flex-direction:column; gap:3px;">
             <div style="display:flex; gap:6px; justify-content:space-around;">
-              <label style="display:flex; align-items:center; gap:4px; padding:4px 8px; background:rgba(81,116,219,0.1); border:1px solid #9966ff; border-radius:3px; font-size:9px; color:#81dff7; font-weight:600;">Haut:<input type="number" id="gmZoneTop" value="${gm.state.zoneConfig?.top || 2}" min="0" max="8" style="width:50px; padding:4px 6px; background:rgba(0,0,0,0.6); border:1px solid #9966ff; color:#e8e8f0; border-radius:2px; font-size:9px; font-weight:600;"></label>
-              <label style="display:flex; align-items:center; gap:4px; padding:4px 8px; background:rgba(81,116,219,0.1); border:1px solid #9966ff; border-radius:3px; font-size:9px; color:#81dff7; font-weight:600;">Bas:<input type="number" id="gmZoneBottom" value="${gm.state.zoneConfig?.bottom || 2}" min="0" max="8" style="width:50px; padding:4px 6px; background:rgba(0,0,0,0.6); border:1px solid #9966ff; color:#e8e8f0; border-radius:2px; font-size:9px; font-weight:600;"></label>
+              <label style="display:flex; align-items:center; gap:4px; padding:4px 8px; background:rgba(81,116,219,0.1); border:1px solid #9966ff; border-radius:3px; font-size:9px; color:#81dff7; font-weight:600;">Haut:<input type="number" id="gmZoneTop" value="${gm.state.zoneConfig?.top ?? 2}" min="0" max="8" style="width:50px; padding:4px 6px; background:rgba(0,0,0,0.6); border:1px solid #9966ff; color:#e8e8f0; border-radius:2px; font-size:9px; font-weight:600;"></label>
+              <label style="display:flex; align-items:center; gap:4px; padding:4px 8px; background:rgba(81,116,219,0.1); border:1px solid #9966ff; border-radius:3px; font-size:9px; color:#81dff7; font-weight:600;">Bas:<input type="number" id="gmZoneBottom" value="${gm.state.zoneConfig?.bottom ?? 2}" min="0" max="8" style="width:50px; padding:4px 6px; background:rgba(0,0,0,0.6); border:1px solid #9966ff; color:#e8e8f0; border-radius:2px; font-size:9px; font-weight:600;"></label>
             </div>
             <div style="display:flex; gap:6px; justify-content:space-around;">
-              <label style="display:flex; align-items:center; gap:4px; padding:4px 8px; background:rgba(81,116,219,0.1); border:1px solid #9966ff; border-radius:3px; font-size:9px; color:#81dff7; font-weight:600;">Gauche:<input type="number" id="gmZoneLeft" value="${gm.state.zoneConfig?.left || 2}" min="0" max="8" style="width:50px; padding:4px 6px; background:rgba(0,0,0,0.6); border:1px solid #9966ff; color:#e8e8f0; border-radius:2px; font-size:9px; font-weight:600;"></label>
-              <label style="display:flex; align-items:center; gap:4px; padding:4px 8px; background:rgba(81,116,219,0.1); border:1px solid #9966ff; border-radius:3px; font-size:9px; color:#81dff7; font-weight:600;">Droite:<input type="number" id="gmZoneRight" value="${gm.state.zoneConfig?.right || 2}" min="0" max="8" style="width:50px; padding:4px 6px; background:rgba(0,0,0,0.6); border:1px solid #9966ff; color:#e8e8f0; border-radius:2px; font-size:9px; font-weight:600;"></label>
+              <label style="display:flex; align-items:center; gap:4px; padding:4px 8px; background:rgba(81,116,219,0.1); border:1px solid #9966ff; border-radius:3px; font-size:9px; color:#81dff7; font-weight:600;">Gauche:<input type="number" id="gmZoneLeft" value="${gm.state.zoneConfig?.left ?? 2}" min="0" max="8" style="width:50px; padding:4px 6px; background:rgba(0,0,0,0.6); border:1px solid #9966ff; color:#e8e8f0; border-radius:2px; font-size:9px; font-weight:600;"></label>
+              <label style="display:flex; align-items:center; gap:4px; padding:4px 8px; background:rgba(81,116,219,0.1); border:1px solid #9966ff; border-radius:3px; font-size:9px; color:#81dff7; font-weight:600;">Droite:<input type="number" id="gmZoneRight" value="${gm.state.zoneConfig?.right ?? 2}" min="0" max="8" style="width:50px; padding:4px 6px; background:rgba(0,0,0,0.6); border:1px solid #9966ff; color:#e8e8f0; border-radius:2px; font-size:9px; font-weight:600;"></label>
             </div>
             <div id="gmZoneStatus" style="font-size:8px; color:#81dff7; padding:3px 6px; background:rgba(102,217,153,0.1); border-radius:2px; border:1px solid rgba(102,217,153,0.3); font-weight:600; text-align:center;"></div>
           </div>

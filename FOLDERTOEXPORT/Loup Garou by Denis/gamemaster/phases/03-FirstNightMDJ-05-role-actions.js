@@ -868,7 +868,8 @@ Object.assign(FirstNightMDJ.prototype, {
 
     // Life potion button - save the victim
     actionControls.querySelector('.life-potion')?.addEventListener('click', () => {
-      this.selectedPlayers = ['potion-life'];
+      // IMPORTANT: inclure l'id de la victime pour que completeRoleAction la retire des morts
+      this.selectedPlayers = victimId ? ['potion-life', victimId] : ['potion-life'];
 
       // Setup actionState for validation
       this.actionState = {

@@ -610,6 +610,12 @@ Object.assign(FirstNightMDJ.prototype, {
           actions.push(`${emoji} ${roleName} a protégé ${targets}`);
         } else if (action === 'sniff' && targets) {
           actions.push(`${emoji} ${roleName} a reniflé ${targets}`);
+        } else if (action === 'resurrect' && targets) {
+          actions.push(`${emoji} ${roleName} a sauvé ${targets} (potion de vie)`);
+        } else if (action === 'poison' && targets) {
+          actions.push(`${emoji} ${roleName} a empoisonné ${targets}`);
+        } else if (targets) {
+          actions.push(`${emoji} ${roleName} → ${targets}`);
         }
       }
     });
@@ -798,7 +804,7 @@ Object.assign(FirstNightMDJ.prototype, {
     }
 
     // Banniere "aucun mort cette nuit" (ex: victime des loups immunisee + sorciere inactive)
-    const realDeathsThisNight = deadThisNight.filter(id => players.some(p => p.id === id));
+    const realDeathsThisNight = deadThisNight.filter(id => players.some(p => p.id === id) && this.deadPlayerIds.has(id));
     const noDeathBanner = realDeathsThisNight.length === 0
       ? `<div style="margin-bottom:8px; padding:8px; text-align:center; font-size:11px; font-weight:700; color:#9ee6b0; background:rgba(80,200,120,0.12); border:1px solid rgba(80,200,120,0.4); border-radius:6px;">🌙 Personne n'est mort cette nuit</div>`
       : '';

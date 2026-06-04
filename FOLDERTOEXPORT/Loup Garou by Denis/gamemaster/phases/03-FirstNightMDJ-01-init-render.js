@@ -444,11 +444,21 @@ Object.assign(FirstNightMDJ.prototype, {
         <div style="font-size:64px; margin-bottom:8px;">${win.emoji || '\u{1F3C6}'}</div>
         <div style="font-size:34px; font-weight:900; color:${win.color}; letter-spacing:1px; text-shadow:0 0 18px ${win.color}88;">${win.label}</div>
         <div style="font-size:15px; color:#ddd; margin-top:10px;">${win.sub}</div>
-        <button id="mdj-victory-close" style="margin-top:22px; padding:12px 28px; font-size:15px; font-weight:700; color:#fff; background:${win.color}; border:none; border-radius:10px; cursor:pointer; box-shadow:0 4px 14px ${win.color}55;">Fermer</button>
+        <button id="mdj-victory-close" style="margin-top:22px; padding:12px 28px; font-size:15px; font-weight:700; color:#fff; background:${win.color}; border:none; border-radius:10px; cursor:pointer; box-shadow:0 4px 14px ${win.color}55;">🔄 Retour au choix des cartes</button>
       </div>
     `;
     document.body.appendChild(ov);
-    ov.querySelector('#mdj-victory-close')?.addEventListener('click', () => ov.remove());
+    ov.querySelector('#mdj-victory-close')?.addEventListener('click', () => {
+      ov.remove();
+      try {
+        const gm = this.gm;
+        if (gm && typeof gm.resetState === 'function') gm.resetState();
+        if (gm) { gm.state.mode = 'selectRoles'; gm.saveState && gm.saveState(); }
+        const ui = window.gameUI || (gm && gm.ui);
+        if (ui && typeof ui.render === 'function') ui.render();
+        else if (gm && typeof gm.changePhase === 'function') gm.changePhase('selectRoles');
+      } catch (e) { console.error('[MDJ] retour choix cartes échoué', e); }
+    });
   }
 
 });
