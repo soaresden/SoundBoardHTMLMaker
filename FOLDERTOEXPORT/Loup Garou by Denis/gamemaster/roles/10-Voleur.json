@@ -3,6 +3,9 @@
   "name": "Voleur",
   "emoji": "🎩",
   "camp": "Village",
+  "ui": {
+    "selectionRenderer": "voleur"
+  },
   "description": "Rôle: Voleur",
   "actions": {
     "ToutesNuits": {

@@ -3,6 +3,9 @@
   "name": "Trois Freres",
   "emoji": "👬",
   "camp": "Village",
+  "ui": {
+    "selectionRenderer": "recognition"
+  },
   "description": "Rôle: Trois_Freres",
   "actions": {
     "NoAction": {
@@ -27,5 +30,8 @@
   },
   "pouvoir": "Les trois frères se reconnaissent et peuvent se concerter silencieusement.",
   "actionType": "NoActions",
+  "nightActive": [
+    1
+  ],
   "tips": "Unissez-vous - trois cœurs battent comme un seul."
 }

@@ -213,6 +213,25 @@ Object.assign(FirstNightMDJ.prototype, {
         lynchSelect.addEventListener('change', () => updateAvatarForCombobox(lynchSelect));
       }
 
+      // Servante Devouee prend le role d'un mort
+      const servanteSelect = document.getElementById('servante-take-target');
+      if (servanteSelect) {
+        servanteSelect.addEventListener('change', () => {
+          const deadId = servanteSelect.value;
+          if (!deadId) return;
+          const ps = this.gm.state.players || [];
+          const servantePlayer = ps.find(p => p.role === 'Servante_Devouee' && !this.deadPlayerIds.has(p.id));
+          const deadP = ps.find(p => p.id === deadId);
+          if (servantePlayer && deadP) {
+            this.transformations[servantePlayer.id] = { from: 'Servante_Devouee', to: deadP.role, reason: `reprend le role de ${deadP.name}` };
+            servantePlayer.role = deadP.role;
+            console.log(`[MDJ] Servante ${servantePlayer.name} reprend le role de ${deadP.name}`);
+            this.renderLiveMap();
+            this.quickSave?.();
+          }
+        });
+      }
+
       // Reassignation du maire si le maire meurt cette nuit
       const mayorReassignSelect = document.getElementById('mayor-reassign-target');
       if (mayorReassignSelect) {
@@ -709,6 +728,25 @@ Object.assign(FirstNightMDJ.prototype, {
           <select id="mayor-reassign-target" style="width: 100%; padding: 4px; font-size: 9px; border-radius: 2px; border: 1px solid #FFD700; background: #333; color: #fff;">
             <option value="">-- Nouveau Maire --</option>
             ${successorOptions}
+          </select>
+        </div>
+      `;
+    }
+
+    // SERVANTE DEVOUEE: si vivante et qu'un joueur est mort cette nuit, elle peut prendre son role
+    const servante = players.find(p => p.role === 'Servante_Devouee' && !this.deadPlayerIds.has(p.id));
+    const deadThisNightPlayers = players.filter(p => deadThisNight.includes(p.id));
+    if (servante && deadThisNightPlayers.length > 0) {
+      const opts = deadThisNightPlayers.map(p => {
+        const rd = this.rolesLoader.getRole(p.role);
+        return `<option value="${p.id}">${p.name} (${rd?.name || p.role})</option>`;
+      }).join('');
+      specialSectionsHtml += `
+        <div style="border: 1px solid rgba(120,200,160,0.4); border-radius: 3px; padding: 6px; background: rgba(120,200,160,0.07); margin-bottom: 6px;">
+          <div style="color: #8fe0b0; font-size: 9px; font-weight: 700; margin-bottom: 3px;">🧹 Servante Dévouée (${servante.name}) — prendre le rôle d'un mort ?</div>
+          <select id="servante-take-target" style="width: 100%; padding: 4px; font-size: 9px; border-radius: 2px; border: 1px solid #8fe0b0; background: #333; color: #fff;">
+            <option value="">-- Ne rien faire --</option>
+            ${opts}
           </select>
         </div>
       `;

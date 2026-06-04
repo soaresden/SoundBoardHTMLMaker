@@ -344,6 +344,12 @@ Object.assign(FirstNightMDJ.prototype, {
         gap: 4px;
       }
 
+      .role-list-blue {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+      }
+
       .mdj-right-panel {
         background: linear-gradient(135deg, rgba(180,80,180,0.7), rgba(150,60,150,0.7));
         border: 2px solid rgba(220,100,220,0.3);

@@ -416,7 +416,8 @@ Object.assign(FirstNightMDJ.prototype, {
       renard: 'renderRenardSelection',
       wolfKill: 'renderWolfKillSelection',
       sorciere: 'renderSorciereSelection',
-      corbeau: 'renderCorbeauSelection'
+      corbeau: 'renderCorbeauSelection',
+      voleur: 'renderVoleurSelection'
     };
     const _rendererKey = roleData.ui && roleData.ui.selectionRenderer;
     const _rendererFn = _rendererKey && _rendererMap[_rendererKey];
@@ -457,19 +458,8 @@ Object.assign(FirstNightMDJ.prototype, {
         this.renderCorbeauSelection(actionControls, actionInfo, bgColor, textColor, state);
         break;
       default:
-        // Fallback to generic action buttons
-        const actions = this.getActionsForRole(this.selectedRoleId);
-        const controlsHtml = actions
-          .map(action => `
-            <button class="action-btn-mdj" data-action="${action.id}"
-                    style="background: ${bgColor}; color: ${textColor}; border: 2px solid ${bgColor};">
-              ${action.icon} ${action.label}
-            </button>
-          `)
-          .join('');
-        if (actionControls) {
-          actionControls.innerHTML = controlsHtml || '<p class="no-actions">Aucune action</p>';
-        }
+        // [STANDARDISATION] Renderer generique data-driven (selection de cibles + indicateur de couleur)
+        this.renderGenericTargetSelection(actionControls, actionInfo, bgColor, textColor, state);
     }
   }
 ,
@@ -754,6 +744,51 @@ Object.assign(FirstNightMDJ.prototype, {
       this.sorcierePotionsUsed++;
       this.sorcierePoisonUsed = true;
       console.log(`[MDJ] 🧙‍♀️ Sorciere potion MORT utilisee (${this.sorcierePotionsUsed}/2)`);
+    }
+
+    // INFECT PERE DES LOUPS: convertit la cible en loup (1x/partie) au lieu de la tuer
+    if (action === 'convert' && this.selectedPlayers.length > 0 && !this.infectUsed) {
+      const ps = this.gm?.state?.players || [];
+      this.selectedPlayers.forEach(pid => {
+        if (String(pid).startsWith('potion-')) return;
+        const tp = ps.find(p => p.id === pid);
+        if (tp && !this.deadPlayerIds.has(tp.id)) {
+          this.transformations[tp.id] = { from: tp.role, to: 'Simple_Loup_Garou', reason: 'infecté par le Père des Loups' };
+          tp.role = 'Simple_Loup_Garou';
+          tp.camp = 'Loup';
+          // S'il avait ete marque mort cette nuit par les loups, il survit converti
+          this.deadPlayerIds.delete(tp.id);
+          console.log(`[MDJ] 🩸 ${tp.name} infecté → devient Loup-Garou`);
+        }
+      });
+      this.infectUsed = true;
+    }
+
+    // VOLEUR: echange son role avec un autre joueur (cible = selectedPlayers[0], MDJ ou aleatoire)
+    if (action === 'roleSwap' && roleId === 'Voleur' && this.selectedPlayers.length > 0) {
+      const ps = this.gm?.state?.players || [];
+      const voleur = ps.find(p => p.role === 'Voleur');
+      const targetId = this.selectedPlayers.find(t => !String(t).startsWith('potion-'));
+      const target = ps.find(p => p.id === targetId);
+      if (voleur && target && voleur.id !== target.id) {
+        const tmp = voleur.role; voleur.role = target.role; target.role = tmp;
+        this.transformations[voleur.id] = { from: 'Voleur', to: voleur.role, reason: 'role vole' };
+        this.transformations[target.id] = { from: voleur.role, to: target.role, reason: 'role echange avec le Voleur' };
+        console.log(`[MDJ] 🦝 Voleur ${voleur.name} echange son role avec ${target.name} -> ${voleur.role}`);
+      }
+    }
+
+    // COMEDIEN: copie le role d'un joueur choisi (devient ce role)
+    if (action === 'changeRole' && roleId === 'Comedien' && this.selectedPlayers.length > 0) {
+      const ps = this.gm?.state?.players || [];
+      const comedien = ps.find(p => p.role === 'Comedien');
+      const targetId = this.selectedPlayers.find(t => !String(t).startsWith('potion-'));
+      const target = ps.find(p => p.id === targetId);
+      if (comedien && target) {
+        this.transformations[comedien.id] = { from: 'Comedien', to: target.role, reason: `copie le role de ${target.name}` };
+        comedien.role = target.role;
+        console.log(`[MDJ] 🎭 Comedien ${comedien.name} copie le role de ${target.name} -> ${target.role}`);
+      }
     }
 
     // Clear selections

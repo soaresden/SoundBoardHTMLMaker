@@ -50,16 +50,19 @@ Object.assign(FirstNightMDJ.prototype, {
    */
   getProtectedPlayers() {
     const protectedSet = new Set();
-
-    // Check if Salvateur has completed and has targets
-    if (this.roleStates['Salvateur']?.completed && this.roleStates['Salvateur']?.result?.targets) {
-      this.roleStates['Salvateur'].result.targets.forEach(targetId => {
-        if (targetId && !targetId.startsWith('potion-')) {
-          protectedSet.add(targetId);
-        }
+    // [STANDARDISATION] Tout role "protecteur" immunise sa/ses cible(s), pas seulement le Salvateur.
+    const protectTypes = new Set(['protect', 'tankProtection', 'amuletProtection', 'bless']);
+    Object.entries(this.roleStates).forEach(([roleId, st]) => {
+      if (!st || !st.completed || !st.result || !st.result.targets) return;
+      const rd = this.rolesLoader.getRole(roleId) || {};
+      const blocks = rd.actions ? Object.values(rd.actions) : [];
+      const isProtector = roleId === 'Salvateur' ||
+        blocks.some(b => b && typeof b === 'object' && protectTypes.has(b.type));
+      if (!isProtector) return;
+      st.result.targets.forEach(targetId => {
+        if (targetId && !String(targetId).startsWith('potion-')) protectedSet.add(targetId);
       });
-    }
-
+    });
     return protectedSet;
   }
 ,

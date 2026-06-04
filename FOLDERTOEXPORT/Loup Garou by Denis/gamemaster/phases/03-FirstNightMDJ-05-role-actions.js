@@ -1086,6 +1086,97 @@ Object.assign(FirstNightMDJ.prototype, {
     }
   }
 ,
+  renderGenericTargetSelection(actionControls, actionInfo, bgColor, textColor, state) {
+    if (!actionControls) return;
+    const roleData = this.rolesLoader.getRole(this.selectedRoleId) || {};
+    const blocks = roleData.actions ? Object.values(roleData.actions) : [];
+    let count = 1, effectType = null;
+    for (const b of blocks) {
+      if (b && typeof b === 'object') {
+        if (effectType === null && b.type) effectType = b.type;
+        if (b.targets && typeof b.targets.count === 'number') { count = b.targets.count; break; }
+      }
+    }
+    const mdjBtn = roleData.actions && roleData.actions.mdj_night_actions && roleData.actions.mdj_night_actions[0];
+    const actionLabel = (mdjBtn && mdjBtn.label) || roleData.pouvoir || 'Designer une cible';
+    const _deadly = new Set(['kill','hunt','huntSelectively','extraKill','bonusKill']);
+    const actionId = _deadly.has(effectType) ? 'kill' : ((mdjBtn && mdjBtn.id) || effectType || 'generic');
+    const affColor = (roleData.visual && roleData.visual.affectedColor && roleData.visual.affectedColor.borderColor) || bgColor;
+
+    const alive = this.playerRegistry.getAlive().filter(p => p.role !== this.selectedRoleId);
+    let selected = this.selectedPlayers.filter(id => !String(id).startsWith('potion-'));
+
+    const list = alive.map(p => {
+      const isSel = selected.includes(p.id);
+      const rd = this.rolesLoader.getRole(p.role);
+      return `
+        <div class="role-action-btn ${isSel ? 'selected' : ''}" data-player-id="${p.id}"
+             style="background: ${isSel ? bgColor + '30' : 'rgba(255,255,255,0.08)'}; border: 2px solid ${isSel ? affColor : 'transparent'};">
+          <span class="btn-emoji">${rd?.emoji || '?'}</span>
+          <span class="btn-name">${p.name}</span>
+        </div>`;
+    }).join('');
+
+    actionControls.innerHTML = `
+      <div style="color:#cfcfe0; font-size:0.72rem; margin-bottom:8px; padding:6px; background:rgba(0,0,0,0.25); border-radius:4px; border-left:3px solid ${bgColor};">
+        ${actionLabel}${count > 1 ? ` <b>(${count} cibles)</b>` : ''}
+      </div>
+      ${list || '<div style="color:#888; font-size:0.7rem;">Aucune cible disponible</div>'}
+    `;
+
+    actionControls.querySelectorAll('.role-action-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.playerId;
+        let sel = this.selectedPlayers.filter(x => !String(x).startsWith('potion-'));
+        if (sel.includes(id)) sel = sel.filter(x => x !== id);
+        else { if (sel.length >= count) sel.shift(); sel.push(id); }
+        this.selectedPlayers = sel;
+        this.actionState = sel.length > 0
+          ? { roleId: this.selectedRoleId, action: actionId, roleName: roleData.name, roleEmoji: roleData.emoji }
+          : {};
+        this.renderActionButtons();
+        this.updateMapForRole();
+      });
+    });
+
+    if (actionInfo) {
+      actionInfo.innerHTML = selected.length > 0
+        ? `<button class="btn-validate-action">✓ Valider</button>`
+        : 'Selectionnez une cible';
+      actionInfo.querySelector('.btn-validate-action')?.addEventListener('click', () => this.completeRoleAction());
+    }
+  }
+,
+  renderVoleurSelection(actionControls, actionInfo, bgColor, textColor, state) {
+    if (!actionControls) return;
+    const roleData = this.rolesLoader.getRole('Voleur') || {};
+    const sel = this.selectedPlayers.find(t => !String(t).startsWith('potion-'));
+    const targetName = sel ? this.getPlayerName(sel) : null;
+    actionControls.innerHTML = `
+      <div style="color:#cfcfe0; font-size:0.75rem; margin-bottom:10px; padding:8px; background:rgba(0,0,0,0.25); border-radius:4px; border-left:3px solid ${bgColor};">
+        Le Voleur echange son role avec un joueur au hasard.
+      </div>
+      <button class="role-action-btn voleur-random" style="background:${bgColor}30; border:2px solid ${bgColor};">
+        <span class="btn-emoji">🎲</span><span class="btn-name">Voler un role au hasard</span>
+      </button>
+      ${targetName ? `<div style="margin-top:8px; color:#9ee6b0; font-size:0.8rem; text-align:center;">Echange avec <b>${targetName}</b></div>` : ''}
+    `;
+    actionControls.querySelector('.voleur-random')?.addEventListener('click', () => {
+      const ps = this.gm.state.players || [];
+      const candidates = ps.filter(p => p.role !== 'Voleur' && !this.deadPlayerIds.has(p.id));
+      if (candidates.length === 0) return;
+      const pick = candidates[Math.floor(Math.random() * candidates.length)];
+      this.selectedPlayers = [pick.id];
+      this.actionState = { roleId: 'Voleur', action: 'roleSwap', roleName: roleData.name || 'Voleur', roleEmoji: roleData.emoji || '🦝' };
+      this.renderActionButtons();
+      this.updateMapForRole();
+    });
+    if (actionInfo) {
+      actionInfo.innerHTML = sel ? `<button class="btn-validate-action">✓ Valider l'echange</button>` : 'Cliquez pour tirer au hasard';
+      actionInfo.querySelector('.btn-validate-action')?.addEventListener('click', () => this.completeRoleAction());
+    }
+  }
+,
 
 
   /**

@@ -3,6 +3,9 @@
   "name": "Deux Soeurs",
   "emoji": "👯‍♀️",
   "camp": "Village",
+  "ui": {
+    "selectionRenderer": "recognition"
+  },
   "description": "Rôle: Deux_Soeurs",
   "actions": {
     "NoAction": {
@@ -27,5 +30,8 @@
   },
   "pouvoir": "Les deux sœurs se reconnaissent la première nuit et peuvent communiquer.",
   "actionType": "NoActions",
+  "nightActive": [
+    1
+  ],
   "tips": "Restez solidaires - votre lien est votre force."
 }
