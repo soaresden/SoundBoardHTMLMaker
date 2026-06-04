@@ -417,7 +417,8 @@ Object.assign(FirstNightMDJ.prototype, {
       wolfKill: 'renderWolfKillSelection',
       sorciere: 'renderSorciereSelection',
       corbeau: 'renderCorbeauSelection',
-      voleur: 'renderVoleurSelection'
+      voleur: 'renderVoleurSelection',
+      recognition: 'renderRecognitionSelection'
     };
     const _rendererKey = roleData.ui && roleData.ui.selectionRenderer;
     const _rendererFn = _rendererKey && _rendererMap[_rendererKey];
@@ -481,6 +482,74 @@ Object.assign(FirstNightMDJ.prototype, {
     // Move to next phase
     console.log('[MDJ] All roles skipped, moving to Day phase');
     this.gm.changePhase('day');
+  }
+,
+
+  /**
+   * FILET DE SECURITE: force l'affichage du resume de la nuit (marque les roles restants comme faits).
+   */
+  forceNightSummary() {
+    console.log('[MDJ] ⏯ Forçage du resume de la nuit (fallback MDJ)');
+    Object.keys(this.roleStates).forEach(rid => { if (this.roleStates[rid]) this.roleStates[rid].completed = true; });
+    this.selectedRoleId = null;
+    this.selectedPlayers = [];
+    try { this.renderRoleListbox(); } catch (e) { console.error('renderRoleListbox failed', e); }
+    try { this.renderNightSummary(); } catch (e) { console.error('renderNightSummary failed', e); }
+    this.quickSave && this.quickSave();
+  }
+,
+
+  /**
+   * FILET DE SECURITE: passe le role courant sans rien appliquer.
+   */
+  forceSkipCurrentRole() {
+    if (this.selectedRoleId && this.roleStates[this.selectedRoleId]) {
+      this.roleStates[this.selectedRoleId].completed = true;
+    }
+    this.selectedPlayers = [];
+    this.actionState = {};
+    this.selectedRoleId = null;
+    console.log('[MDJ] ⏭ Role courant passe (fallback MDJ)');
+    try { this.renderRoleListbox(); } catch (e) { console.error(e); }
+    this.quickSave && this.quickSave();
+  }
+,
+
+  /**
+   * FILET DE SECURITE: telecharge un log complet (etat + historique console) en JSON.
+   */
+  downloadGameLog() {
+    const gm = this.gm;
+    const snap = {
+      timestamp: new Date().toISOString(),
+      currentNight: this.currentNight,
+      mayorId: this.mayorId,
+      mayorName: this.mayorId ? this.getPlayerName(this.mayorId) : null,
+      players: (gm?.state?.players || []).map(p => ({ id: p.id, name: p.name, role: p.role, camp: p.camp })),
+      deadPlayerIds: Array.from(this.deadPlayerIds || []),
+      deadNames: Array.from(this.deadPlayerIds || []).map(id => this.getPlayerName(id)),
+      deathCauses: this.deathCauses,
+      roleStates: this.roleStates,
+      transformations: this.transformations,
+      sorcierePotionsUsed: this.sorcierePotionsUsed,
+      sorciereLifeUsed: this.sorciereLifeUsed,
+      sorcierePoisonUsed: this.sorcierePoisonUsed,
+      renardDetectedWolves: this.renardDetectedWolves,
+      chasseurHasShot: this.chasseurHasShot,
+      chevalierCursedWolfId: this.chevalierCursedWolfId,
+      infectUsed: this.infectUsed,
+      consoleLog: (window.__mdjLog || []).slice(-3000)
+    };
+    let txt;
+    try { txt = JSON.stringify(snap, null, 2); }
+    catch (e) { txt = 'Erreur serialisation: ' + e + '\n\n' + (window.__mdjLog || []).join('\n'); }
+    const blob = new Blob([txt], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `loupgarou-log-nuit${this.currentNight}-${Date.now()}.json`;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    console.log('[MDJ] 📥 Log telecharge');
   }
 ,
 

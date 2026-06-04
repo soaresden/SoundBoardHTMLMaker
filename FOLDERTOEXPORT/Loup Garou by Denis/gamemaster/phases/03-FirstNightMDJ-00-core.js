@@ -17,6 +17,27 @@
  * 5. Logs all actions
  */
 
+// ====== CAPTURE CONSOLE (filet de securite: log telechargeable) ======
+(function setupMdjConsoleCapture() {
+  if (window.__mdjLogReady) return;
+  window.__mdjLogReady = true;
+  window.__mdjLog = window.__mdjLog || [];
+  const cap = (level, orig) => function (...args) {
+    try {
+      const msg = args.map(a => {
+        if (typeof a === 'string') return a;
+        try { return JSON.stringify(a); } catch (_) { return String(a); }
+      }).join(' ');
+      window.__mdjLog.push(new Date().toISOString().slice(11, 23) + ' [' + level + '] ' + msg);
+      if (window.__mdjLog.length > 5000) window.__mdjLog.shift();
+    } catch (_) {}
+    return orig.apply(this, args);
+  };
+  console.log = cap('log', console.log);
+  console.warn = cap('warn', console.warn);
+  console.error = cap('error', console.error);
+})();
+
 /**
  * PlayerRegistry - Centralized player data management
  * Handles all player filtering and state queries

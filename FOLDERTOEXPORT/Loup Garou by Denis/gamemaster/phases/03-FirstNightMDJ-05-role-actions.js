@@ -1177,6 +1177,28 @@ Object.assign(FirstNightMDJ.prototype, {
     }
   }
 ,
+  renderRecognitionSelection(actionControls, actionInfo, bgColor, textColor, state) {
+    if (!actionControls) return;
+    const roleData = this.rolesLoader.getRole(this.selectedRoleId) || {};
+    const group = (this.gm.state.players || []).filter(p => p.role === this.selectedRoleId);
+    const names = group.map(p => `
+      <div style="padding:7px 10px; margin:5px 0; background:${bgColor}25; border:1px solid ${bgColor}; border-radius:6px; font-weight:700; color:#fff;">
+        ${roleData.emoji || '👥'} ${p.name}${this.deadPlayerIds.has(p.id) ? ' (mort)' : ''}
+      </div>`).join('');
+    actionControls.innerHTML = `
+      <div style="color:#cfcfe0; font-size:0.82rem; margin-bottom:10px; font-weight:600;">👀 Réveillez-vous et reconnaissez-vous :</div>
+      <div style="font-size:0.7rem; color:#9aa; margin-bottom:6px;">(${roleData.name || this.selectedRoleId} — info Maître du Jeu)</div>
+      ${names || '<div style="color:#888;">Seul membre de ce groupe</div>'}
+    `;
+    if (actionInfo) {
+      actionInfo.innerHTML = `<button class="btn-validate-action">✓ Reconnaissance faite</button>`;
+      actionInfo.querySelector('.btn-validate-action')?.addEventListener('click', () => {
+        this.actionState = { roleId: this.selectedRoleId, action: 'recognition', roleName: roleData.name, roleEmoji: roleData.emoji };
+        this.completeRoleAction();
+      });
+    }
+  }
+,
 
 
   /**
