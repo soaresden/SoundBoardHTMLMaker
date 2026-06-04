@@ -197,7 +197,7 @@ Object.assign(FirstNightMDJ.prototype, {
       const killerEmojiMap = { wolf: '🐺', poison: '🧙‍♀️', lynch: '🪓', chasseur: '🏹', chevalier: '⚔️', love: '💔' };
       const killerEmoji = isDead ? (killerEmojiMap[this.deathCauses && this.deathCauses[p.id]] || '') : '';
       const killerBadge = killerEmoji
-        ? `<span class="mdj-killer-badge" title="Tué par : ${this.deathCauses[p.id]}" style="position:absolute; top:-9px; right:-9px; font-size:12px; line-height:1; background:rgba(0,0,0,0.75); border:1px solid rgba(255,255,255,0.25); border-radius:50%; padding:2px; z-index:5; filter:none; opacity:1;">${killerEmoji}</span>`
+        ? `<span class="mdj-killer-badge" title="Cause de la mort : ${this.deathCauses[p.id]}" style="position:absolute; top:-9px; right:-9px; font-size:13px; line-height:1; background:rgba(0,0,0,0.8); border:1px solid rgba(255,255,255,0.3); border-radius:50%; padding:2px; z-index:5;">${killerEmoji}</span>`
         : '';
 
       return `
