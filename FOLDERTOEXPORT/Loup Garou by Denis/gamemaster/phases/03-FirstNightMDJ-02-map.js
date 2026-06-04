@@ -193,11 +193,20 @@ Object.assign(FirstNightMDJ.prototype, {
       }
       const displayName = isMayor ? `🎖️ ${p.name}` : p.name;
 
-      // Badge "tueur" : emoji de la cause de mort, affiche a cote du mort
-      const killerEmojiMap = { wolf: '🐺', poison: '🧙‍♀️', lynch: '🪓', chasseur: '🏹', chevalier: '⚔️', love: '💔' };
-      const killerEmoji = isDead ? (killerEmojiMap[this.deathCauses && this.deathCauses[p.id]] || '') : '';
-      const killerBadge = killerEmoji
-        ? `<span class="mdj-killer-badge" title="Cause de la mort : ${this.deathCauses[p.id]}" style="position:absolute; top:-9px; right:-9px; font-size:13px; line-height:1; background:rgba(0,0,0,0.8); border:1px solid rgba(255,255,255,0.3); border-radius:50%; padding:2px; z-index:5;">${killerEmoji}</span>`
+      // Badge "tueur" : emoji + couleur de fond du tueur + tooltip "Tué par ..."
+      const _cause = isDead ? (this.deathCauses && this.deathCauses[p.id]) : null;
+      const _killerColor = (rid, fallback) => (rolesData[rid]?.visual?.roleColor?.fondColor) || fallback;
+      const killerInfoMap = {
+        wolf:      { emoji: '🐺', bg: _killerColor('Simple_Loup_Garou', '#b03030'), label: 'les Loups-Garous' },
+        poison:    { emoji: '🧙‍♀️', bg: _killerColor('Sorciere', '#7a3aa0'), label: 'la Sorcière (potion)' },
+        lynch:     { emoji: '🪓', bg: '#9966CC', label: 'le village (bûcher)' },
+        chasseur:  { emoji: '🏹', bg: _killerColor('Chasseur', '#D4A574'), label: 'le Chasseur' },
+        chevalier: { emoji: '⚔️', bg: _killerColor('Chevalier_Epee_Rouille', '#FFD700'), label: 'le Chevalier' },
+        love:      { emoji: '💔', bg: _killerColor('Cupidon', '#D6899E'), label: 'amour (Cupidon)' }
+      };
+      const killerInfo = _cause ? killerInfoMap[_cause] : null;
+      const killerBadge = killerInfo
+        ? `<span class="mdj-killer-badge" title="Tué par ${killerInfo.label}" style="position:absolute; top:-9px; right:-9px; font-size:12px; line-height:1; background:${killerInfo.bg}; border:1px solid rgba(255,255,255,0.65); border-radius:50%; padding:2px 3px; z-index:5; box-shadow:0 1px 3px rgba(0,0,0,0.6);">${killerInfo.emoji}</span>`
         : '';
 
       return `

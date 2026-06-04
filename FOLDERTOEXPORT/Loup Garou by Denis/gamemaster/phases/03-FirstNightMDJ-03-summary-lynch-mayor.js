@@ -759,9 +759,16 @@ Object.assign(FirstNightMDJ.prototype, {
       }
     }
 
+    // Banniere "aucun mort cette nuit" (ex: victime des loups immunisee + sorciere inactive)
+    const realDeathsThisNight = deadThisNight.filter(id => players.some(p => p.id === id));
+    const noDeathBanner = realDeathsThisNight.length === 0
+      ? `<div style="margin-bottom:8px; padding:8px; text-align:center; font-size:11px; font-weight:700; color:#9ee6b0; background:rgba(80,200,120,0.12); border:1px solid rgba(80,200,120,0.4); border-radius:6px;">🌙 Personne n'est mort cette nuit</div>`
+      : '';
+
     // STYLIZED COMPACT LAYOUT: Dark mode with purple/pink accents
     return `
       <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 6px; padding: 10px; border: 1px solid rgba(201,124,255,0.2);">
+        ${noDeathBanner}
         <!-- 2 Columns: Actions & Morts -->
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
           <!-- ACTIONS -->
