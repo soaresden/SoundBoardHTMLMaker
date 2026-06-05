@@ -905,10 +905,77 @@ Object.assign(FirstNightMDJ.prototype, {
    * Execute lynch - kill player and reveal role
    * NIGHT 1 SPECIFIC: Uses processLynchVictim() and displays UI
    */
+  /**
+   * Effet de mort/vote du role lynche: { survives, type, note }.
+   * Pilote par le type d'action JSON (surviveDayKill, killNeighbors, etc.).
+   */
+  getLynchDeathEffect(roleId) {
+    const rd = this.rolesLoader.getRole(roleId) || {};
+    const blocks = rd.actions ? Object.values(rd.actions) : [];
+    const special = ['surviveDayKill','dieOnTie','killVoters','killNeighbors','bonusKill','pauseWolfKill','winOnFirstDeath','vultureCondition'];
+    let type = null;
+    for (const b of blocks) {
+      if (b && typeof b === 'object' && special.includes(b.type)) { type = b.type; break; }
+    }
+    const notes = {
+      surviveDayKill: "🤪 Idiot du Village démasqué : il SURVIT au vote (il ne pourra plus voter ensuite).",
+      killNeighbors: "🧪 Savant Fou : à sa mort, ses 2 voisins (vivants) meurent aussi — à appliquer.",
+      killVoters: "🦠 Lépreux lynché : la prochaine attaque des loups est gâchée — à appliquer.",
+      bonusKill: "🐺 Louveteau mort : les loups ont droit à une victime bonus — à appliquer.",
+      pauseWolfKill: "🌙 Fils de la Lune mort : les loups ne tueront personne la prochaine nuit — à appliquer.",
+      winOnFirstDeath: "👼 Ange Déchu : s'il est éliminé très tôt, il gagne SEUL — vérifier la condition !",
+      dieOnTie: "🐐 Bouc Émissaire : meurt automatiquement en cas d'ÉGALITÉ des votes.",
+      vultureCondition: "🦅 Président : condition de victoire spéciale — vérifier."
+    };
+    return { survives: type === 'surviveDayKill', type, note: type ? (notes[type] || '') : '' };
+  }
+,
+
   executeLynch(victimId) {
     const result = this.processLynchVictim(victimId);
     const {victim, victimRole, cascadeDeaths, enfantSauvageTransformed} = result;
     const players = this.gm.state.players || [];
+
+    // Effet de mort/vote du role lynche
+    const _lynchEffect = this.getLynchDeathEffect(victim.role);
+    if (_lynchEffect.survives) {
+      this.deadPlayerIds.delete(victimId);
+      if (this.deathCauses) delete this.deathCauses[victimId];
+      console.log(`[MDJ] 🤪 ${victim.name} (${victim.role}) survit au vote`);
+    }
+
+    // EFFETS AUTOMATIQUES AU LYNCH
+    let _extraDeathsHtml = '';
+    if (_lynchEffect.type === 'killNeighbors') {
+      // Savant Fou: emporte ses 2 voisins VIVANTS dans la mort
+      const idx = players.indexOf(victim);
+      const aliveNeighbor = (dir) => {
+        let i = idx;
+        for (let k = 0; k < players.length; k++) {
+          i = (i + dir + players.length) % players.length;
+          if (i === idx) break;
+          if (!this.deadPlayerIds.has(players[i].id)) return players[i];
+        }
+        return null;
+      };
+      const victimsN = [];
+      [aliveNeighbor(-1), aliveNeighbor(1)].forEach(n => {
+        if (n && !this.deadPlayerIds.has(n.id)) {
+          this.deadPlayerIds.add(n.id);
+          this.deathCauses[n.id] = 'savant';
+          this.checkCupidonCascadingDeath(n.id);
+          victimsN.push(n.name);
+        }
+      });
+      if (victimsN.length) {
+        _extraDeathsHtml = `<div style="margin-top:12px; padding:10px; background:rgba(170,34,14,0.15); border:2px solid #d9534f; border-radius:6px; color:#ffb3ba; font-size:11px; font-weight:600;">🧪 Le Savant Fou emporte ${victimsN.join(' et ')} dans la mort !</div>`;
+      }
+    } else if (_lynchEffect.type === 'pauseWolfKill' || _lynchEffect.type === 'killVoters') {
+      this.skipNextWolfKill = true;
+      console.log(`[MDJ] 🌙 Prochaine attaque des loups annulée (${victim.role})`);
+    } else if (_lynchEffect.type === 'bonusKill') {
+      this.wolvesBonusKill = true;
+    }
 
     // CRITICAL: Check for Enfant Sauvage idol death - transform to wolf if idol is lynched
     if (this.roleStates['Enfant_Sauvage']?.completed && this.roleStates['Enfant_Sauvage']?.result?.targets?.includes(victimId)) {
@@ -929,9 +996,9 @@ Object.assign(FirstNightMDJ.prototype, {
       }
     }
 
-    // Update map to show dead player
+    // Update map to show dead player (sauf si le role survit au vote)
     const mdjMap = document.getElementById('mdj-live-map');
-    if (mdjMap) {
+    if (mdjMap && !_lynchEffect.survives) {
       const victimPoint = mdjMap.querySelector(`[data-player-id="${victimId}"]`);
       if (victimPoint) {
         victimPoint.style.filter = 'grayscale(100%) brightness(0.5)';
@@ -1031,10 +1098,81 @@ Object.assign(FirstNightMDJ.prototype, {
         `;
       }
 
+      // Morts induites par l'effet (ex: voisins du Savant Fou)
+      if (_extraDeathsHtml) html += _extraDeathsHtml;
+
+      // Rappel MDJ de l'effet de mort/vote du role
+      if (_lynchEffect.note) {
+        html += `
+          <div style="margin-top: 14px; padding: 10px; background: rgba(255,180,80,0.12); border: 2px solid #ffb84d; border-radius: 6px; color:#ffd9a3; font-size:11px; font-weight:600;">
+            ⚠️ ${_lynchEffect.note}
+          </div>
+        `;
+      }
+
+      // Servante Devouee: peut prendre le role du lynche
+      const _servante = players.find(p => p.role === 'Servante_Devouee' && !this.deadPlayerIds.has(p.id) && p.id !== victimId);
+      if (_servante && !_lynchEffect.survives) {
+        html += `
+          <div style="margin-top: 14px; padding: 10px; background: rgba(120,200,160,0.1); border: 2px solid #8fe0b0; border-radius: 6px;">
+            <div style="color:#8fe0b0; font-size:11px; font-weight:700; margin-bottom:6px;">🧹 Servante Dévouée (${_servante.name}) prend le rôle de ${victim.name} ?</div>
+            <select id="lynch-servante-take" style="width:100%; padding:6px; background:#333; color:#fff; border:1px solid #8fe0b0; border-radius:3px; font-size:11px;">
+              <option value="">-- Ne rien faire --</option>
+              <option value="${victimId}">Oui, devenir ${victimRole?.name || victim.role}</option>
+            </select>
+          </div>
+        `;
+      }
+
+      // Si la victime du buchet etait le MAIRE: proposer un successeur
+      if (victimId === this.mayorId) {
+        const successors = players.filter(p => !this.deadPlayerIds.has(p.id) && p.id !== victimId);
+        html += `
+          <div style="margin-top: 14px; padding: 10px; background: rgba(255,215,0,0.1); border: 2px solid #FFD700; border-radius: 6px;">
+            <div style="color:#FFD700; font-size:12px; font-weight:700; margin-bottom:6px;">🎖️ ${victim.name} était Maire — désigner le nouveau Maire</div>
+            <select id="lynch-mayor-reassign" style="width:100%; padding:6px; background:#333; color:#fff; border:1px solid #FFD700; border-radius:3px; font-size:11px;">
+              <option value="">-- Nouveau Maire --</option>
+              ${successors.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+            </select>
+          </div>
+        `;
+      }
+
       html += `
         </div>
       `;
       actionControls.innerHTML = html;
+
+      // Handler Servante (cas lynch)
+      const lynchServanteSel = document.getElementById('lynch-servante-take');
+      if (lynchServanteSel) {
+        lynchServanteSel.addEventListener('change', () => {
+          if (!lynchServanteSel.value) return;
+          const ps = this.gm.state.players || [];
+          const servantePlayer = ps.find(p => p.role === 'Servante_Devouee' && !this.deadPlayerIds.has(p.id));
+          const deadP = ps.find(p => p.id === lynchServanteSel.value);
+          if (servantePlayer && deadP) {
+            this.transformations[servantePlayer.id] = { from: 'Servante_Devouee', to: deadP.role, reason: `reprend le role de ${deadP.name}` };
+            servantePlayer.role = deadP.role;
+            console.log(`[MDJ] 🧹 Servante ${servantePlayer.name} reprend le role de ${deadP.name}`);
+            this.renderLiveMap();
+            this.quickSave && this.quickSave();
+          }
+        });
+      }
+
+      // Handler de reassignation du maire (cas lynch)
+      const lynchMayorSel = document.getElementById('lynch-mayor-reassign');
+      if (lynchMayorSel) {
+        lynchMayorSel.addEventListener('change', () => {
+          if (lynchMayorSel.value) {
+            this.mayorId = lynchMayorSel.value;
+            console.log(`[MDJ] 🎖️ Nouveau Maire (apres lynch): ${this.getPlayerName(this.mayorId)}`);
+            this.renderLiveMap();
+            this.quickSave && this.quickSave();
+          }
+        });
+      }
     }
 
     if (actionInfo) {

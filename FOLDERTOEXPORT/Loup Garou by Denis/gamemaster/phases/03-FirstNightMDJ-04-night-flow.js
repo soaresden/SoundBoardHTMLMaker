@@ -730,6 +730,11 @@ Object.assign(FirstNightMDJ.prototype, {
           if (isWolfKill && isProtected) {
             const playerName = this.getPlayerName(playerId);
             console.log(`[MDJ] 🛡️ ${playerName} (${playerId}) is PROTECTED (immunisé) - wolf attack blocked, no death recorded`);
+          } else if (isWolfKill && this.skipNextWolfKill) {
+            // Fils de la Lune / Lepreux: la prochaine attaque des loups est annulee
+            this.skipNextWolfKill = false;
+            const playerName = this.getPlayerName(playerId);
+            console.log(`[MDJ] 🌙 ${playerName} épargné: attaque des loups annulée (Fils de la Lune / Lépreux)`);
           } else {
             this.deadPlayerIds.add(playerId);
             const playerName = this.getPlayerName(playerId);
