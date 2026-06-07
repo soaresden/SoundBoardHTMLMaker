@@ -387,6 +387,26 @@
       "pos": 1,
       "volume": 0.7,
       "cover": null
+    },
+	{
+      "file": "intro ninja.mp3",
+      "title": "00-Brief Jeu",
+      "disc": 0,
+      "track": 0,
+      "category": "⏳Stage Setup",
+      "pos": 1,
+      "volume": 0.7,
+      "cover": null
+    },
+	{
+      "file": "ninja fini.mp3",
+      "title": "00-Brief Jeu",
+      "disc": 0,
+      "track": 0,
+      "category": "⏳Stage Setup",
+      "pos": 1,
+      "volume": 0.7,
+      "cover": null
     }
   ],
   "sfx": [
@@ -612,6 +632,13 @@
       "label": "💀 Game Over",
       "category": "Jingles",
       "pos": 2,
+      "volume": 1
+    }
+	{
+      "file": "mantis-030 cervelle arrete.mp3",
+      "label": "",
+      "category": "",
+      "pos": ,
       "volume": 1
     }
   ]

@@ -1236,12 +1236,8 @@ input[type="range"]{ width:100%; accent-color:var(--accent); }
         <button class="btn btn-switch" id="btnGameMaster"
                 title="Ouvrir le gestionnaire de partie Loup-Garou"
                 style="font-size: 16px; padding: 12px 20px; font-weight: 800;">🐺 Maître du Jeu</button>
-        <a class="btn btn-switch" id="btnSwitchVersion"
-           href="index_aio.html"
-           title="Basculer vers la version all-in-one (un seul fichier auto-suffisant)">📦 All-in-one</a>
-        <button class="btn btn-switch" id="btnDownload"
-                title="Télécharger ce HTML autonome (un seul fichier)"
-                style="display:none;">⬇ Télécharger</button>
+        <button class="btn btn-switch" id="btnOffline"
+                title="Charger tous les sons en cache pour une utilisation hors-ligne">📥 Hors-ligne</button>
         <button class="btn btn-green" id="btnStopAll" title="Stop music + sfx">⏹ Stop all</button>
       </div>
     </div>
@@ -1862,6 +1858,75 @@ input[type="range"]{ width:100%; accent-color:var(--accent); }
       }
     });
   }
+
+  // ----- Mode hors-ligne : met tous les sons en cache via Service Worker -----
+  (function setupOffline(){
+    const btn = document.getElementById("btnOffline");
+    if (!btn) return;
+    const httpOK = (location.protocol === "http:" || location.protocol === "https:");
+    const supported = ("serviceWorker" in navigator) && httpOK;
+    if (!supported) {
+      btn.textContent = "📥 Hors-ligne (http requis)";
+      btn.title = "Le mode hors-ligne nécessite que la page soit servie via http(s) (GitHub Pages ou un serveur local), pas en ouverture directe du fichier (file://).";
+      btn.addEventListener("click", () => {
+        alert("Le mode hors-ligne nécessite que la page soit servie via http(s) — par ex. GitHub Pages ou un petit serveur local — et non en double-cliquant le fichier (file://).");
+      });
+      return;
+    }
+
+    navigator.serviceWorker.register("sw.js").catch(e => console.warn("[offline] SW register KO:", e));
+
+    const buildUrlList = () => {
+      const set = new Set();
+      set.add(location.href.split("#")[0].split("?")[0]);
+      document.querySelectorAll('script[src], link[rel="stylesheet"]').forEach(n => {
+        const u = n.src || n.href; if (u) set.add(u);
+      });
+      (tracks || []).forEach(t => {
+        if (t.file && !String(t.file).startsWith("data:")) {
+          set.add((t.type === "sfx" ? "sfx/" : "music/") + t.file);
+        }
+        if (t.cover && !String(t.cover).startsWith("data:")) set.add(t.cover);
+      });
+      return [...set];
+    };
+
+    const precacheViaSW = (urls, onProgress) => new Promise(async (resolve, reject) => {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        const sw = reg.active;
+        if (!sw) { reject(new Error("Service Worker inactif")); return; }
+        const ch = new MessageChannel();
+        ch.port1.onmessage = (e) => {
+          const d = e.data || {};
+          if (d.finished) resolve(d);
+          else onProgress(d.done, d.total, d.ok);
+        };
+        sw.postMessage({ type: "PRECACHE", urls }, [ch.port2]);
+      } catch (e) { reject(e); }
+    });
+
+    let busy = false;
+    btn.addEventListener("click", async () => {
+      if (busy) return; busy = true;
+      const orig = "📥 Hors-ligne";
+      btn.disabled = true;
+      try {
+        const urls = buildUrlList();
+        const res = await precacheViaSW(urls, (done, total) => {
+          btn.textContent = "📥 " + done + "/" + total + "…";
+        });
+        btn.textContent = "✅ Hors-ligne prêt (" + res.ok + ")";
+        setTimeout(() => { btn.textContent = orig; }, 3000);
+      } catch (e) {
+        console.error("[offline] KO:", e);
+        alert("Échec du chargement hors-ligne : " + e.message);
+        btn.textContent = orig;
+      } finally {
+        btn.disabled = false; busy = false;
+      }
+    });
+  })();
 
   // ----- Termine le loader (visible jusqu'ici) -----
   if (window.__finishLoader) {
