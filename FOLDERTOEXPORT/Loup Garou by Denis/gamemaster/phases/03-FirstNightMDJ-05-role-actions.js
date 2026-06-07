@@ -749,15 +749,26 @@ Object.assign(FirstNightMDJ.prototype, {
     });
 
     if (actionInfo) {
+      // Loup Blanc & Grand Méchant Loup peuvent choisir de NE PAS tuer
+      const canSkip = this.selectedRoleId === 'Loup_Garou_Blanc' || this.selectedRoleId === 'Grand_Mechant_Loup';
+      const skipBtn = canSkip ? `<button class="btn-skip-kill" style="width:100%; margin-top:6px; padding:10px; background:rgba(120,120,120,0.4); color:#fff; border:2px solid #999; border-radius:4px; cursor:pointer; font-weight:600; font-size:12px;">🚫 Ne tuer personne</button>` : '';
       if (selectedVictim) {
-        actionInfo.innerHTML = `<button class="btn-validate-action">☠️ Tuer</button>`;
+        actionInfo.innerHTML = `<button class="btn-validate-action">☠️ Tuer</button>${skipBtn}`;
         actionInfo.querySelector('.btn-validate-action')?.addEventListener('click', () => {
           console.log(`[MDJ] Wolf kill validation - completing action for victim:`, selectedVictim);
           this.completeRoleAction();
         });
       } else {
-        actionInfo.innerHTML = 'Sélectionnez la victime';
+        actionInfo.innerHTML = canSkip ? `<div style="margin-bottom:6px; color:#ccc; font-size:12px;">Choisis une cible, ou :</div>${skipBtn}` : 'Sélectionnez la victime';
       }
+      // Handler "ne tuer personne"
+      actionInfo.querySelector('.btn-skip-kill')?.addEventListener('click', () => {
+        const rd = this.rolesLoader.getRole(this.selectedRoleId);
+        this.selectedPlayers = [];
+        this.actionState = { roleId: this.selectedRoleId, action: 'kill', roleName: rd?.name || 'Loup', roleEmoji: rd?.emoji || '🐺' };
+        console.log(`[MDJ] ${this.selectedRoleId} choisit de ne tuer personne`);
+        this.completeRoleAction();
+      });
     }
   }
 ,

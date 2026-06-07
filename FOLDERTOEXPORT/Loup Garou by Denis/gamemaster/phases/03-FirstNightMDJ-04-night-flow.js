@@ -735,6 +735,11 @@ Object.assign(FirstNightMDJ.prototype, {
             this.skipNextWolfKill = false;
             const playerName = this.getPlayerName(playerId);
             console.log(`[MDJ] 🌙 ${playerName} épargné: attaque des loups annulée (Fils de la Lune / Lépreux)`);
+          } else if (isWolfKill && (players.find(p => p.id === playerId)?.role === 'Ancien') && !this.ancienResisted) {
+            // L'Ancien survit a la PREMIERE attaque des loups
+            this.ancienResisted = true;
+            const playerName = this.getPlayerName(playerId);
+            console.log(`[MDJ] 🛡️ ${playerName} (Ancien) résiste à la 1ère attaque des loups !`);
           } else {
             this.deadPlayerIds.add(playerId);
             const playerName = this.getPlayerName(playerId);

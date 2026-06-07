@@ -910,6 +910,10 @@ Object.assign(FirstNightMDJ.prototype, {
    * Pilote par le type d'action JSON (surviveDayKill, killNeighbors, etc.).
    */
   getLynchDeathEffect(roleId) {
+    // Cas special Ancien : tué par le village → les villageois perdent leurs pouvoirs
+    if (roleId === 'Ancien') {
+      return { survives:false, type:'ancien', note:"👴 L'Ancien est tué par le village → TOUS les villageois à pouvoir (Voyante, Salvateur, Sorcière, Chasseur, Renard, Juge…) PERDENT leur pouvoir jusqu'à la fin de la partie !" };
+    }
     const rd = this.rolesLoader.getRole(roleId) || {};
     const blocks = rd.actions ? Object.values(rd.actions) : [];
     const special = ['surviveDayKill','dieOnTie','killVoters','killNeighbors','bonusKill','pauseWolfKill','winOnFirstDeath','vultureCondition'];

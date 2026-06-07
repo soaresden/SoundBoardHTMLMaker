@@ -84,9 +84,33 @@ Object.assign(FirstNightMDJ.prototype, {
   /**
    * Determine si le role agit cette nuit (currentNight), avec garantie loups.
    */
+  /** Un loup (assigné) est-il mort ? (pour le Grand Méchant Loup) */
+  anyWolfDead() {
+    return (this.gm?.state?.players || []).some(p => this.isWolfRoleId(p.role) && this.deadPlayerIds.has(p.id));
+  }
+,
+
+  /** L'Ancien a-t-il été tué PAR LE VILLAGE (vote / Sorcière / Chasseur) ?
+   *  Si oui, les villageois à pouvoir perdent leurs pouvoirs. */
+  ancienKilledByVillage() {
+    const ps = this.gm?.state?.players || [];
+    const ancien = ps.find(p => p.role === 'Ancien');
+    if (!ancien || !this.deadPlayerIds.has(ancien.id)) return false;
+    const c = this.deathCauses && this.deathCauses[ancien.id];
+    return c === 'lynch' || c === 'poison' || c === 'chasseur';
+  }
+,
+
   roleActsThisNight(roleId) {
     const roleData = this.rolesLoader.getRole(roleId) || {};
     const n = this.currentNight;
+
+    // Grand Méchant Loup : 2e victime UNIQUEMENT tant qu'aucun loup n'est mort.
+    // Une fois un loup mort, il n'a plus de tour dédié (il chasse avec la meute).
+    if (roleId === 'Grand_Mechant_Loup' && this.anyWolfDead()) return false;
+
+    // Ancien tué par le village → les VILLAGEOIS à pouvoir n'agissent plus (plus que les loups).
+    if (this.ancienKilledByVillage() && roleData.camp === 'Village' && !this.isWolfRoleId(roleId)) return false;
 
     // 1) Planning explicite par nightActive (prioritaire). Ex: Loup Blanc n'a PAS
     //    de nightActive -> on passe a la phase ci-dessous.
