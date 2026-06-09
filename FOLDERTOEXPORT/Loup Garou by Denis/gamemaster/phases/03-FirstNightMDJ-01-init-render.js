@@ -381,6 +381,24 @@ Object.assign(FirstNightMDJ.prototype, {
 ,
 
 
+  // Recalcule les camps et declenche la victoire immediatement (independant du DOM).
+  // Utilise apres CHAQUE mort (tir du Chasseur, lynch, cascade) pour ne pas attendre.
+  checkVictoryNow() {
+    const players = this.gm.state.players || [];
+    const alive = players.filter(p => !this.deadPlayerIds.has(p.id));
+    let village = 0, loups = 0;
+    const solos = {};
+    alive.forEach(p => {
+      const camp = this.getPlayerCamp(p);
+      if (camp === 'Village') village++;
+      else if (camp === 'Loups') loups++;
+      else solos[camp] = (solos[camp] || 0) + 1;
+    });
+    if (typeof this.renderVictoryBar === 'function') this.renderVictoryBar();
+    this.maybeShowVictory(village, loups, solos, alive.length);
+  }
+,
+
   renderVictoryBar() {
     const bar = document.getElementById('mdj-victory-bar');
     if (!bar) return;

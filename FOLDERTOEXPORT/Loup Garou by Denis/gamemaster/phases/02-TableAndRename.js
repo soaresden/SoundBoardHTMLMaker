@@ -2,15 +2,36 @@
 // ÉCRAN 2: TABLE SETUP + PLACE PLAYERS
 // ========================================
 
+// ---- Persistance des profils de joueurs + dernière table (localStorage) ----
+function lgGetProfiles() {
+  try { return JSON.parse(localStorage.getItem('lg_profiles') || '[]').filter(Boolean); }
+  catch (_) { return []; }
+}
+function lgSaveProfiles(arr) {
+  try {
+    const uniq = [...new Set((arr || []).map(s => String(s).trim()).filter(Boolean))];
+    localStorage.setItem('lg_profiles', JSON.stringify(uniq));
+  } catch (_) {}
+}
+function lgAddProfiles(names) {
+  lgSaveProfiles([...lgGetProfiles(), ...(names || [])]);
+}
+function lgGetLastTable() {
+  try { return JSON.parse(localStorage.getItem('lg_lastTable') || '[]'); }
+  catch (_) { return []; }
+}
+function lgSaveLastTable(names) {
+  try { localStorage.setItem('lg_lastTable', JSON.stringify(names || [])); } catch (_) {}
+}
+
 function renderTableAndRename(gameUI) {
   const gm = gameUI.gm;
   const players = gm.state.players;
-  const tableType = gm.state.tableType || 'circle';
+  // Vue unique: table ronde (les vues rectangulaires/ovales ont été retirées).
+  gm.state.tableType = 'circle';
+  const tableType = 'circle';
   const tablePresets = {
-    'circle': { width: 140, height: 140 },
-    'oval-v': { width: 100, height: 180 },
-    'rect-v': { width: 80, height: 200 },
-    'square': { width: 140, height: 140 }
+    'circle': { width: 140, height: 140 }
   };
 
   const preset = tablePresets[tableType];
@@ -90,19 +111,30 @@ function renderTableAndRename(gameUI) {
     tableStyle += ` border-radius:8px;`;
   }
 
-  const tableTypeOptions = Object.keys(tablePresets).map(type =>
-    `<option value="${type}" ${type === tableType ? 'selected' : ''}>${type}</option>`
-  ).join('');
+  // ---- Barre de profils cliquables ----
+  const profiles = lgGetProfiles();
+  const placedNames = new Set(players.map(p => (p.name || '').trim()).filter(Boolean));
+  const chipStyleBase = 'border:1px solid rgba(199,125,255,0.4); border-radius:10px; padding:2px 8px; font-size:9px; cursor:pointer; color:#e8e8f0; background:rgba(80,60,140,0.45);';
+  const chips = profiles.map((n, i) => {
+    const placed = placedNames.has(n.trim());
+    return `<button class="gm-profile-chip" data-idx="${i}" title="${placed ? 'Déjà placé' : 'Cliquer pour placer'}" style="${chipStyleBase} ${placed ? 'opacity:0.45; text-decoration:line-through;' : ''}">${placed ? '✔ ' : ''}${n}</button>`;
+  }).join('');
+  const lastTable = lgGetLastTable();
+  const btnSmall = 'border:1px solid rgba(199,125,255,0.4); border-radius:6px; padding:2px 8px; font-size:9px; cursor:pointer; color:#fff; font-weight:600;';
 
   return `
     <div class="gm-screen" style="display:flex; flex-direction:column; height:100%; gap:0; padding:0;">
       <h2 style="padding:16px; margin:0; border-bottom:2px solid rgba(199,125,255,0.3); background:linear-gradient(135deg, rgba(25,25,45,0.95), rgba(35,30,55,0.95)); font-size:18px; color:#e8e8f0;">
          🪑 Placer les Joueurs & Nommer
       </h2>
-      <div style="padding:1px; background:linear-gradient(135deg, rgba(20,25,45,0.9), rgba(30,35,55,0.9));">
-        <select id="gmTableTypeSelect" style="width:100%; padding:2px; background:rgba(0,0,0,0.5); border:1px solid rgba(199,125,255,0.3); color:#e8e8f0; border-radius:2px; font-size:8px; box-sizing:border-box;">
-          ${tableTypeOptions}
-        </select>
+      <div style="padding:5px 6px; background:linear-gradient(135deg, rgba(20,25,45,0.9), rgba(30,35,55,0.9)); display:flex; flex-wrap:wrap; gap:4px; align-items:center; border-bottom:1px solid rgba(199,125,255,0.2);">
+        <span style="font-size:9px; color:#81dff7; font-weight:700;">👤 Profils — clic = placer dans l'ordre :</span>
+        <div id="gmProfileChips" style="display:flex; flex-wrap:wrap; gap:3px; flex:1; min-width:120px;">
+          ${chips || '<span style="font-size:8px; opacity:0.6;">aucun profil — utilisez ＋ Nouveau</span>'}
+        </div>
+        <button id="gmBtnNewProfile" style="${btnSmall} background:rgba(90,160,110,0.6);">＋ Nouveau</button>
+        ${lastTable.length ? `<button id="gmBtnLoadLast" style="${btnSmall} background:rgba(90,120,200,0.6);">↩ Dernière table</button>` : ''}
+        <button id="gmBtnClearNames" style="${btnSmall} background:rgba(180,90,90,0.55);">✖ Vider</button>
       </div>
       <div style="flex:1; padding:0px; display:flex; flex-direction:row; gap:0px; background:linear-gradient(135deg, rgba(20,25,45,0.9), rgba(30,35,55,0.9)); overflow:hidden; box-sizing:border-box;">
         <!-- GAUCHE: TABLE (1/3) -->
@@ -144,9 +176,52 @@ function renderTableAndRename(gameUI) {
 function attachTableAndRenameEvents(gameUI) {
   const gm = gameUI.gm;
 
-  document.getElementById('gmTableTypeSelect')?.addEventListener('change', (e) => {
-    gm.state.tableType = e.target.value;
-    gm.state.players.forEach(p => { p.tableX = null; p.tableY = null; });
+  // ===== PROFILS DE JOUEURS =====
+  // Place un nom dans le prochain emplacement libre (ou avance dans l'ordre).
+  const placeName = (name) => {
+    name = String(name || '').trim();
+    if (!name) return;
+    const players = gm.state.players;
+    // Cherche un slot vide; sinon avance via _fillIdx
+    let idx = players.findIndex(p => !(p.name || '').trim());
+    if (idx === -1) {
+      if (typeof gm.state._fillIdx !== 'number') gm.state._fillIdx = 0;
+      idx = gm.state._fillIdx % players.length;
+      gm.state._fillIdx = (gm.state._fillIdx + 1) % players.length;
+    }
+    players[idx].name = name;
+    gm.saveState();
+    gameUI.render();
+  };
+
+  document.querySelectorAll('.gm-profile-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const profiles = lgGetProfiles();
+      const i = parseInt(chip.dataset.idx, 10);
+      if (profiles[i]) placeName(profiles[i]);
+    });
+  });
+
+  document.getElementById('gmBtnNewProfile')?.addEventListener('click', () => {
+    const name = (prompt('Nom du nouveau profil :') || '').trim();
+    if (!name) return;
+    lgAddProfiles([name]);
+    placeName(name); // ajoute ET place directement
+  });
+
+  document.getElementById('gmBtnLoadLast')?.addEventListener('click', () => {
+    const last = lgGetLastTable();
+    if (!last.length) return;
+    const players = gm.state.players;
+    players.forEach((p, i) => { p.name = last[i] || ''; });
+    gm.state._fillIdx = Math.min(last.length, players.length) % players.length;
+    gm.saveState();
+    gameUI.render();
+  });
+
+  document.getElementById('gmBtnClearNames')?.addEventListener('click', () => {
+    gm.state.players.forEach(p => { p.name = ''; });
+    gm.state._fillIdx = 0;
     gm.saveState();
     gameUI.render();
   });
@@ -177,6 +252,10 @@ function attachTableAndRenameEvents(gameUI) {
   });
 
   document.getElementById('gmBtnStartGame')?.addEventListener('click', () => {
+    // Mémorise la table (noms dans l'ordre) + enrichit les profils pour la prochaine partie
+    const names = gm.state.players.map(p => (p.name || '').trim()).filter(Boolean);
+    lgSaveLastTable(gm.state.players.map(p => (p.name || '').trim()));
+    lgAddProfiles(names);
     gm.state.mode = 'assignRoles';
     gm.state.currentRoleIdx = 0;
     gm.saveState();

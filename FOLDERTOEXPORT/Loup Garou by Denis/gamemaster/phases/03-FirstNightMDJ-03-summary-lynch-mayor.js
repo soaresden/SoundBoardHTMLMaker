@@ -99,6 +99,20 @@ Object.assign(FirstNightMDJ.prototype, {
     // Montreur_Ours growl detection
     html += montreurOursHtml;
 
+    // Rappel Corbeau : +2 votes contre la cible désignée cette nuit (à prendre en compte au vote)
+    const _corbeauRes = this.roleStates && this.roleStates['Corbeau'] && this.roleStates['Corbeau'].result;
+    const _corbeauAlive = (this.gm && this.gm.state && this.gm.state.players || []).some(pl => pl.role === 'Corbeau' && !this.deadPlayerIds.has(pl.id));
+    if (_corbeauAlive && _corbeauRes && _corbeauRes.action === 'steal_votes' && Array.isArray(_corbeauRes.targets)) {
+      const _cbTargetId = _corbeauRes.targets.find(t => !String(t).startsWith('potion-'));
+      const _cbTarget = _cbTargetId && (this.gm && this.gm.state && this.gm.state.players || []).find(p => p.id === _cbTargetId);
+      if (_cbTarget && !this.deadPlayerIds.has(_cbTarget.id)) {
+        html += `
+      <div style="padding:10px; margin-bottom:8px; background:rgba(40,40,60,0.9); border:2px solid #7a7ab0; border-radius:6px;">
+        <span style="color:#e0e0f0; font-size:11px; font-weight:700;">\u{1F426}\u{200D}\u{2B1B} Corbeau : <b>+2 votes</b> contre <b>${_cbTarget.name}</b> au vote d'aujourd'hui.</span>
+      </div>`;
+      }
+    }
+
     // Lynch combobox
     const nonWolves = alivePlayers.filter(p => !p.role || (!p.role.includes('Loup') && !p.role.includes('Wolf')));
     html += `
@@ -1204,6 +1218,8 @@ Object.assign(FirstNightMDJ.prototype, {
             this.deathCauses[targetId] = 'chasseur';
             this.chasseurHasShot = true;
             this.checkCupidonCascadingDeath(targetId);
+            // Decompte en direct: si le tir du Chasseur decide la partie, l'afficher tout de suite
+            this.checkVictoryNow();
           } else {
             console.log(`[MDJ] 🏹 ${victim.name} (Chasseur) chooses not to shoot`);
             this.chasseurHasShot = true;
@@ -1269,6 +1285,9 @@ Object.assign(FirstNightMDJ.prototype, {
     }
 
     // Zone bleue stays as player list - already disabled by disableRoleListbox()
+
+    // Decompte en direct: recalcule la victoire immediatement apres le lynch
+    this.checkVictoryNow();
   }
 
 });

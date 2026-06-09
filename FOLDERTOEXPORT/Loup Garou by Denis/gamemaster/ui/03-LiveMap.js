@@ -36,12 +36,11 @@ function getPlayerVisualEffects(player, gm, gameUI, baseBorderColor = 'var(--gm-
 function renderLiveMap(gameUI) {
   const gm = gameUI.gm;
   const players = gm.state.players;
-  const tableType = gm.state.tableType || 'circle';
+  // Vue unique: table ronde (rectangle/ovale retirés).
+  gm.state.tableType = 'circle';
+  const tableType = 'circle';
   const tablePresets = {
-    'circle': { width: 140, height: 140 },
-    'oval-v': { width: 100, height: 180 },
-    'rect-v': { width: 80, height: 200 },
-    'square': { width: 140, height: 140 }
+    'circle': { width: 140, height: 140 }
   };
 
   const preset = tablePresets[tableType];
@@ -262,20 +261,13 @@ function renderLiveMap(gameUI) {
     tableStyle += ` border-radius:8px;`;
   }
 
-  const tableTypeOptions = Object.keys(tablePresets).map(type =>
-    `<option value="${type}" ${type === tableType ? 'selected' : ''}>${type}</option>`
-  ).join('');
-
   return `
     <div class="gm-screen" style="display:flex; flex-direction:column; height:100%; gap:0; padding:0;">
       <h2 style="padding:16px; margin:0; border-bottom:2px solid rgba(199,125,255,0.3); background:linear-gradient(135deg, rgba(25,25,45,0.95), rgba(35,30,55,0.95)); font-size:18px; color:#e8e8f0;">
          Placer les Joueurs & Nommer
       </h2>
       <div style="padding:1px; background:linear-gradient(135deg, rgba(20,25,45,0.9), rgba(30,35,55,0.9)); display:flex; flex-direction:column; gap:1px;">
-        <select id="gmTableTypeSelect" style="width:100%; padding:2px; background:rgba(0,0,0,0.5); border:1px solid rgba(199,125,255,0.3); color:#e8e8f0; border-radius:2px; font-size:8px; box-sizing:border-box;">
-          ${tableTypeOptions}
-        </select>
-        ${tableType !== 'circle' ? `
+        ${false ? `
           <div style="padding:6px 4px; display:flex; flex-direction:column; gap:3px;">
             <div style="display:flex; gap:6px; justify-content:space-around;">
               <label style="display:flex; align-items:center; gap:4px; padding:4px 8px; background:rgba(81,116,219,0.1); border:1px solid #9966ff; border-radius:3px; font-size:9px; color:#81dff7; font-weight:600;">Haut:<input type="number" id="gmZoneTop" value="${gm.state.zoneConfig?.top ?? 2}" min="0" max="8" style="width:50px; padding:4px 6px; background:rgba(0,0,0,0.6); border:1px solid #9966ff; color:#e8e8f0; border-radius:2px; font-size:9px; font-weight:600;"></label>

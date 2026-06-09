@@ -7,20 +7,31 @@ Object.assign(FirstNightMDJ.prototype, {
    * Only show roles with actual night actions (exclude Cupidon, Enfant_Sauvage, etc.)
    */
   startNight2() {
-    console.log('[MDJ] ===== NIGHT 2 START =====');
-    this.currentNight = 2;
+    // Si une mort (ex: tir du Chasseur) a déjà décidé la partie, ne pas démarrer de nuit
+    this.checkVictoryNow();
+    if (this.victoryShown) return;
+    // Avance vers la nuit suivante : incrémente (avant: bloqué en dur à 2)
+    this.currentNight = (this.currentNight || 1) + 1;
+    console.log('[MDJ] ===== NIGHT ' + this.currentNight + ' START =====');
 
-    // CRITICAL: Apply Chevalier curse - kill cursed wolf at start of Night 2
+    // CRITICAL: Malédiction du Chevalier à l'Épée Rouillée — le loup maudit meurt
+    // au début de la nuit qui suit la mort du Chevalier (quelle que soit la nuit).
     if (this.chevalierCursedWolfId && !this.deadPlayerIds.has(this.chevalierCursedWolfId)) {
       const cursedWolf = this.gm?.state?.players?.find(p => p.id === this.chevalierCursedWolfId);
       if (cursedWolf) {
         this.deadPlayerIds.add(this.chevalierCursedWolfId);
         this.deathCauses[this.chevalierCursedWolfId] = 'chevalier';
-        console.log(`[MDJ] ⚔️ Chevalier curse applies: ${cursedWolf.name} dies at start of Night 2`);
+        console.log(`[MDJ] ⚔️ Malédiction du Chevalier : ${cursedWolf.name} meurt au début de la nuit ${this.currentNight}`);
 
-        // CRITICAL: Check if cursed wolf was a Cupidon lover — trigger cascading death
+        // Si le loup maudit était un amoureux de Cupidon -> mort en cascade
         this.checkCupidonCascadingDeath(this.chevalierCursedWolfId);
+
+        // Met à jour la carte + la légende pour afficher le loup comme mort (bug: restait vivant)
+        if (typeof this.renderLiveMap === 'function') this.renderLiveMap();
+        if (typeof this.renderLegend === 'function') this.renderLegend();
       }
+      // Malédiction consommée une seule fois
+      this.chevalierCursedWolfId = null;
     }
 
     // Reset selections for night 2
@@ -38,7 +49,7 @@ Object.assign(FirstNightMDJ.prototype, {
     if (centerPanel) {
       const header = centerPanel.querySelector('.role-list-header');
       if (header) {
-        header.textContent = '🌙 Nuit 2';
+        header.textContent = '🌙 Nuit ' + this.currentNight;
       }
     }
 
