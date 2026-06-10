@@ -58,7 +58,7 @@ async function generateIndex() {
     console.log(`✓ ${files.length} fichiers trouvés`);
 
     // Filtrer et traiter les fichiers JSON (sauf index.json)
-    const jsonFiles = files.filter(f => f.endsWith('.json') && f !== 'index.json');
+    const jsonFiles = files.filter(f => f.endsWith('.json') && f !== 'index.json' && !/^00-template/i.test(f));
     console.log(`✓ ${jsonFiles.length} fichiers JSON à traiter (excluant index.json)`);
 
     if (jsonFiles.length === 0) {

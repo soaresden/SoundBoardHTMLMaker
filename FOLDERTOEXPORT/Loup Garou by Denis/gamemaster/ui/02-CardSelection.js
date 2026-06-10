@@ -430,8 +430,11 @@ function attachCardSelectionEvents(gameUI) {
     for (let i = 0; i < playerCount; i++) {
       gameUI.gm.state.players.push({ id: `p${i}`, name: playerNames[i] || `J${i+1}`, tableX: null, tableY: null, roleId: null });
     }
-    // Route to TableSetup to organize players at table
-    gameUI.gm.state.mode = 'tableSetup';
+    // Route vers l'écran "Ordre des joueurs" : on définit l'ordre en cliquant des prénoms.
+    // Noms vidés pour construire l'ordre à partir de zéro (rôles assignés plus tard, au reveal).
+    gameUI.gm.state.rolesPreassigned = false;
+    gameUI.gm.state.players.forEach(p => { p.role = null; p.roleId = null; p.name = ''; });
+    gameUI.gm.state.mode = 'deckNames';
     gameUI.gm.state.tableType = 'circle';
     gameUI.gm.saveState();
     gameUI.render();

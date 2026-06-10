@@ -256,6 +256,17 @@ function attachTableAndRenameEvents(gameUI) {
     const names = gm.state.players.map(p => (p.name || '').trim()).filter(Boolean);
     lgSaveLastTable(gm.state.players.map(p => (p.name || '').trim()));
     lgAddProfiles(names);
+    // Si les rôles ont déjà été assignés (écran "Noms du deck"), on file direct à la nuit MDJ
+    if (gm.state.rolesPreassigned) {
+      gm.state.mdjMode = true;
+      gm.state.gameInterface = 'mdj';
+      gm.state.currentRoleIdx = 0;
+      gm.state.nightStep = 1;
+      gm.saveState();
+      if (typeof gm.changePhase === 'function') gm.changePhase('firstNight');
+      else { gm.state.mode = 'firstNight'; gameUI.render(); }
+      return;
+    }
     gm.state.mode = 'assignRoles';
     gm.state.currentRoleIdx = 0;
     gm.saveState();

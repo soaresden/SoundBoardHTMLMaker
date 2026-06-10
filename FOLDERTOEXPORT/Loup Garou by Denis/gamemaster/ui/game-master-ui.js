@@ -201,6 +201,13 @@ class GameMasterUI {
       gmContent.style.overflow = 'auto';
       gmContent.style.padding = '0';
       gmContent.innerHTML = renderCardSelection(this);
+    } else if (mode === 'deckNames') {
+      // Écran: noms du deck (appariement aléatoire cartes <-> prénoms)
+      gmContent.style.display = 'block !important';
+      gmContent.style.flexDirection = 'column';
+      gmContent.style.overflow = 'auto';
+      gmContent.style.padding = '0';
+      gmContent.innerHTML = renderDeckNames(this);
     } else if (mode === 'modeSelection') {
       // En mode sélection du mode de jeu, afficher en full-width
       gmContent.style.display = 'block !important';
@@ -736,6 +743,8 @@ class GameMasterUI {
 
     if (mode === 'selectRoles') {
       attachCardSelectionEvents(this);
+    } else if (mode === 'deckNames') {
+      attachDeckNamesEvents(this);
     } else if (mode === 'modeSelection') {
       attachModeSelectionEvents(this);
     } else if (mode === 'tableSetup') {

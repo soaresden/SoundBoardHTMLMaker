@@ -69,7 +69,7 @@ let ROLE_FILE_MAPPING = {
 };
 
 const CACHE_KEY = 'LoupsGarous_RolesJSON_Cache';
-const CACHE_VERSION = 3;
+const CACHE_VERSION = 4;
 
 // ========== CHARGER LE MAPPING DYNAMIQUEMENT DEPUIS L'INDEX ==========
 async function loadRolesIndexDynamically() {
@@ -221,6 +221,8 @@ async function loadSelectedRolesFromJSON(selectedRoleIds) {
 
     // Identifier les rôles à charger
     for (const roleId of selectedRoleIds) {
+      // Ignorer le modèle de référence (00-template.json est du JSONC commenté, non chargeable)
+      if (roleId === 'template' || /^00-template/i.test(ROLE_FILE_MAPPING[roleId] || '')) continue;
       if (!rolesData[roleId]) {
         // Rôle pas en cache - à fetcher
         neededRoles.push(roleId);
