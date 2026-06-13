@@ -15,6 +15,7 @@ function renderWindowsButtons() {
         <button id="gmBtnSkipRole" title="Passer le rôle courant (secours)" style="width:24px; height:24px; padding:0; border:1px solid rgba(199,125,255,0.4); background:rgba(255,180,80,0.25); border-radius:3px; color:#ffb84d; font-size:13px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;">⏭</button>
         <button id="gmBtnForceSummary" title="Forcer le résumé de la nuit (secours)" style="width:24px; height:24px; padding:0; border:1px solid rgba(199,125,255,0.4); background:rgba(120,160,255,0.25); border-radius:3px; color:#9ec0ff; font-size:13px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;">🌙</button>
         <button id="gmBtnLog" title="Télécharger le journal (debug)" style="width:24px; height:24px; padding:0; border:1px solid rgba(199,125,255,0.4); background:rgba(100,200,150,0.25); border-radius:3px; color:#66e0a0; font-size:13px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;">📥</button>
+        <button id="gmBtnJournal" title="Journal de la partie (horodaté)" style="width:24px; height:24px; padding:0; border:1px solid rgba(199,125,255,0.4); background:rgba(150,90,200,0.3); border-radius:3px; color:#c79cff; font-size:13px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;">📜</button>
         <button id="gmBtnCollapse" title="Réduire/Maximiser" style="width:24px; height:24px; padding:0; border:1px solid rgba(199,125,255,0.4); background:rgba(100,150,255,0.3); border-radius:3px; color:#6699ff; font-size:14px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;">−</button>
         <button id="gmBtnClose" title="Fermer" style="width:24px; height:24px; padding:0; border:1px solid rgba(199,125,255,0.4); background:rgba(200,100,200,0.3); border-radius:3px; color:#dd77ff; font-size:14px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;">✕</button>
       </div>
@@ -63,6 +64,12 @@ function attachWindowsButtonsEvents(gameUI) {
   document.getElementById('gmBtnLog')?.addEventListener('click', () => {
     const m = mdj();
     if (m && typeof m.downloadGameLog === 'function') m.downloadGameLog();
+    else alert('Journal indisponible (la partie MDJ n\'est pas active).');
+  });
+
+  document.getElementById('gmBtnJournal')?.addEventListener('click', () => {
+    const m = mdj();
+    if (m && typeof m.openJournalOverlay === 'function') m.openJournalOverlay();
     else alert('Journal indisponible (la partie MDJ n\'est pas active).');
   });
 

@@ -202,7 +202,8 @@ Object.assign(FirstNightMDJ.prototype, {
         lynch:     { emoji: '🪓', bg: '#9966CC', label: 'le village (bûcher)' },
         chasseur:  { emoji: '🏹', bg: _killerColor('Chasseur', '#D4A574'), label: 'le Chasseur' },
         chevalier: { emoji: '⚔️', bg: _killerColor('Chevalier_Epee_Rouille', '#FFD700'), label: 'le Chevalier' },
-        love:      { emoji: '💔', bg: _killerColor('Cupidon', '#D6899E'), label: 'amour (Cupidon)' }
+        love:      { emoji: '💔', bg: _killerColor('Cupidon', '#D6899E'), label: 'amour (Cupidon)' },
+        mdj:       { emoji: '🛟', bg: '#888', label: 'le Maître du Jeu (secours)' }
       };
       const killerInfo = _cause ? killerInfoMap[_cause] : null;
       const killerBadge = killerInfo
@@ -232,9 +233,208 @@ Object.assign(FirstNightMDJ.prototype, {
     `;
 
     mapContainer.innerHTML = html;
+
+    // Tap / clic sur un joueur => ouvre sa fiche (statut + historique + secours tuer/revivre).
+    // Fonctionne au tactile. Le clic gauche n'est pas utilisé pour la sélection de cible.
+    mapContainer.querySelectorAll('.mdj-player-point').forEach(pt => {
+      const open = (e) => { e.preventDefault(); e.stopPropagation(); this.openPlayerPopup(pt.dataset.playerId); };
+      pt.addEventListener('click', open);
+    });
   }
 ,
 
+
+  // Fiche joueur (tactile) : statut + historique des "mouvements" + secours tuer/revivre.
+  // ---- Audio MDJ (joue directement les fichiers du soundboard, sans ouvrir la fenêtre) ----
+  mdjMusicList() {
+    return [
+      { name: '🌙 1ère Nuit',     file: '1ere Nuit - Harpfire Reliquary.mp3' },
+      { name: '🐺 Nuit (Lycans)', file: 'Nuit - Wounded Ringers.mp3' },
+      { name: '☀️ Jour (Village)', file: 'Jour - Salted Confession.mp3' },
+      { name: '⚖️ Vote Final',     file: 'Vote Final - Gavel Thunder.mp3' },
+      { name: '💀 Qui est mort ?', file: '05 Mission Objective.mp3' }
+    ];
+  }
+,
+  mdjRoleSfx(roleId) {
+    const m = {
+      Cupidon: 'Cupidon Firing Arrow.mp3',
+      Enfant_Sauvage: 'virtualzero-boy-giggling-playful-laugh-hd-379353.mp3',
+      Chien_Loup: 'stu9-dog-howl-2-352681.mp3',
+      Montreur_Ours: 'universfield-bear-191995.mp3',
+      Chevalier_Epee_Rouille: 'creatorshome-draw-a-sword-327726.mp3',
+      Voyante: 'universfield-mysterious-places-30s-159313.mp3',
+      Renard: 'BANK_01_INSTR_0000_SND_006D.mp3',
+      Salvateur: 'dragon-studio-holy-spell-cast-450460.mp3',
+      Simple_Loup_Garou: 'Voicy_Howling werewolf sound effect.mp3',
+      Grand_Mechant_Loup: 'universfield-wolf-howling-140235.mp3',
+      Loup_Garou_Blanc: 'alesiadavina-werewolf-sound-pain-wail-457328.mp3',
+      Infect_Pere_Loups: 'Voicy_Werewolves Sound Effects - Copie.mp3',
+      Loup_Garou_Voyant: 'freesound_community-wolf-howl-6310.mp3',
+      Sorciere: 'Witch Laughing.mp3',
+      Corbeau: 'dragon-studio-crow-caw-with-echoing-reverb-472375.mp3'
+    };
+    return m[roleId] || null;
+  }
+,
+  mdjPlaySfx(file) {
+    if (!file) return;
+    try { const a = new Audio(encodeURI('sfx/' + file)); a.volume = 1; a.play().catch(() => {}); } catch (_) {}
+  }
+,
+  mdjPlayMusic(file) {
+    if (!file) return;
+    try {
+      this.mdjStopMusic();
+      const a = new Audio(encodeURI('music/' + file));
+      a.loop = true; a.volume = 0.6;
+      a.play().catch(() => {});
+      this._mdjMusicAudio = a;
+    } catch (_) {}
+  }
+,
+  mdjStopMusic() {
+    try { if (this._mdjMusicAudio) { this._mdjMusicAudio.pause(); this._mdjMusicAudio = null; } } catch (_) {}
+  }
+,
+  // Barre audio (à insérer dans l'en-tête d'action) : son du rôle + combobox musique + stop.
+  mdjAudioToolbarHtml(roleId) {
+    const sfx = this.mdjRoleSfx(roleId);
+    const opts = this.mdjMusicList().map(m => '<option value="' + m.file + '">' + m.name + '</option>').join('');
+    const b = 'border:none; border-radius:5px; padding:3px 7px; font-size:12px; cursor:pointer; color:#fff;';
+    return '<span style="float:right; display:inline-flex; gap:4px; align-items:center;">'
+      + (sfx ? '<button id="mdj-role-sfx" title="Jouer le son du rôle" style="' + b + ' background:rgba(120,90,200,0.7);">🔊</button>' : '')
+      + '<select id="mdj-music-sel" title="Lancer une musique" style="font-size:11px; padding:3px; border-radius:5px; background:#1a1a2e; color:#fff; border:1px solid rgba(199,125,255,0.5); max-width:130px;">'
+      + '<option value="">🎵 Musique…</option>' + opts + '</select>'
+      + '<button id="mdj-music-stop" title="Stop musique" style="' + b + ' background:rgba(180,90,90,0.7);">⏹</button>'
+      + '</span>';
+  }
+,
+  mdjWireAudioToolbar(roleId) {
+    const sfx = this.mdjRoleSfx(roleId);
+    const sb = document.getElementById('mdj-role-sfx');
+    if (sb) sb.addEventListener('click', (e) => { e.stopPropagation(); this.mdjPlaySfx(sfx); });
+    const sel = document.getElementById('mdj-music-sel');
+    if (sel) sel.addEventListener('change', (e) => { e.stopPropagation(); if (sel.value) this.mdjPlayMusic(sel.value); });
+    const st = document.getElementById('mdj-music-stop');
+    if (st) st.addEventListener('click', (e) => { e.stopPropagation(); this.mdjStopMusic(); });
+  }
+,
+
+  // Journal complet de la partie (horodaté, chronologique) en plein écran.
+  openJournalOverlay() {
+    const j = (typeof this.getJournal === 'function') ? this.getJournal() : [];
+    const old = document.getElementById('mdj-journal-overlay');
+    if (old) old.remove();
+
+    const rows = j.length ? j.map(e => {
+      if (e.kind === 'nightsep') return '<div style="margin:12px 0 6px; text-align:center; color:#81dff7; font-weight:800; letter-spacing:1px;">' + e.text + '</div>';
+      if (e.kind === 'phase') return '<div style="margin-top:8px; font-weight:800; color:#e0a0ff;"><span style="opacity:.6; font-weight:400; font-size:11px;">' + e.date + ' ' + e.time + '</span> — ' + e.text + '</div>';
+      if (e.kind === 'assign') return '<div style="padding-left:16px; color:#bfe9ff; font-size:12px;">' + e.text + '</div>';
+      return '<div style="font-size:12px; color:#e8e8f0; padding:1px 0;"><span style="opacity:.55;">' + e.date + ' ' + e.time + '</span> : ' + e.text + '</div>';
+    }).join('') : '<div style="opacity:.6;">Journal vide pour l\'instant.</div>';
+
+    const plain = j.map(e => (e.kind === 'nightsep' ? '\n' + e.text + '\n' : (e.date + ' ' + e.time + ' : ' + e.text))).join('\n');
+
+    const ov = document.createElement('div');
+    ov.id = 'mdj-journal-overlay';
+    ov.style.cssText = 'position:fixed; inset:0; z-index:100001; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.6); backdrop-filter:blur(2px);';
+    ov.innerHTML =
+      '<div style="width:min(620px,94vw); height:min(80vh,720px); display:flex; flex-direction:column; background:linear-gradient(135deg,#161a28,#241f38); border:2px solid rgba(199,125,255,0.5); border-radius:12px; box-shadow:0 12px 48px rgba(0,0,0,0.6); color:#e8e8f0; overflow:hidden;">'
+      + '<div style="display:flex; align-items:center; gap:10px; padding:12px 14px; border-bottom:1px solid rgba(199,125,255,0.3); background:rgba(0,0,0,0.25);">'
+      +   '<span style="font-size:18px; font-weight:800;">📜 Journal de la partie</span>'
+      +   '<span style="flex:1;"></span>'
+      +   '<button id="mdj-journal-copy" style="padding:7px 12px; border:1px solid rgba(255,255,255,0.25); border-radius:7px; background:rgba(90,120,200,0.6); color:#fff; font-weight:700; cursor:pointer;">📋 Copier</button>'
+      +   '<button id="mdj-journal-close" style="padding:7px 12px; border:1px solid rgba(255,255,255,0.25); border-radius:7px; background:rgba(255,255,255,0.1); color:#fff; font-weight:700; cursor:pointer;">Fermer</button>'
+      + '</div>'
+      + '<div style="flex:1; overflow:auto; padding:12px 16px; font-family:ui-monospace,Menlo,Consolas,monospace; line-height:1.45;">' + rows + '</div>'
+      + '</div>';
+    document.body.appendChild(ov);
+
+    ov.addEventListener('click', (e) => { if (e.target === ov) ov.remove(); });
+    const c = document.getElementById('mdj-journal-close');
+    if (c) c.addEventListener('click', () => ov.remove());
+    const cp = document.getElementById('mdj-journal-copy');
+    if (cp) cp.addEventListener('click', () => {
+      try { navigator.clipboard.writeText(plain); cp.textContent = '✅ Copié'; setTimeout(() => { cp.textContent = '📋 Copier'; }, 1500); }
+      catch (_) { alert('Copie indisponible'); }
+    });
+  }
+,
+
+  openPlayerPopup(playerId) {
+    const players = this.gm.state.players || [];
+    const p = players.find(pp => pp.id === playerId);
+    if (!p) return;
+    const old = document.getElementById('mdj-player-popup');
+    if (old) old.remove();
+
+    const rolesData = (window.ROLES_DATA && window.ROLES_DATA.roles) || {};
+    const roleData = rolesData[p.role] || {};
+    const emoji = roleData.emoji || '\u2753';
+    const isDead = this.deadPlayerIds.has(playerId);
+    const cause = this.deathCauses && this.deathCauses[playerId];
+    const causeLabel = {
+      wolf: 'Loups-Garous', poison: 'Sorcière (poison)', lynch: 'village (vote)',
+      chasseur: 'Chasseur', chevalier: 'Chevalier', love: 'chagrin (amoureux)',
+      savant: 'Savant Fou', mdj: 'Maître du Jeu'
+    }[cause] || '';
+    const statusHtml = isDead
+      ? '<span style="color:#ff8a8a; font-weight:800;">\u2620\uFE0F MORT' + (causeLabel ? ' — ' + causeLabel : '') + '</span>'
+      : '<span style="color:#7CFC9A; font-weight:800;">\u2764\uFE0F Vivant</span>';
+
+    const history = (typeof this.getPlayerHistory === 'function') ? this.getPlayerHistory(playerId) : [];
+    const histHtml = history.length
+      ? history.map(h => '<div style="padding:3px 0; border-bottom:1px solid rgba(255,255,255,0.08); font-size:12px;"><b style="color:#81dff7;">Nuit ' + h.night + '</b> : ' + h.text + '</div>').join('')
+      : '<div style="opacity:0.55; font-size:12px;">Aucun événement enregistré</div>';
+
+    const toggleLabel = isDead ? '\u2764\uFE0F Faire revivre' : '\u2620\uFE0F Forcer la mort';
+    const toggleBg = isDead ? 'rgba(90,170,110,0.85)' : 'rgba(190,80,80,0.85)';
+
+    const ov = document.createElement('div');
+    ov.id = 'mdj-player-popup';
+    ov.style.cssText = 'position:fixed; inset:0; z-index:100000; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.55); backdrop-filter:blur(2px);';
+    ov.innerHTML =
+      '<div style="width:min(340px,90vw); max-height:80vh; overflow:auto; background:linear-gradient(135deg,#1c2030,#2a2440); border:2px solid rgba(199,125,255,0.5); border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,0.6); padding:16px; color:#e8e8f0;">'
+      + '<div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">'
+      +   '<span style="font-size:26px;">' + (isDead ? '\uD83D\uDC80' : emoji) + '</span>'
+      +   '<div style="flex:1;"><div style="font-size:17px; font-weight:800;">' + p.name + '</div>'
+      +   '<div style="font-size:11px; opacity:0.75;">' + (roleData.name || p.role || '') + (this.mayorId === p.id ? ' \uD83C\uDF96\uFE0F Maire' : '') + '</div></div>'
+      + '</div>'
+      + '<div style="margin:6px 0 10px;">' + statusHtml + '</div>'
+      + '<div style="font-size:11px; color:#81dff7; font-weight:700; margin-bottom:3px;">\uD83D\uDCDC Historique</div>'
+      + '<div style="background:rgba(0,0,0,0.25); border-radius:6px; padding:6px 9px; margin-bottom:12px;">' + histHtml + '</div>'
+      + '<div style="display:flex; gap:8px;">'
+      +   '<button id="mdj-popup-toggle" style="flex:1; padding:11px; border:none; border-radius:8px; font-weight:700; color:#fff; cursor:pointer; background:' + toggleBg + ';">' + toggleLabel + '</button>'
+      +   '<button id="mdj-popup-close" style="padding:11px 14px; border:1px solid rgba(255,255,255,0.25); border-radius:8px; font-weight:700; color:#e8e8f0; cursor:pointer; background:rgba(255,255,255,0.08);">Fermer</button>'
+      + '</div>'
+      + '<div style="margin-top:8px; font-size:10px; opacity:0.55; text-align:center;">Secours MDJ — modifie l\'état vivant/mort manuellement</div>'
+      + '</div>';
+    document.body.appendChild(ov);
+
+    ov.addEventListener('click', (e) => { if (e.target === ov) ov.remove(); });
+    const closeBtn = document.getElementById('mdj-popup-close');
+    if (closeBtn) closeBtn.addEventListener('click', () => ov.remove());
+    const toggleBtn = document.getElementById('mdj-popup-toggle');
+    if (toggleBtn) toggleBtn.addEventListener('click', () => {
+      if (this.deadPlayerIds.has(playerId)) {
+        this.deadPlayerIds.delete(playerId);
+        if (this.deathCauses) delete this.deathCauses[playerId];
+        if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(playerId, '[MJ] l\'a fait revivre');
+      } else {
+        this.deadPlayerIds.add(playerId);
+        if (this.deathCauses) this.deathCauses[playerId] = 'mdj';
+        if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(playerId, '[MJ] a forcé la mort');
+      }
+      if (this.gm && typeof this.gm.saveState === 'function') this.gm.saveState();
+      ov.remove();
+      this.renderLiveMap();
+      if (typeof this.renderLegend === 'function') this.renderLegend();
+      if (typeof this.renderRoleListbox === 'function') this.renderRoleListbox();
+      if (typeof this.checkVictoryNow === 'function') this.checkVictoryNow();
+    });
+  }
+,
 
   /**
    * Render legend showing all players with their emoji and color
@@ -922,3 +1122,5 @@ Object.assign(FirstNightMDJ.prototype, {
   }
 
 });
+
+

@@ -112,6 +112,12 @@ Object.assign(FirstNightMDJ.prototype, {
     // Ancien tué par le village → les VILLAGEOIS à pouvoir n'agissent plus (plus que les loups).
     if (this.ancienKilledByVillage() && roleData.camp === 'Village' && !this.isWolfRoleId(roleId)) return false;
 
+    // Sorcière : si elle n'a plus aucune potion (inventaire vide), on passe son tour.
+    if (roleId === 'Sorciere') {
+      const inv = this.gm.state.sorciereInv;
+      if (inv && (inv.life || 0) <= 0 && (inv.death || 0) <= 0) return false;
+    }
+
     // 1) Planning explicite par nightActive (prioritaire). Ex: Loup Blanc n'a PAS
     //    de nightActive -> on passe a la phase ci-dessous.
     const nightActive = roleData.nightActive || [];
@@ -383,6 +389,68 @@ Object.assign(FirstNightMDJ.prototype, {
 
   // Recalcule les camps et declenche la victoire immediatement (independant du DOM).
   // Utilise apres CHAQUE mort (tir du Chasseur, lynch, cascade) pour ne pas attendre.
+  // ---- Journal de partie horodaté (chronologique, persistant) ----
+  journalLog(text, opts) {
+    if (!text) return;
+    try {
+      if (!Array.isArray(this.gm.state.gameJournal)) this.gm.state.gameJournal = [];
+      const now = new Date();
+      const pad = (x) => String(x).padStart(2, '0');
+      const date = pad(now.getDate()) + '/' + pad(now.getMonth() + 1) + '/' + now.getFullYear();
+      const time = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+      this.gm.state.gameJournal.push({
+        ts: now.getTime(), date, time,
+        night: (opts && opts.night != null) ? opts.night : (this.currentNight || 1),
+        kind: (opts && opts.kind) || 'event',
+        text
+      });
+      if (this.gm && typeof this.gm.saveState === 'function') this.gm.saveState();
+    } catch (_) {}
+  }
+,
+  getJournal() { return this.gm.state.gameJournal || []; }
+,
+  // Journalise une seule fois le début de partie (joueurs + assignation + NUIT 1)
+  logGameStartOnce() {
+    try {
+      if (this.gm.state._journalStarted) return;
+      const players = this.gm.state.players || [];
+      if (!players.length || !players.every(p => p.role)) return;
+      this.gm.state._journalStarted = true;
+      const names = players.map(p => p.name).join(', ');
+      this.journalLog('🎬 Début de partie — joueurs : ' + names, { kind: 'phase' });
+      this.journalLog('🃏 ASSIGNATION des rôles :', { kind: 'phase' });
+      players.forEach(p => {
+        const rd = this.rolesLoader.getRole(p.role) || {};
+        this.journalLog('• ' + p.name + ' = ' + (rd.name || p.role || '?'), { kind: 'assign' });
+      });
+      this.journalLog('━━━━━━━━━ NUIT 1 ━━━━━━━━━', { kind: 'nightsep', night: 1 });
+    } catch (_) {}
+  }
+,
+  // ---- Historique des "mouvements" par joueur (pour la fiche joueur) ----
+  logPlayerEvent(playerId, text) {
+    if (!playerId || !text) return;
+    try {
+      if (!this.gm.state.playerHistory) this.gm.state.playerHistory = {};
+      const h = this.gm.state.playerHistory;
+      if (!h[playerId]) h[playerId] = [];
+      const night = this.currentNight || 1;
+      const last = h[playerId][h[playerId].length - 1];
+      if (!last || last.night !== night || last.text !== text) {
+        h[playerId].push({ night, text });
+        const nm = this.getPlayerName ? this.getPlayerName(playerId) : playerId;
+        this.journalLog(nm + ' : ' + text);   // journal global chronologique
+        if (this.gm && typeof this.gm.saveState === 'function') this.gm.saveState();
+      }
+    } catch (_) {}
+  }
+,
+  getPlayerHistory(playerId) {
+    return (this.gm.state.playerHistory && this.gm.state.playerHistory[playerId]) || [];
+  }
+,
+
   checkVictoryNow() {
     const players = this.gm.state.players || [];
     const alive = players.filter(p => !this.deadPlayerIds.has(p.id));

@@ -68,7 +68,8 @@ Object.assign(FirstNightMDJ.prototype, {
 
     // Chasseur revenge kill
     if (deadChaseur) {
-      const validTargets = alivePlayers.filter(p => p.role && (p.role.includes('Loup') || p.role.includes('Wolf')));
+      // Le Chasseur peut tuer N'IMPORTE QUI de vivant (sauf lui-même)
+      const validTargets = alivePlayers.filter(p => p.id !== deadChaseur.id);
       html += `
         <div style="padding:12px; background:rgba(210,180,140,0.2); border:2px solid #D4A574; border-radius:6px; margin-bottom:12px;">
           <h4 style="margin:0 0 8px 0; color:#D4A574; font-size:12px;">🏹 ${deadChaseur.name} (Chasseur) - Vengeance</h4>
@@ -159,8 +160,10 @@ Object.assign(FirstNightMDJ.prototype, {
 
     if (!listbox) return;
 
-    // Simply disable clicks on blue zone - do NOT modify its content
-    this.disableRoleListbox();
+    // (Avant: on désactivait les clics de la zone bleue.)
+    // On garde la liste CLIQUABLE pour permettre de re-saisir un rôle depuis l'écran de résumé.
+    const _lb = document.getElementById('role-listbox');
+    if (_lb) { _lb.style.opacity = '1'; _lb.style.pointerEvents = 'auto'; }
 
     // UPDATE RIGHT PANEL WITH NIGHT SUMMARY
     const titleBig = document.getElementById('action-title-big');
@@ -597,6 +600,21 @@ Object.assign(FirstNightMDJ.prototype, {
       deadThisNight.push(lynchVictim);
     }
 
+    // Malédiction du Chevalier : le loup maudit meurt au DÉBRIEF de la nuit suivante
+    // (il a donc pu jouer une dernière fois la nuit en cours).
+    if (this.chevalierCursedWolfId && (this.currentNight || 1) > (this.chevalierCurseSetNight || 0)) {
+      const cw = this.chevalierCursedWolfId;
+      if (!this.deadPlayerIds.has(cw)) {
+        this.deadPlayerIds.add(cw);
+        this.deathCauses[cw] = 'chevalier';
+        if (typeof this.checkCupidonCascadingDeath === 'function') this.checkCupidonCascadingDeath(cw);
+        if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(cw, "Mort — maudit par le Chevalier à l'Épée Rouillée");
+      }
+      if (!deadThisNight.includes(cw)) deadThisNight.push(cw);
+      this.chevalierCursedWolfId = null;
+      this.chevalierCurseSetNight = null;
+    }
+
     // Lynch can include ANYONE alive, even wolves - removed wolf filter
     const alivePlayers = players.filter(p => !this.deadPlayerIds.has(p.id));
 
@@ -643,7 +661,8 @@ Object.assign(FirstNightMDJ.prototype, {
     });
 
     // Collect deaths
-    const deadPlayers = players.filter(p => this.deadPlayerIds.has(p.id));
+    // Uniquement les morts de CETTE nuit (pas tout l'historique de la partie)
+    const deadPlayers = players.filter(p => this.deadPlayerIds.has(p.id) && deadThisNight.includes(p.id));
     deadPlayers.forEach(p => {
       const roleData = this.rolesLoader.getRole(p.role);
       const emoji = roleData?.emoji || '❓';
@@ -803,14 +822,16 @@ Object.assign(FirstNightMDJ.prototype, {
         const isWolf = leftNeighbor && (leftNeighbor.role?.includes('Loup') || leftNeighbor.role?.includes('Wolf'));
 
         if (isWolf && !this.deadPlayerIds.has(leftNeighbor.id)) {
-          // Mark this wolf to die next night
+          // Marque ce loup comme maudit ; il meurt au débrief de la nuit SUIVANTE.
           this.chevalierCursedWolfId = leftNeighbor.id;
+          this.chevalierCurseSetNight = this.currentNight || 1;
           const wolfName = leftNeighbor.name;
-          console.log(`[MDJ] ⚔️ Chevalier cursed wolf: ${wolfName} will die NEXT night`);
+          console.log(`[MDJ] ⚔️ Chevalier : loup maudit à gauche = ${wolfName} (meurt au débrief de la nuit suivante)`);
 
           specialSectionsHtml += `
             <div style="border: 1px solid #FFD700; border-radius: 3px; padding: 6px; background: rgba(255,215,0,0.08); margin-bottom: 6px;">
-              <div style="color: #FFD700; font-size: 9px; font-weight: 700;">⚔️ ${wolfName} maudit</div>
+              <div style="color: #FFD700; font-size: 10px; font-weight: 700;">⚔️ <b>${wolfName}</b> — loup à gauche du Chevalier — est maudit</div>
+              <div style="color: #ffe9a0; font-size: 9px; margin-top:2px;">Il jouera encore la nuit prochaine, puis mourra (annoncé au débrief d'après).</div>
             </div>
           `;
         }
@@ -823,10 +844,42 @@ Object.assign(FirstNightMDJ.prototype, {
       ? `<div style="margin-bottom:8px; padding:8px; text-align:center; font-size:11px; font-weight:700; color:#9ee6b0; background:rgba(80,200,120,0.12); border:1px solid rgba(80,200,120,0.4); border-radius:6px;">🌙 Personne n'est mort cette nuit</div>`
       : '';
 
+    // Événements de la nuit (chronologique) — depuis le journal, filtré à la nuit courante
+    const _jrn = (typeof this.getJournal === 'function' ? this.getJournal() : [])
+      .filter(e => e.night === (this.currentNight || 1) && e.kind === 'event');
+    const eventsChronoHtml = _jrn.length
+      ? _jrn.map(e => `<div style="font-size:10px; padding:2px 6px; border-left:2px solid #c79cff; color:#e8d8ff; line-height:1.3;">🕒 ${e.time} — ${e.text}</div>`).join('')
+      : '<div style="font-size:9px; opacity:.5; padding:4px 6px;">Aucun événement</div>';
+    const eventsPanel = `
+      <div style="border:1px solid rgba(201,124,255,0.3); border-radius:4px; padding:8px; margin-bottom:8px; background:rgba(60,40,90,0.15);">
+        <div style="color:#c79cff; font-size:10px; font-weight:700; margin-bottom:4px; text-transform:uppercase;">📜 Événements de la nuit</div>
+        <div style="max-height:120px; overflow-y:auto; display:flex; flex-direction:column; gap:2px;">${eventsChronoHtml}</div>
+      </div>`;
+
+    // Rappel Corbeau : +2 votes contre sa cible (s'il est vivant et a désigné)
+    let corbeauReminder = '';
+    const _cbRes = this.roleStates && this.roleStates['Corbeau'] && this.roleStates['Corbeau'].result;
+    const _cbAlive = (this.gm.state.players || []).some(pl => pl.role === 'Corbeau' && !this.deadPlayerIds.has(pl.id));
+    if (_cbAlive && _cbRes && _cbRes.action === 'steal_votes' && Array.isArray(_cbRes.targets)) {
+      const cbId = _cbRes.targets.find(t => !String(t).startsWith('potion-'));
+      const cb = cbId && (this.gm.state.players || []).find(p => p.id === cbId);
+      if (cb && !this.deadPlayerIds.has(cb.id)) {
+        corbeauReminder = `<div style="padding:8px; margin-bottom:8px; background:rgba(40,40,60,0.9); border:2px solid #7a7ab0; border-radius:6px; font-size:11px; font-weight:700; color:#e0e0f0;">🐦‍⬛ Corbeau : <b>+2 votes</b> contre <b>${cb.name}</b> au vote d'aujourd'hui.</div>`;
+      }
+    }
+
     // STYLIZED COMPACT LAYOUT: Dark mode with purple/pink accents
     return `
+      <style>
+        @keyframes lgFlameFlicker { 0%,100%{ text-shadow:0 0 6px #ff9d00, 0 0 12px #ff5a00; opacity:1;} 50%{ text-shadow:0 0 10px #ffd000, 0 0 22px #ff3000; opacity:0.85;} }
+        @keyframes lgFlameRise { 0%{ transform:translateY(0) scale(1);} 50%{ transform:translateY(-2px) scale(1.15);} 100%{ transform:translateY(0) scale(1);} }
+        .lg-flame { display:inline-block; animation: lgFlameRise 0.7s ease-in-out infinite; }
+        .lg-bucher-title { background:linear-gradient(90deg,#ffe000,#ff8a00,#ff2d00); -webkit-background-clip:text; background-clip:text; color:transparent; font-weight:900; animation: lgFlameFlicker 1s ease-in-out infinite; }
+      </style>
       <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 6px; padding: 10px; border: 1px solid rgba(201,124,255,0.2);">
         ${noDeathBanner}
+        ${corbeauReminder}
+        ${eventsPanel}
         <!-- 2 Columns: Actions & Morts -->
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
           <!-- ACTIONS -->
@@ -859,7 +912,7 @@ Object.assign(FirstNightMDJ.prototype, {
 
         <!-- LYNCH SELECTION -->
         <div style="border: 1px solid rgba(201,124,255,0.4); border-radius: 4px; padding: 8px; background: linear-gradient(135deg, rgba(201,124,255,0.12) 0%, rgba(150,50,200,0.08) 100%);">
-          <div style="color: #e0a0ff; font-size: 10px; font-weight: 700; margin-bottom: 4px; text-transform: uppercase; text-shadow: 0 0 10px rgba(224,160,255,0.3);">🪓 Au Bûcher</div>
+          <div class="lg-bucher-title" style="font-size: 13px; margin-bottom: 4px; text-transform: uppercase;"><span class="lg-flame">🔥</span> AU BÛCHER <span class="lg-flame">🔥</span></div>
           <select id="lynch-target" style="width: 100%; padding: 6px; font-size: 11px; border-radius: 4px; border: 1px solid #e0a0ff; background: #1a1a2e; color: #fff; font-weight: 600;">
             <option value="" style="background: #1a1a2e; color: #fff;">-- Sélectionner --</option>
             ${alivePlayers.map(p => `<option value="${p.id}" style="background: #1a1a2e; color: #fff;">${p.name}</option>`).join('')}
@@ -1096,12 +1149,13 @@ Object.assign(FirstNightMDJ.prototype, {
       // If Chasseur and can shoot, show combobox first
       if (chasseurCanShoot) {
         const alivePlayers = players.filter(p => !this.deadPlayerIds.has(p.id) && p.id !== victimId);
-        const validTargets = alivePlayers.filter(p => p.role && (p.role.includes('Loup') || p.role.includes('Wolf')));
+        // N'IMPORTE QUI de vivant (sauf lui-même)
+        const validTargets = alivePlayers;
 
         html += `
           <div style="margin-top: 16px; padding: 12px; background: rgba(210,180,140,0.2); border: 2px solid #D4A574; border-radius: 6px;">
             <h4 style="margin:0 0 8px 0; color:#D4A574; font-size:12px;">🏹 ${victim.name} peut tirer avant de mourir!</h4>
-            <p style="margin:0 0 8px 0; color:#ddd; font-size:11px;">Choisir sa cible parmi les loups:</p>
+            <p style="margin:0 0 8px 0; color:#ddd; font-size:11px;">Choisir sa cible (n'importe quel joueur vivant) :</p>
             <select id="chasseur-revenge-target" style="width:100%; padding:6px; background:#333; color:#fff; border:1px solid #666; border-radius:3px; font-size:11px;">
               <option value="">-- Pas de tir --</option>
               ${validTargets.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}

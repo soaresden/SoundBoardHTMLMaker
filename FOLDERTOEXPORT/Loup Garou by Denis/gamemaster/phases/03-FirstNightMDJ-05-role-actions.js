@@ -37,7 +37,9 @@ Object.assign(FirstNightMDJ.prototype, {
       })
       .join('');
 
-    actionControls.innerHTML = playerListHtml;
+    actionControls.innerHTML = `
+      <div style="font-size:11px; color:#ffd6e6; background:rgba(214,137,158,0.15); border:1px solid rgba(214,137,158,0.45); border-radius:6px; padding:7px 9px; margin-bottom:8px; line-height:1.35;">💡 <b>Astuce MJ</b> : une fois les 2 amoureux désignés, tu peux les réveiller ensemble pour qu'ils se reconnaissent (comme les Sœurs).</div>
+    ` + playerListHtml;
 
     // Attach click handlers for player selection
     actionControls.querySelectorAll('.cupidon-player-option').forEach(playerBtn => {
@@ -780,252 +782,176 @@ Object.assign(FirstNightMDJ.prototype, {
    */
   renderSorciereSelection(actionControls, actionInfo, bgColor, textColor, state) {
     if (!actionControls) return;
-
     const players = this.gm.state.players || [];
-    const sorciereRole = this.rolesLoader.getRole('Sorciere');
-    console.log('[MDJ] Sorciere role data:', sorciereRole);
-    const actions = sorciereRole?.actions?.mdj_night_actions || [];
-    const resurrectIcon = actions.find(a => a.id === 'resurrect')?.icon || '💚';
-    const poisonIcon = actions.find(a => a.id === 'poison')?.icon || '💜';
+    const sorciereRole = this.rolesLoader.getRole('Sorciere') || {};
+    const night = this.currentNight || 1;
 
-    // Get protected players for indicator
-    const protectedPlayers = this.getProtectedPlayers();
+    // ----- Inventaire persistant (sauvegardé à travers les tours) -----
+    if (!this.gm.state.sorciereInv) this.gm.state.sorciereInv = { life: 1, death: 1 };
+    if (!Array.isArray(this.gm.state.sorciereUsage)) this.gm.state.sorciereUsage = [];
+    const inv = this.gm.state.sorciereInv;
+    const usage = this.gm.state.sorciereUsage;
 
-    // Get victim from wolf pack kill (FIRST victim = the one killed by Simple_Loup_Garou)
-    let victimName = '???';
+    // Victime des loups (première attaque)
     let victimId = null;
-    let firstWolfKill = null;
-
-    console.log('[MDJ] Sorciere - roleStates keys:', Object.keys(this.roleStates));
-    console.log('[MDJ] Sorciere - Simple_Loup_Garou state:', this.roleStates['Simple_Loup_Garou']?.result);
-    console.log('[MDJ] Sorciere - Grand_Mechant_Loup state:', this.roleStates['Grand_Mechant_Loup']?.result);
-
-    // Check all wolves in order - take FIRST kill (Simple_Loup_Garou kills first in sequence)
     for (const roleId of this.getWolfKillRoleIds()) {
       const st = this.roleStates[roleId];
-      if (!st?.result || st.result.action !== 'kill') continue; // ignorer Chien-Loup (join_wolves) etc.
+      if (!st || !st.result || st.result.action !== 'kill') continue;
       const t = st.result.targets && st.result.targets[0];
-      if (!t || !players.some(p => p.id === t)) continue;       // doit etre un vrai joueur
-      if (!firstWolfKill) {
-        firstWolfKill = { roleId, victimId: t };
-        console.log(`[MDJ] Sorciere - Found firstWolfKill from ${roleId}:`, t);
-      }
+      if (!t || !players.some(p => p.id === t)) continue;
+      if (!victimId) victimId = t;
     }
-    if (firstWolfKill) {
-      victimId = firstWolfKill.victimId;
-      const player = players.find(p => p.id === victimId);
-      if (player) victimName = player.name;
-      console.log(`[MDJ] Sorciere - Victim:`, victimName, victimId);
+    const victimName = victimId ? this.getPlayerName(victimId) : null;
+    const protectedPlayers = this.getProtectedPlayers();
+    const victimProtected = victimId && protectedPlayers.has(victimId);
+
+    const lifeUsedThisNight = usage.find(u => u.type === 'life' && u.night === night);
+    const deathUsedThisNight = usage.find(u => u.type === 'death' && u.night === night);
+
+    const poisonOptions = players.filter(p => p.role !== 'Sorciere').map(p => {
+      const dead = this.deadPlayerIds.has(p.id);
+      const prot = protectedPlayers.has(p.id) ? ' (immunisé)' : '';
+      return `<option value="${p.id}">${p.name}${dead ? ' (mort)' : ''}${prot}</option>`;
+    }).join('');
+
+    const usageHtml = usage.length
+      ? usage.map(u => `<div style="font-size:11px; padding:2px 0; border-bottom:1px solid rgba(255,255,255,0.07);"><b>${u.type === 'life' ? '🧪 Vie' : '💀 Mort'}</b> → ${u.targetName} <span style="opacity:.6;">(Nuit ${u.night})</span></div>`).join('')
+      : '<div style="opacity:.55; font-size:11px;">Aucune potion utilisée</div>';
+
+    const stepBtn = 'border:none; border-radius:5px; width:30px; height:28px; font-weight:800; font-size:14px; cursor:pointer; color:#fff;';
+
+    // ----- Bloc Potion de Vie -----
+    let lifeBlock;
+    if (lifeUsedThisNight) {
+      lifeBlock = `<div style="display:flex; align-items:center; gap:8px;">
+          <span style="flex:1; color:#9affb0; font-size:12px;">✔ Utilisée sur <b>${lifeUsedThisNight.targetName}</b></span>
+          <button class="sorc-life-plus" title="Annuler (ce tour)" style="${stepBtn} background:rgba(90,120,200,0.8);">+1</button>
+        </div>`;
+    } else if (deathUsedThisNight) {
+      lifeBlock = `<div style="font-size:11px; opacity:.55;">🚫 Une seule potion par nuit (Mort déjà utilisée)</div>`;
+    } else if (inv.life > 0 && victimId) {
+      lifeBlock = `<div style="display:flex; align-items:center; gap:8px;">
+          <button class="sorc-life-minus" style="${stepBtn} background:rgba(90,170,110,0.9); width:auto; padding:0 10px;">−1 · Sauver ${victimName}${victimProtected ? ' (immunisé)' : ''}</button>
+        </div>`;
+    } else if (inv.life > 0) {
+      lifeBlock = `<div style="font-size:11px; opacity:.6;">Aucune victime à sauver cette nuit</div>`;
     } else {
-      console.log('[MDJ] Sorciere - NO WOLF KILL FOUND!');
+      lifeBlock = `<div style="font-size:11px; opacity:.6;">Plus de potion de vie</div>`;
     }
 
-    const selectedAction = this.selectedPlayers[0];
-    const selectedKillTarget = this.selectedPlayers[1] || null;
-
-    // Ensure victimName is a real name, not an ID
-    const hasVictim = !!victimId;
-    const displayVictimName = hasVictim ? this.getPlayerName(victimId) : "Personne n'est mort cette nuit";
-
-    // Check if victim is protected (immunisé)
-    const isVictimProtected = victimId && protectedPlayers.has(victimId);
-    const protectionLabel = isVictimProtected ? ' <span style="color: #ff9999; font-weight: bold;">(immunisé)</span>' : '';
-
-    // Potion de VIE: seulement s'il y a une victime ET si elle n'a pas deja ete utilisee
-    const lifePotionHtml = (hasVictim && !this.sorciereLifeUsed) ? `
-        <button class="potion-btn life-potion ${selectedAction === 'potion-life' ? 'selected' : ''}" style="background: ${selectedAction === 'potion-life' ? bgColor + '50' : bgColor + '30'}; border: 2px solid ${bgColor};">
-          ${resurrectIcon} Potion Vie - La sauver
-        </button>` : '';
-
-    // Potion de MORT: combobox seulement si pas deja utilisee
-    const poisonHtml = (!this.sorcierePoisonUsed) ? `
-        <div style="color: #aaa; font-size: 0.7rem; margin: 8px 0; text-align: center;">─── ou ───</div>
-        <div style="color: white; font-size: 0.75rem; margin-bottom: 8px; padding: 6px; background: rgba(0,0,0,0.2); border-radius: 4px;">
-          Empoisonner un joueur:
-        </div>
-        <select class="sorciere-kill-combobox" style="width: 100%; padding: 8px; font-size: 0.85rem; background: rgba(30,30,60,0.9); color: #fff; border: 2px solid #ff6666; border-radius: 4px; font-weight: bold;">
-          <option value="">-- Choisir un joueur --</option>
-          ${(() => {
-            const poisonTargets = this.gm.state.players.filter(p => {
-              if (p.role === 'Sorciere') return false;
-              const isAlive = !this.deadPlayerIds.has(p.id);
-              const isTonightWolfVictim = victimId && p.id === victimId;
-              return isAlive || isTonightWolfVictim;
-            });
-            return poisonTargets.map(p => {
-              const isProtected = protectedPlayers.has(p.id);
-              const protectedLabel = isProtected ? ' (immunisé)' : '';
-              const isSelected = selectedAction === 'potion-death' && selectedKillTarget === p.id;
-              return `<option value="${p.id}" ${isSelected ? 'selected' : ''}>${p.name}${protectedLabel}</option>`;
-            }).join('');
-          })()}
-        </select>` : '';
+    // ----- Bloc Potion de Mort -----
+    let deathBlock;
+    if (deathUsedThisNight) {
+      deathBlock = `<div style="display:flex; align-items:center; gap:8px;">
+          <span style="flex:1; color:#ff9a9a; font-size:12px;">✔ Utilisée sur <b>${deathUsedThisNight.targetName}</b></span>
+          <button class="sorc-death-plus" title="Annuler (ce tour)" style="${stepBtn} background:rgba(90,120,200,0.8);">+1</button>
+        </div>`;
+    } else if (lifeUsedThisNight) {
+      deathBlock = `<div style="font-size:11px; opacity:.55;">🚫 Une seule potion par nuit (Vie déjà utilisée)</div>`;
+    } else if (inv.death > 0) {
+      deathBlock = `<div style="display:flex; gap:6px; align-items:center;">
+          <select class="sorc-death-target" style="flex:1; padding:7px; background:rgba(30,30,60,0.9); color:#fff; border:1px solid #ff6666; border-radius:4px; font-size:12px;">
+            <option value="">-- Empoisonner… --</option>
+            ${poisonOptions}
+          </select>
+          <button class="sorc-death-minus" style="${stepBtn} background:rgba(190,80,80,0.9); width:auto; padding:0 10px;">−1</button>
+        </div>`;
+    } else {
+      deathBlock = `<div style="font-size:11px; opacity:.6;">Plus de potion de mort</div>`;
+    }
 
     actionControls.innerHTML = `
       <div class="sorciere-controls">
-        <div style="color: white; font-size: 0.8rem; margin-bottom: 10px; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 4px; border-left: 3px solid ${bgColor};">
-          <strong>💀 Victime des Loups:</strong><br>
-          <span style="font-size: 0.9rem; font-weight: bold; color: #ffaaaa;">${displayVictimName}${protectionLabel}</span>
+        <div style="color:#fff; font-size:0.78rem; margin-bottom:8px; padding:7px; background:rgba(0,0,0,0.3); border-radius:4px; border-left:3px solid ${bgColor};">
+          <strong>💀 Victime des Loups :</strong>
+          <span style="font-weight:bold; color:#ffaaaa;">${victimName || "personne"}${victimProtected ? " (immunisé)" : ""}</span>
         </div>
 
-        ${lifePotionHtml}
+        <div style="background:rgba(80,160,110,0.12); border:1px solid rgba(120,220,150,0.35); border-radius:6px; padding:8px; margin-bottom:8px;">
+          <div style="font-size:12px; font-weight:700; color:#9affb0; margin-bottom:6px;">🧪 Potion de Vie — reste : ${inv.life}</div>
+          ${lifeBlock}
+        </div>
 
-        <button class="potion-btn do-nothing-btn ${selectedAction === 'do-nothing' ? 'selected' : ''}" style="background: ${selectedAction === 'do-nothing' ? 'rgba(100,100,100,0.5)' : 'rgba(100,100,100,0.3)'}; border: 2px solid #999;">
-          ⏭️ Ne rien faire
-        </button>
-        ${poisonHtml}
+        <div style="background:rgba(190,80,80,0.12); border:1px solid rgba(255,120,120,0.35); border-radius:6px; padding:8px; margin-bottom:8px;">
+          <div style="font-size:12px; font-weight:700; color:#ff9a9a; margin-bottom:6px;">💀 Potion de Mort — reste : ${inv.death}</div>
+          ${deathBlock}
+        </div>
+
+        <div style="background:rgba(0,0,0,0.22); border-radius:6px; padding:7px 9px;">
+          <div style="font-size:11px; color:#81dff7; font-weight:700; margin-bottom:3px;">📜 Inventaire / usages</div>
+          ${usageHtml}
+        </div>
       </div>
     `;
 
-    // Life potion button - save the victim
-    actionControls.querySelector('.life-potion')?.addEventListener('click', () => {
-      // IMPORTANT: inclure l'id de la victime pour que completeRoleAction la retire des morts
-      this.selectedPlayers = victimId ? ['potion-life', victimId] : ['potion-life'];
-
-      // Setup actionState for validation
-      this.actionState = {
-        roleId: 'Sorciere',
-        action: 'resurrect',
-        roleName: sorciereRole?.name || 'Sorciere',
-        roleEmoji: sorciereRole?.emoji || '🧙‍♀️'
-      };
-
+    const rerender = () => {
+      if (this.gm && typeof this.gm.saveState === 'function') this.gm.saveState();
       this.renderActionButtons();
+      this.renderLiveMap();
+      if (typeof this.renderLegend === 'function') this.renderLegend();
+    };
 
-      // Restore victim's original colors and add resurrection border
-      if (victimId) {
-        const mdjMap = document.getElementById('mdj-live-map');
-        if (mdjMap) {
-          const victimPoint = mdjMap.querySelector(`[data-player-id="${victimId}"]`);
-          if (victimPoint) {
-            const victimPlayer = players.find(p => p.id === victimId);
-            if (victimPlayer) {
-              const victimRole = this.rolesLoader.getRole(victimPlayer.role);
-
-              // Restore normal colors (remove grayscale/dead effect)
-              victimPoint.style.filter = 'none';
-              victimPoint.style.opacity = '1';
-
-              // Restore emoji
-              const emoji = victimPoint.querySelector('.mdj-point-emoji');
-              if (emoji) {
-                emoji.textContent = victimRole?.emoji || '❓';
-                emoji.style.color = victimRole?.visual?.roleColor?.emojiColor || 'inherit';
-                emoji.style.opacity = '1';
-              }
-
-              // Add green border for resurrection
-              const dot = victimPoint.querySelector('.mdj-point-dot');
-              if (dot) {
-                dot.style.setProperty('--affected-border', '#00ff00'); // Green border
-                victimPoint.classList.add('affected');
-              }
-
-              console.log(`[MDJ] 🧙‍♀️ Sorciere resurrection - restored ${victimPlayer.name} with green border`);
-            }
-          }
-        }
-      }
-
-      // Save after Sorciere life potion action
-      this.quickSave();
+    // Potion de Vie : −1 (sauver la victime)
+    actionControls.querySelector('.sorc-life-minus')?.addEventListener('click', () => {
+      if (inv.life <= 0 || !victimId || lifeUsedThisNight || deathUsedThisNight) return;
+      this.deadPlayerIds.delete(victimId);
+      if (this.deathCauses) delete this.deathCauses[victimId];
+      inv.life -= 1;
+      usage.push({ type: 'life', targetId: victimId, targetName: victimName, night });
+      if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(victimId, 'Sauvé par la Sorcière (potion de vie)');
+      rerender();
+    });
+    // Potion de Vie : +1 (annuler, ce tour uniquement)
+    actionControls.querySelector('.sorc-life-plus')?.addEventListener('click', () => {
+      if (!lifeUsedThisNight) return;
+      this.deadPlayerIds.add(lifeUsedThisNight.targetId);
+      if (this.deathCauses) this.deathCauses[lifeUsedThisNight.targetId] = 'wolf';
+      inv.life += 1;
+      const i = usage.indexOf(lifeUsedThisNight);
+      if (i >= 0) usage.splice(i, 1);
+      rerender();
     });
 
-    // Do-nothing button
-    actionControls.querySelector('.do-nothing-btn')?.addEventListener('click', () => {
-      this.selectedPlayers = ['do-nothing'];
-
-      // Setup actionState for validation
-      this.actionState = {
-        roleId: 'Sorciere',
-        action: 'skip',
-        roleName: sorciereRole?.name || 'Sorciere',
-        roleEmoji: sorciereRole?.emoji || '🧙‍♀️'
-      };
-
-      this.renderActionButtons();
-      console.log(`[MDJ] 🧙‍♀️ Sorciere: Ne rien faire`);
-
-      // Save after Sorciere action
-      this.quickSave();
+    // Potion de Mort : −1 (empoisonner la cible choisie)
+    actionControls.querySelector('.sorc-death-minus')?.addEventListener('click', () => {
+      if (inv.death <= 0 || deathUsedThisNight || lifeUsedThisNight) return;
+      const sel = actionControls.querySelector('.sorc-death-target');
+      const tgt = sel && sel.value;
+      if (!tgt) { alert('Choisissez un joueur à empoisonner.'); return; }
+      const tgtName = this.getPlayerName(tgt);
+      this.deadPlayerIds.add(tgt);
+      if (this.deathCauses) this.deathCauses[tgt] = 'poison';
+      if (typeof this.checkCupidonCascadingDeath === 'function') this.checkCupidonCascadingDeath(tgt);
+      inv.death -= 1;
+      usage.push({ type: 'death', targetId: tgt, targetName: tgtName, night });
+      if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(tgt, 'Empoisonné par la Sorcière');
+      rerender();
+      if (typeof this.checkVictoryNow === 'function') this.checkVictoryNow();
+    });
+    // Potion de Mort : +1 (annuler, ce tour uniquement)
+    actionControls.querySelector('.sorc-death-plus')?.addEventListener('click', () => {
+      if (!deathUsedThisNight) return;
+      this.deadPlayerIds.delete(deathUsedThisNight.targetId);
+      if (this.deathCauses) delete this.deathCauses[deathUsedThisNight.targetId];
+      inv.death += 1;
+      const i = usage.indexOf(deathUsedThisNight);
+      if (i >= 0) usage.splice(i, 1);
+      rerender();
     });
 
-    // Combobox for kill selection
-    const combobox = actionControls.querySelector('.sorciere-kill-combobox');
-    if (combobox) {
-      combobox.addEventListener('change', () => {
-        const playerId = combobox.value;
-        if (!playerId) {
-          this.selectedPlayers = [];
-          this.renderActionButtons();
-          return;
-        }
-
-        const playerName = this.getPlayerName(playerId);
-        console.log(`[MDJ] 🧙‍♀️ Sorciere: ${playerName} selected for poison`);
-
-        // RESTORE PREVIOUS VICTIM FROM RESURRECTION (if they had Potion Vie)
-        if (victimId && this.selectedPlayers[0] === 'potion-life') {
-          const mdjMap = document.getElementById('mdj-live-map');
-          if (mdjMap) {
-            const victimPoint = mdjMap.querySelector(`[data-player-id="${victimId}"]`);
-            if (victimPoint && this.deadPlayerIds.has(victimId)) {
-              // Victim is actually dead, restore grayscale + skull
-              victimPoint.style.filter = 'grayscale(100%) brightness(0.5)';
-              victimPoint.style.opacity = '0.6';
-
-              const emoji = victimPoint.querySelector('.mdj-point-emoji');
-              if (emoji) {
-                emoji.textContent = '💀';
-                emoji.style.opacity = '0.6';
-              }
-
-              const dot = victimPoint.querySelector('.mdj-point-dot');
-              if (dot) {
-                dot.style.setProperty('--affected-border', 'transparent');
-              }
-              victimPoint.classList.remove('affected');
-
-              console.log(`[MDJ] 🧙‍♀️ Sorciere - restored ${this.getPlayerName(victimId)} to dead state`);
-            }
-          }
-        }
-
-        this.selectedPlayers = ['potion-death', playerId];
-        console.log(`[MDJ] 🧙‍♀️ Sorciere selectedPlayers: poison → ${playerName}`);
-
-        // Setup actionState for validation
+    // Bouton Terminer (valide le tour de la Sorcière sans re-appliquer d'effet)
+    if (actionInfo) {
+      actionInfo.innerHTML = `<button class="btn-validate-action">✓ Terminer le tour de la Sorcière</button>`;
+      actionInfo.querySelector('.btn-validate-action')?.addEventListener('click', () => {
+        this.selectedPlayers = [];
         this.actionState = {
           roleId: 'Sorciere',
-          action: 'poison',
-          roleName: sorciereRole?.name || 'Sorciere',
-          roleEmoji: sorciereRole?.emoji || '🧙‍♀️'
+          action: 'sorciere-turn',
+          roleName: sorciereRole.name || 'Sorcière',
+          roleEmoji: sorciereRole.emoji || '🧙‍♀️'
         };
-
-        this.renderActionButtons();
-        this.updateMapForRole();
-        console.log(`[MDJ] 🧙‍♀️ Sorciere visuals applied for ${playerName}`);
-
-        // Save after Sorciere death potion selection
-        this.quickSave();
+        this.completeRoleAction();
       });
-    }
-
-    if (actionInfo) {
-      if (this.selectedPlayers.length > 0) {
-        // CRITICAL: Check for do-nothing action (must use different label)
-        let buttonLabel = '✓ Utiliser Mort';
-        if (this.selectedPlayers[0] === 'potion-life') {
-          buttonLabel = '✓ Utiliser Vie';
-        } else if (this.selectedPlayers[0] === 'do-nothing') {
-          buttonLabel = '✓ Valider ne rien faire';
-        }
-        actionInfo.innerHTML = `<button class="btn-validate-action">${buttonLabel}</button>`;
-        actionInfo.querySelector('.btn-validate-action')?.addEventListener('click',
-          () => this.completeRoleAction());
-      } else {
-        actionInfo.innerHTML = 'Sélectionnez une potion';
-      }
     }
   }
 ,
@@ -1244,6 +1170,10 @@ Object.assign(FirstNightMDJ.prototype, {
         action: 'lover',
         targets: [lover1.id, lover2.id]  // Store IDs not names!
       };
+    }
+    if (typeof this.logPlayerEvent === 'function') {
+      this.logPlayerEvent(lover1.id, 'Désigné amoureux par Cupidon');
+      this.logPlayerEvent(lover2.id, 'Désigné amoureux par Cupidon');
     }
 
     // Clear selections & role state, but KEEP map effects visible

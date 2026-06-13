@@ -13,26 +13,10 @@ Object.assign(FirstNightMDJ.prototype, {
     // Avance vers la nuit suivante : incrémente (avant: bloqué en dur à 2)
     this.currentNight = (this.currentNight || 1) + 1;
     console.log('[MDJ] ===== NIGHT ' + this.currentNight + ' START =====');
+    this.journalLog('━━━━━━━━━ NUIT ' + this.currentNight + ' ━━━━━━━━━', { kind: 'nightsep' });
 
-    // CRITICAL: Malédiction du Chevalier à l'Épée Rouillée — le loup maudit meurt
-    // au début de la nuit qui suit la mort du Chevalier (quelle que soit la nuit).
-    if (this.chevalierCursedWolfId && !this.deadPlayerIds.has(this.chevalierCursedWolfId)) {
-      const cursedWolf = this.gm?.state?.players?.find(p => p.id === this.chevalierCursedWolfId);
-      if (cursedWolf) {
-        this.deadPlayerIds.add(this.chevalierCursedWolfId);
-        this.deathCauses[this.chevalierCursedWolfId] = 'chevalier';
-        console.log(`[MDJ] ⚔️ Malédiction du Chevalier : ${cursedWolf.name} meurt au début de la nuit ${this.currentNight}`);
-
-        // Si le loup maudit était un amoureux de Cupidon -> mort en cascade
-        this.checkCupidonCascadingDeath(this.chevalierCursedWolfId);
-
-        // Met à jour la carte + la légende pour afficher le loup comme mort (bug: restait vivant)
-        if (typeof this.renderLiveMap === 'function') this.renderLiveMap();
-        if (typeof this.renderLegend === 'function') this.renderLegend();
-      }
-      // Malédiction consommée une seule fois
-      this.chevalierCursedWolfId = null;
-    }
+    // La malédiction du Chevalier est désormais appliquée au DÉBRIEF de la nuit suivante
+    // (voir getNightSummaryHtml) afin que le loup maudit joue une dernière fois avant de mourir.
 
     // Reset selections for night 2
     this.selectedRoleId = null;
@@ -42,6 +26,10 @@ Object.assign(FirstNightMDJ.prototype, {
     this.selectedLynchVictimId = null;
 
     // Reinitialize role states for Night 2 (only roles with night actions)
+    // Instantané des morts AU DÉBUT de la nuit : un joueur tué PENDANT cette nuit
+    // doit quand même jouer son tour (on ne saute que ceux déjà morts avant).
+    this.gm.state.deadAtNightStart = Array.from(this.deadPlayerIds);
+
     this.initializeNight2RoleStates();
 
     // Update the center panel header
@@ -134,6 +122,7 @@ Object.assign(FirstNightMDJ.prototype, {
   renderRoleListbox() {
     const listbox = document.getElementById('role-listbox');
     if (!listbox) return;
+    if (typeof this.logGameStartOnce === 'function') this.logGameStartOnce();
 
     // PRIORITY 1: If mayor election not done yet, show it FIRST (before any roles)
     if (!this.mayorElectionCompleted) {
@@ -145,11 +134,9 @@ Object.assign(FirstNightMDJ.prototype, {
     const completedRoleIds = Object.keys(this.roleStates);
     const allCompleted = completedRoleIds.length > 0 && completedRoleIds.every(roleId => this.roleStates[roleId].completed);
 
-    if (allCompleted) {
-      // Just disable clicks - zone bleue MUST stay as player list!
-      this.disableRoleListbox();
-      return this.renderNightSummary();
-    }
+    // (Avant: on désactivait la liste et on affichait le résumé en bloquant les clics.)
+    // Désormais la liste reste CLIQUABLE même quand tout est joué -> permet de RE-SAISIR un rôle.
+    const _showSummaryAfter = allCompleted;
 
     // ALWAYS SHOW: Re-enable clicks at night phases
     if (listbox.style.pointerEvents === 'none') {
@@ -189,7 +176,7 @@ Object.assign(FirstNightMDJ.prototype, {
         const actsThisNight = this.roleActsThisNight(roleId);
         if (!actsThisNight) return false;
 
-        const playerWithRole = players.find(p => p.role === roleId && !this.deadPlayerIds.has(p.id));
+        const playerWithRole = players.find(p => p.role === roleId && !(new Set(this.gm.state.deadAtNightStart || [])).has(p.id));
         return !!playerWithRole;
       });
 
@@ -286,24 +273,8 @@ Object.assign(FirstNightMDJ.prototype, {
       const isGreyedOut = item.classList.contains('disabled');
 
       item.addEventListener('click', () => {
-        if (!isGreyedOut) {
-          const roleData = this.rolesLoader.getRole(roleId);
-          const actsThisNight = this.roleActsThisNight(roleId);
-
-          // Only allow selection if role acts this night
-          if (actsThisNight) {
-            this.selectedRoleId = roleId;
-            console.log(`[MDJ] Selected role ${roleId} for player ${playerId}`);
-
-            // Apply breathing effect
-            this.renderLiveMap();
-            this.updateMapForRole();
-            this.restoreCompletedRoleEffects();
-
-            // Re-render to update selection visual
-            this.renderRoleListbox();
-          }
-        }
+        // Toujours cliquable (secours / ré-édition) : même mort, même déjà joué, même sans action.
+        this.selectRole(roleId, true);
       });
     });
 
@@ -322,7 +293,7 @@ Object.assign(FirstNightMDJ.prototype, {
         if (!actsThisNight) return false;
 
         // Also check that at least one player with this role is alive
-        const playerWithRole = players.find(p => p.role === roleId && !this.deadPlayerIds.has(p.id));
+        const playerWithRole = players.find(p => p.role === roleId && !(new Set(this.gm.state.deadAtNightStart || [])).has(p.id));
         return !!playerWithRole;
       });
 
@@ -336,8 +307,12 @@ Object.assign(FirstNightMDJ.prototype, {
       }
     }
 
-    // Show action section for selected role
-    this.renderActionButtons();
+    // Show action section for selected role — ou le résumé de nuit si tout a été joué
+    if (_showSummaryAfter) {
+      this.renderNightSummary();
+    } else {
+      this.renderActionButtons();
+    }
   }
 ,
 
@@ -593,12 +568,47 @@ Object.assign(FirstNightMDJ.prototype, {
    * Select a role from the listbox
    * @param {string} roleId
    */
-  selectRole(roleId) {
+  reopenRole(roleId) {
+    // Rouvre un rôle déjà joué pour RE-SAISIR : annule (best-effort) les morts qu'il a causées,
+    // ré-initialise ses compteurs, et le repasse en "non complété". Pas de bouton reset.
+    const st = this.roleStates[roleId];
+    if (!st) return;
+    const prev = st.result;
+    const causeForRole = {
+      'Simple_Loup_Garou': 'wolf', 'Grand_Mechant_Loup': 'wolf', 'Loup_Garou_Blanc': 'wolf',
+      'Loup_Garou_Voyant': 'wolf', 'Infect_Pere_Loups': 'wolf'
+      // NB: Sorcière gérée en inventaire verrouillé -> pas d'annulation auto de ses potions ici.
+    };
+    if (prev && Array.isArray(prev.targets)) {
+      prev.targets.forEach(t => {
+        if (String(t).startsWith('potion-')) return;
+        const cause = causeForRole[roleId];
+        if (cause && this.deadPlayerIds.has(t) && this.deathCauses[t] === cause) {
+          this.deadPlayerIds.delete(t);
+          delete this.deathCauses[t];
+        }
+      });
+    }
+    st.completed = false;
+    st.result = null;
+    this.selectedPlayers = [];
+    this.actionState = {};
+    if (this.gm && typeof this.gm.saveState === 'function') this.gm.saveState();
+  }
+,
+
+  selectRole(roleId, force = false) {
     // CRITICAL: Check if the player with this role is dead
     const players = this.gm.state.players || [];
     const playerWithRole = players.find(p => p.role === roleId);
 
-    if (playerWithRole && this.deadPlayerIds.has(playerWithRole.id)) {
+    // Ré-édition / secours : si on force, on rouvre un rôle déjà complété pour re-saisir
+    if (force && this.roleStates[roleId] && this.roleStates[roleId].completed) {
+      this.reopenRole(roleId);
+    }
+
+    const _deadAtStart = new Set(this.gm.state.deadAtNightStart || []);
+    if (!force && playerWithRole && _deadAtStart.has(playerWithRole.id)) {
       console.log(`[MDJ] ⚠️ SKIP: ${roleId} (${playerWithRole.name}) is DEAD - finding next role`);
       // Mark this role as completed so we don't try to select it again
       if (this.roleStates[roleId]) {
@@ -698,6 +708,7 @@ Object.assign(FirstNightMDJ.prototype, {
       // CRITICAL: Track Salvateur protection (can't protect same person 2 nights in a row)
       if (roleId === 'Salvateur' && action === 'protect' && this.selectedPlayers.length > 0) {
         this.lastSalvateurProtected = this.selectedPlayers[0];
+        this.logPlayerEvent(this.selectedPlayers[0], 'Protégé par le Salvateur');
         console.log(`[MDJ] Salvateur protected ${this.getPlayerName(this.lastSalvateurProtected)} - can't protect same person next night`);
       }
 
@@ -767,6 +778,7 @@ Object.assign(FirstNightMDJ.prototype, {
                   this.deadPlayerIds.add(otherLoverId);
                   const otherLoverName = this.getPlayerName(otherLoverId);
                   this.deathCauses[otherLoverId] = 'love'; // Died from love, not attack
+                  this.logPlayerEvent(otherLoverId, 'Mort de chagrin (amoureux)');
                   console.log(`[MDJ] 💔 Cascading death: ${otherLoverName} (${otherLoverId}) dies with lover ${playerName}`);
                 }
               }
@@ -780,6 +792,14 @@ Object.assign(FirstNightMDJ.prototype, {
               } else if (action === 'kill') {
                 this.deathCauses[playerId] = 'wolf';
               }
+            }
+            // Historique du joueur
+            {
+              const _c = this.deathCauses[playerId];
+              const _txt = _c === 'poison' ? 'Empoisonné par la Sorcière'
+                         : _c === 'wolf' ? 'Tué par les Loups-Garous'
+                         : 'Tué';
+              this.logPlayerEvent(playerId, _txt);
             }
 
             // Check for Enfant Sauvage idol death - transform to wolf
@@ -819,6 +839,7 @@ Object.assign(FirstNightMDJ.prototype, {
           if (this.deadPlayerIds.has(playerId)) {
             this.deadPlayerIds.delete(playerId);
             const playerName = this.getPlayerName(playerId);
+            this.logPlayerEvent(playerId, 'Sauvé par la Sorcière (potion de vie)');
             console.log(`[MDJ] 💚 Sorciere resurrected ${playerName} (${playerId}) - removed from dead list`);
           }
         }
