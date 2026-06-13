@@ -1173,9 +1173,16 @@ class GameMasterUI {
           container.innerHTML = '<div style="padding:20px; color:red;">Erreur: FirstNightMDJ non chargé</div>';
           return;
         }
-        // Create FirstNightMDJ instance - pass container
-        const mdjPhase = new FirstNightMDJ(this.gm, container);
-        mdjPhase.init();
+        // Réutilise l'instance existante (préserve l'état: maire, nuit, morts, rôles).
+        // On ne crée une NOUVELLE instance que si aucune n'existe (nouvelle partie : gm.mdj = null).
+        let mdjPhase = this.gm.mdj;
+        if (mdjPhase && typeof mdjPhase.init === 'function') {
+          mdjPhase.container = container;
+          mdjPhase.init();
+        } else {
+          mdjPhase = new FirstNightMDJ(this.gm, container);
+          mdjPhase.init();
+        }
         break;
 
       case 'nightMdj':

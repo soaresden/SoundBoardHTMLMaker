@@ -256,30 +256,37 @@ Object.assign(FirstNightMDJ.prototype, {
     ];
   }
 ,
-  mdjRoleSfx(roleId) {
+  // Sons disponibles par rôle (depuis les catégories du soundboard). Plusieurs sons possibles.
+  mdjRoleSounds(roleId) {
     const m = {
-      Cupidon: 'Cupidon Firing Arrow.mp3',
-      Enfant_Sauvage: 'virtualzero-boy-giggling-playful-laugh-hd-379353.mp3',
-      Chien_Loup: 'stu9-dog-howl-2-352681.mp3',
-      Montreur_Ours: 'universfield-bear-191995.mp3',
-      Chevalier_Epee_Rouille: 'creatorshome-draw-a-sword-327726.mp3',
-      Voyante: 'universfield-mysterious-places-30s-159313.mp3',
-      Renard: 'BANK_01_INSTR_0000_SND_006D.mp3',
-      Salvateur: 'dragon-studio-holy-spell-cast-450460.mp3',
-      Simple_Loup_Garou: 'Voicy_Howling werewolf sound effect.mp3',
-      Grand_Mechant_Loup: 'universfield-wolf-howling-140235.mp3',
-      Loup_Garou_Blanc: 'alesiadavina-werewolf-sound-pain-wail-457328.mp3',
-      Infect_Pere_Loups: 'Voicy_Werewolves Sound Effects - Copie.mp3',
-      Loup_Garou_Voyant: 'freesound_community-wolf-howl-6310.mp3',
-      Sorciere: 'Witch Laughing.mp3',
-      Corbeau: 'dragon-studio-crow-caw-with-echoing-reverb-472375.mp3'
+      Cupidon: [['Cupidon Firing Arrow.mp3', '🏹'], ['sims-2-falling-in-love.mp3', '🥰']],
+      Enfant_Sauvage: [['virtualzero-boy-giggling-playful-laugh-hd-379353.mp3', '🚸']],
+      Chien_Loup: [['stu9-dog-howl-2-352681.mp3', '🐶']],
+      Montreur_Ours: [['universfield-bear-191995.mp3', '🐻']],
+      Chevalier_Epee_Rouille: [['creatorshome-draw-a-sword-327726.mp3', '⚔️']],
+      Voyante: [['universfield-mysterious-places-30s-159313.mp3', '🔮']],
+      Renard: [['BANK_01_INSTR_0000_SND_006D.mp3', '🦊']],
+      Salvateur: [['dragon-studio-holy-spell-cast-450460.mp3', '😇'], ['freesound_community-short-choir-6116.mp3', '👼']],
+      Simple_Loup_Garou: [['Voicy_Howling werewolf sound effect.mp3', '🐺'], ['Voicy_Werewolves Sound Effects.mp3', '💀']],
+      Grand_Mechant_Loup: [['universfield-wolf-howling-140235.mp3', '🐺']],
+      Infect_Pere_Loups: [['Voicy_Werewolves Sound Effects - Copie.mp3', '🐺']],
+      Loup_Garou_Blanc: [['alesiadavina-werewolf-sound-pain-wail-457328.mp3', '🐺']],
+      Loup_Garou_Voyant: [['freesound_community-wolf-howl-6310.mp3', '🐺']],
+      Sorciere: [['freesound_community-bubbles-003-6397.mp3', '🧋'], ['Witch Laughing.mp3', '😏']],
+      Corbeau: [['dragon-studio-crow-caw-with-echoing-reverb-472375.mp3', '🐦‍⬛']]
     };
-    return m[roleId] || null;
+    return (m[roleId] || []).map(function (x) { return { file: x[0], label: x[1] }; });
   }
 ,
   mdjPlaySfx(file) {
     if (!file) return;
-    try { const a = new Audio(encodeURI('sfx/' + file)); a.volume = 1; a.play().catch(() => {}); } catch (_) {}
+    try {
+      const url = 'sfx/' + encodeURIComponent(file);
+      const a = new Audio(url);
+      a.volume = 1;
+      this._mdjSfxAudio = a; // garde une référence (évite le ramasse-miettes)
+      a.play().catch((err) => console.warn('[MDJ] son KO:', url, err));
+    } catch (e) { console.warn('[MDJ] son exception:', e); }
   }
 ,
   mdjPlayMusic(file) {
@@ -297,27 +304,19 @@ Object.assign(FirstNightMDJ.prototype, {
     try { if (this._mdjMusicAudio) { this._mdjMusicAudio.pause(); this._mdjMusicAudio = null; } } catch (_) {}
   }
 ,
-  // Barre audio (à insérer dans l'en-tête d'action) : son du rôle + combobox musique + stop.
+  // Barre audio (en-tête d'action) : 1 bouton par son disponible pour le rôle (SFX uniquement).
   mdjAudioToolbarHtml(roleId) {
-    const sfx = this.mdjRoleSfx(roleId);
-    const opts = this.mdjMusicList().map(m => '<option value="' + m.file + '">' + m.name + '</option>').join('');
-    const b = 'border:none; border-radius:5px; padding:3px 7px; font-size:12px; cursor:pointer; color:#fff;';
-    return '<span style="float:right; display:inline-flex; gap:4px; align-items:center;">'
-      + (sfx ? '<button id="mdj-role-sfx" title="Jouer le son du rôle" style="' + b + ' background:rgba(120,90,200,0.7);">🔊</button>' : '')
-      + '<select id="mdj-music-sel" title="Lancer une musique" style="font-size:11px; padding:3px; border-radius:5px; background:#1a1a2e; color:#fff; border:1px solid rgba(199,125,255,0.5); max-width:130px;">'
-      + '<option value="">🎵 Musique…</option>' + opts + '</select>'
-      + '<button id="mdj-music-stop" title="Stop musique" style="' + b + ' background:rgba(180,90,90,0.7);">⏹</button>'
-      + '</span>';
+    const sounds = this.mdjRoleSounds(roleId);
+    if (!sounds.length) return '';
+    const b = 'border:none; border-radius:5px; padding:3px 7px; font-size:13px; cursor:pointer; color:#fff;';
+    const sfxBtns = sounds.map(s => '<button class="mdj-sfx-btn" data-file="' + encodeURIComponent(s.file) + '" title="Jouer le son" style="' + b + ' background:rgba(120,90,200,0.8);">🔊' + s.label + '</button>').join('');
+    return '<span style="float:right; display:inline-flex; gap:4px; align-items:center; flex-wrap:wrap; justify-content:flex-end; max-width:60%;">' + sfxBtns + '</span>';
   }
 ,
   mdjWireAudioToolbar(roleId) {
-    const sfx = this.mdjRoleSfx(roleId);
-    const sb = document.getElementById('mdj-role-sfx');
-    if (sb) sb.addEventListener('click', (e) => { e.stopPropagation(); this.mdjPlaySfx(sfx); });
-    const sel = document.getElementById('mdj-music-sel');
-    if (sel) sel.addEventListener('change', (e) => { e.stopPropagation(); if (sel.value) this.mdjPlayMusic(sel.value); });
-    const st = document.getElementById('mdj-music-stop');
-    if (st) st.addEventListener('click', (e) => { e.stopPropagation(); this.mdjStopMusic(); });
+    document.querySelectorAll('.mdj-sfx-btn').forEach((bt) => {
+      bt.addEventListener('click', (e) => { e.stopPropagation(); try { this.mdjPlaySfx(decodeURIComponent(bt.dataset.file || '')); } catch (_) {} });
+    });
   }
 ,
 

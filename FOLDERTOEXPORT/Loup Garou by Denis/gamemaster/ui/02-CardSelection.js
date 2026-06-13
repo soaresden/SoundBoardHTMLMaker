@@ -443,6 +443,8 @@ function attachCardSelectionEvents(gameUI) {
     gameUI.gm.state.deadAtNightStart = [];
     gameUI.gm.state.sorciereInv = { life: 1, death: 1 };
     gameUI.gm.state.sorciereUsage = [];
+    // Nouvelle partie : on jette l'ancienne instance MDJ pour repartir d'un état propre
+    gameUI.gm.mdj = null;
     gameUI.gm.state.mode = 'deckNames';
     gameUI.gm.state.tableType = 'circle';
     gameUI.gm.saveState();

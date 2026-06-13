@@ -400,9 +400,12 @@ Object.assign(FirstNightMDJ.prototype, {
 
     // Title with role color background (emoji shown in list, not repeated here)
     if (titleBig) {
-      titleBig.innerHTML = `${roleData.name}${playerName ? ` (${playerName})` : ''}`;
+      window.__mdjAudio = this; // pour les boutons sons inline (ours dans le résumé, etc.)
+      const _audioBar = (typeof this.mdjAudioToolbarHtml === 'function') ? this.mdjAudioToolbarHtml(this.selectedRoleId) : '';
+      titleBig.innerHTML = `<span>${roleData.name}${playerName ? ` (${playerName})` : ''}</span>` + _audioBar;
       titleBig.style.background = bgColor;
       titleBig.style.color = textColor;
+      if (typeof this.mdjWireAudioToolbar === 'function') this.mdjWireAudioToolbar(this.selectedRoleId);
     }
 
     // [STANDARDISATION] Dispatch pilote par JSON ui.selectionRenderer

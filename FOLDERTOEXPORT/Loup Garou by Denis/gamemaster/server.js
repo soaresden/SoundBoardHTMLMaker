@@ -100,6 +100,10 @@ const server = http.createServer((req, res) => {
   const parsedUrl = url.parse(req.url, true);
   let pathname = parsedUrl.pathname;
 
+  // Décoder le %20 (espaces) et autres caractères encodés, sinon les fichiers
+  // contenant des espaces (ex: "Cupidon Firing Arrow.mp3") renvoient un 404.
+  try { pathname = decodeURIComponent(pathname); } catch (_) {}
+
   // Enlever le leading slash
   if (pathname.startsWith('/')) {
     pathname = pathname.slice(1);

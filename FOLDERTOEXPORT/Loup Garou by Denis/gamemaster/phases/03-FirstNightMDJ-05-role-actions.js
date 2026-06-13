@@ -675,11 +675,14 @@ Object.assign(FirstNightMDJ.prototype, {
       );
       console.log(`[MDJ]   - Loup_Garou_Blanc mode: filtering for OTHER WOLVES only (excluding dead)`);
     } else {
-      // Normal wolves kill non-wolves (no other wolves, no dead players, but protected can be shown with indicator)
+      // Les loups (dont le Grand Méchant Loup) ne tuent QUE des non-loups vivants :
+      // on exclut tout rôle loup ET tout joueur passé dans le camp Loup (ex: Enfant Sauvage transformé).
       validTargets = players.filter(p =>
-        !p.role.includes('Loup')
+        !this.deadPlayerIds.has(p.id)
+        && !this.isWolfRoleId(p.role)
+        && !p.role.includes('Loup')
         && !p.role.includes('Wolf')
-        && !this.deadPlayerIds.has(p.id)
+        && p.camp !== 'Loup' && p.camp !== 'Loups'
       );
       console.log(`[MDJ]   - Normal wolf mode (${this.selectedRoleId}): filtering for NON-WOLVES only (excluding dead)`);
     }
