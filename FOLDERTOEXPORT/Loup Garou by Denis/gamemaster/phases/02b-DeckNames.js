@@ -24,11 +24,12 @@ function renderDeckNames(gameUI) {
   // Pré-remplir le cache de profils avec le groupe connu (une seule fois),
   // pour que TOUS les prénoms habituels soient cliquables d'emblée.
   try {
-    if (!localStorage.getItem('lg_profiles_seeded')) {
-      const DEFAULTS = (typeof PLAYER_NAMES_SELECTION !== 'undefined' && Array.isArray(PLAYER_NAMES_SELECTION)) ? PLAYER_NAMES_SELECTION
+    if (!localStorage.getItem('lg_profiles_seeded_v2')) {
+      const DEFAULTS = (typeof window !== 'undefined' && Array.isArray(window.LG_PLAYER_NAMES) && window.LG_PLAYER_NAMES.length) ? window.LG_PLAYER_NAMES
+                     : (typeof PLAYER_NAMES_SELECTION !== 'undefined' && Array.isArray(PLAYER_NAMES_SELECTION)) ? PLAYER_NAMES_SELECTION
                      : (typeof PLAYER_NAMES !== 'undefined' && Array.isArray(PLAYER_NAMES)) ? PLAYER_NAMES : [];
       if (DEFAULTS.length && typeof lgAddProfiles === 'function') lgAddProfiles(DEFAULTS);
-      localStorage.setItem('lg_profiles_seeded', '1');
+      localStorage.setItem('lg_profiles_seeded_v2', '1');
     }
   } catch (_) {}
 
@@ -61,6 +62,9 @@ function renderDeckNames(gameUI) {
       <h2 style="padding:14px 16px; margin:0; border-bottom:2px solid rgba(199,125,255,0.3); background:linear-gradient(135deg, rgba(25,25,45,0.95), rgba(35,30,55,0.95)); font-size:17px; color:#e8e8f0;">
         👥 Ordre des joueurs — <span style="color:${allFilled ? '#66d999' : '#ffb84d'}">${placedCount}/${N}</span> placés
       </h2>
+      <div style="padding:7px 12px; background:rgba(129,223,247,0.1); border-bottom:1px solid rgba(199,125,255,0.2); font-size:11px; color:#bfe9ff; line-height:1.35;">
+        ℹ️ Mets les prénoms <b>dans l'ordre où les joueurs sont assis</b> (sens de passage de la tablette). Ça rendra la révélation plus simple : la tablette passe de main en main dans cet ordre.
+      </div>
 
       <div style="padding:8px 10px; background:linear-gradient(135deg, rgba(20,25,45,0.9), rgba(30,35,55,0.9)); border-bottom:1px solid rgba(199,125,255,0.2);">
         <div style="font-size:11px; color:#81dff7; font-weight:700; margin-bottom:5px;">Clique un prénom pour l'ajouter dans l'ordre <span style="opacity:0.6; font-weight:400;">(clic droit = retirer du cache)</span> :</div>
@@ -73,6 +77,7 @@ function renderDeckNames(gameUI) {
           <button id="dnAdd" style="${btn} background:rgba(90,160,110,0.7);">＋ Ajouter</button>
           <button id="dnRandom" style="${btn} background:rgba(150,90,200,0.6);">🎲 Au hasard</button>
           <button id="dnClear" style="${btn} background:rgba(180,90,90,0.55);">✖ Vider</button>
+          <button id="dnFromTxt" title="Recharger la liste depuis players.txt" style="${btn} background:rgba(90,120,200,0.65);">📄 players.txt</button>
         </div>
       </div>
 
@@ -152,6 +157,17 @@ function attachDeckNamesEvents(gameUI) {
     gm.state.players.forEach(p => { p.name = ''; });
     gm.saveState();
     gameUI.render();
+  });
+
+  document.getElementById('dnFromTxt')?.addEventListener('click', () => {
+    if (!confirm('Recharger la liste de profils depuis players.txt ?\nTes ajouts / suppressions en cache seront remplacés par le fichier.')) return;
+    const apply = (names) => {
+      const list = (names && names.length) ? names : ((typeof window !== 'undefined' && window.LG_PLAYER_NAMES) || []);
+      if (list.length && typeof lgSaveProfiles === 'function') lgSaveProfiles(list);
+      gameUI.render();
+    };
+    if (typeof window.reloadPlayerNamesFromTxt === 'function') window.reloadPlayerNamesFromTxt().then(apply);
+    else apply();
   });
 
   document.getElementById('dnBack')?.addEventListener('click', () => {

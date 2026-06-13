@@ -186,9 +186,9 @@ Object.assign(FirstNightMDJ.prototype, {
 
     if (actionInfo) {
       actionInfo.innerHTML = `
-        <button id="night-summary-btn-lynch" class="btn-validate-action"
-                style="width:100%; padding:12px; background:#ff6b00; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600; font-size:12px;">
-          🪓 Au Bûcher!
+        <button id="night-summary-btn-lynch" class="btn-validate-action lg-fire-btn"
+                style="width:100%; padding:14px; border-radius:8px; cursor:pointer; font-size:14px;">
+          🪓 AU BÛCHER <span class="lg-flame">🔥</span> !
         </button>
       `;
       // Add event listeners for combobox changes (update avatar on selection)
@@ -548,9 +548,9 @@ Object.assign(FirstNightMDJ.prototype, {
     if (actionInfo) {
       const isDisabled = !selectedVictim;
       actionInfo.innerHTML = `
-        <button id="btn-lynch" class="btn-validate-action"
-                style="width: 100%; padding: 12px; background: ${isDisabled ? '#999' : '#e74c3c'}; color: white; border: none; border-radius: 4px; cursor: ${isDisabled ? 'not-allowed' : 'pointer'}; font-weight: 600; font-size: 12px; opacity: ${isDisabled ? 0.6 : 1};">
-          🔥 Envoyer au Bûcher
+        <button id="btn-lynch" class="btn-validate-action ${isDisabled ? '' : 'lg-fire-btn'}"
+                style="width: 100%; padding: 14px; border-radius: 8px; font-size: 14px; cursor: ${isDisabled ? 'not-allowed' : 'pointer'}; opacity: ${isDisabled ? 0.5 : 1}; ${isDisabled ? 'background:#999; color:#fff; border:none; font-weight:700;' : ''}">
+          🪓 AU BÛCHER <span class="lg-flame">🔥</span> !
         </button>
       `;
 
@@ -572,6 +572,7 @@ Object.assign(FirstNightMDJ.prototype, {
    */
   getNightSummaryHtml() {
     const players = this.gm.state.players || [];
+    window.__mdjAudio = this; // pour les boutons sons inline
     const actions = [];
     const deaths = [];
 
@@ -620,7 +621,7 @@ Object.assign(FirstNightMDJ.prototype, {
 
     // Collect actions (ONLY role actions, not transformations or Montreur_Ours)
     const transformations = [];
-    Object.entries(this.roleStates).forEach(([roleId, state]) => {
+    Object.entries(this.roleStates).sort((a, b) => ((a[1] && a[1]._seq) || 0) - ((b[1] && b[1]._seq) || 0)).forEach(([roleId, state]) => {
       if (state.completed && state.result?.targets?.length > 0) {
         const roleData = this.rolesLoader.getRole(roleId);
         const roleName = roleData?.name || roleId;
@@ -726,8 +727,9 @@ Object.assign(FirstNightMDJ.prototype, {
         : '🐻 Ça ne grogne pas, pas de loup à proximité de l\'ours';
 
       montreurOursHtml = `
-        <div style="padding:4px 6px; margin-bottom:4px; background:rgba(139,69,19,0.08); border-left:2px solid #8B4513; font-size:9px; line-height:1.3;">
-          ${growlText}
+        <div style="padding:5px 7px; margin-bottom:4px; background:rgba(139,69,19,0.12); border-left:2px solid #8B4513; font-size:11px; line-height:1.4; display:flex; align-items:center; gap:8px;">
+          <span style="flex:1;">${growlText}</span>
+          <button onclick="window.__mdjAudio && window.__mdjAudio.mdjPlaySfx('universfield-bear-191995.mp3')" title="Jouer le son de l'ours" style="border:none; border-radius:6px; padding:4px 9px; background:rgba(139,69,19,0.8); color:#fff; font-size:13px; cursor:pointer;">🔊🐻</button>
         </div>
       `;
     }
@@ -875,27 +877,25 @@ Object.assign(FirstNightMDJ.prototype, {
         @keyframes lgFlameRise { 0%{ transform:translateY(0) scale(1);} 50%{ transform:translateY(-2px) scale(1.15);} 100%{ transform:translateY(0) scale(1);} }
         .lg-flame { display:inline-block; animation: lgFlameRise 0.7s ease-in-out infinite; }
         .lg-bucher-title { background:linear-gradient(90deg,#ffe000,#ff8a00,#ff2d00); -webkit-background-clip:text; background-clip:text; color:transparent; font-weight:900; animation: lgFlameFlicker 1s ease-in-out infinite; }
+        @keyframes lgFireBg { 0%{ background-position:0% 0%; } 50%{ background-position:0% 100%; } 100%{ background-position:0% 0%; } }
+        @keyframes lgFireGlow { 0%,100%{ box-shadow:0 0 10px #ff6a00, 0 0 22px rgba(255,60,0,0.5), inset 0 -6px 14px rgba(130,0,0,0.55); } 50%{ box-shadow:0 0 22px #ffb000, 0 0 38px rgba(255,120,0,0.7), inset 0 -10px 20px rgba(255,70,0,0.6); } }
+        @keyframes lgFlamesFlick { 0%,100%{ transform:scaleY(1) translateY(0); opacity:0.85; } 25%{ transform:scaleY(1.3) translateY(-1px); opacity:1; } 50%{ transform:scaleY(0.85) translateY(0); opacity:0.7; } 75%{ transform:scaleY(1.15) translateY(-1px); opacity:0.95; } }
+        .lg-fire-btn { position:relative; overflow:hidden; isolation:isolate; border:none !important; color:#fff !important; font-weight:900 !important; letter-spacing:0.5px; background:linear-gradient(180deg,#ffd24a 0%,#ff8a00 40%,#ff3a00 70%,#9c1500 100%) !important; background-size:100% 220% !important; animation: lgFireBg 1.6s ease-in-out infinite, lgFireGlow 0.9s ease-in-out infinite; text-shadow:0 1px 2px rgba(0,0,0,0.6), 0 0 8px rgba(255,190,0,0.7); }
+        .lg-fire-btn::before { content:''; position:absolute; left:-10%; right:-10%; bottom:-30%; height:90%; z-index:-1; pointer-events:none; background:radial-gradient(45% 100% at 20% 100%, #ffe07a 0%, #ff7a00 40%, transparent 72%), radial-gradient(45% 100% at 50% 100%, #fff0a0 0%, #ff5a00 42%, transparent 72%), radial-gradient(45% 100% at 80% 100%, #ffd24a 0%, #ff7a00 40%, transparent 72%); filter:blur(3px); transform-origin:bottom; animation: lgFlamesFlick 0.42s ease-in-out infinite; }
+        .lg-fire-btn::after { content:''; position:absolute; left:5%; right:5%; bottom:-15%; height:70%; z-index:-1; pointer-events:none; background:radial-gradient(50% 100% at 35% 100%, #fff4c0 0%, #ff9a00 45%, transparent 70%), radial-gradient(50% 100% at 70% 100%, #ffe07a 0%, #ff6a00 45%, transparent 70%); filter:blur(2px); transform-origin:bottom; animation: lgFlamesFlick 0.66s ease-in-out infinite 0.1s; }
       </style>
       <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 6px; padding: 10px; border: 1px solid rgba(201,124,255,0.2);">
         ${noDeathBanner}
         ${corbeauReminder}
-        ${eventsPanel}
-        <!-- 2 Columns: Actions & Morts -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
-          <!-- ACTIONS -->
+        <!-- Actions puis Morts, empilés (pleine largeur), sans scroll, chronologique -->
+        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:8px;">
           <div style="border: 1px solid rgba(0,191,255,0.3); border-radius: 4px; padding: 8px; background: linear-gradient(135deg, rgba(0,191,255,0.08) 0%, rgba(0,100,150,0.06) 100%);">
-            <div style="color: #4dd0e1; font-size: 10px; font-weight: 700; margin-bottom: 5px; text-transform: uppercase; text-shadow: 0 0 10px rgba(77,208,225,0.3);">📋 Actions</div>
-            <div style="max-height: 110px; overflow-y: auto;">
-              ${actionsHtml}
-            </div>
+            <div style="color: #4dd0e1; font-size: 11px; font-weight: 700; margin-bottom: 5px; text-transform: uppercase;">📋 Actions de la nuit</div>
+            <div>${actionsHtml}</div>
           </div>
-
-          <!-- MORTS -->
           <div style="border: 1px solid rgba(255,68,68,0.3); border-radius: 4px; padding: 8px; background: linear-gradient(135deg, rgba(255,68,68,0.08) 0%, rgba(150,30,30,0.06) 100%);">
-            <div style="color: #ff6b6b; font-size: 10px; font-weight: 700; margin-bottom: 5px; text-transform: uppercase; text-shadow: 0 0 10px rgba(255,107,107,0.3);">☠️ Morts</div>
-            <div style="max-height: 110px; overflow-y: auto;">
-              ${deathsHtml}
-            </div>
+            <div style="color: #ff6b6b; font-size: 11px; font-weight: 700; margin-bottom: 5px; text-transform: uppercase;">☠️ Morts de la nuit</div>
+            <div>${deathsHtml}</div>
           </div>
         </div>
 
@@ -912,7 +912,7 @@ Object.assign(FirstNightMDJ.prototype, {
 
         <!-- LYNCH SELECTION -->
         <div style="border: 1px solid rgba(201,124,255,0.4); border-radius: 4px; padding: 8px; background: linear-gradient(135deg, rgba(201,124,255,0.12) 0%, rgba(150,50,200,0.08) 100%);">
-          <div class="lg-bucher-title" style="font-size: 13px; margin-bottom: 4px; text-transform: uppercase;"><span class="lg-flame">🔥</span> AU BÛCHER <span class="lg-flame">🔥</span></div>
+          <div style="color:#ffd0a0; font-size: 11px; font-weight:700; margin-bottom: 6px;">Sélectionne la personne à envoyer au Feu</div>
           <select id="lynch-target" style="width: 100%; padding: 6px; font-size: 11px; border-radius: 4px; border: 1px solid #e0a0ff; background: #1a1a2e; color: #fff; font-weight: 600;">
             <option value="" style="background: #1a1a2e; color: #fff;">-- Sélectionner --</option>
             ${alivePlayers.map(p => `<option value="${p.id}" style="background: #1a1a2e; color: #fff;">${p.name}</option>`).join('')}

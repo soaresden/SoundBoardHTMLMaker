@@ -22,8 +22,10 @@ function shuffleArray(arr) {
 
 // Fonction pour obtenir N noms aléatoires et uniques
 function getRandomPlayerNames(count) {
-  const shuffled = shuffleArray(PLAYER_NAMES);
-  return shuffled.slice(0, Math.min(count, PLAYER_NAMES.length));
+  // Source unifiée : window.LG_PLAYER_NAMES (players.txt), sinon liste locale.
+  const src = (typeof window !== 'undefined' && Array.isArray(window.LG_PLAYER_NAMES) && window.LG_PLAYER_NAMES.length) ? window.LG_PLAYER_NAMES : PLAYER_NAMES;
+  const shuffled = shuffleArray(src);
+  return shuffled.slice(0, Math.min(count, src.length));
 }
 
 function renderChooseCard(gameUI) {

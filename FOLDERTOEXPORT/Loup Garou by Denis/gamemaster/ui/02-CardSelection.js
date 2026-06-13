@@ -23,8 +23,10 @@ function shuffleArrayCardSelection(arr) {
 
 // Fonction pour obtenir N noms aléatoires et uniques
 function getRandomPlayerNamesCardSelection(count) {
-  const shuffled = shuffleArrayCardSelection(PLAYER_NAMES_SELECTION);
-  return shuffled.slice(0, Math.min(count, PLAYER_NAMES_SELECTION.length));
+  // Source unifiée : window.LG_PLAYER_NAMES (players.txt), sinon liste locale.
+  const src = (typeof window !== 'undefined' && Array.isArray(window.LG_PLAYER_NAMES) && window.LG_PLAYER_NAMES.length) ? window.LG_PLAYER_NAMES : PLAYER_NAMES_SELECTION;
+  const shuffled = shuffleArrayCardSelection(src);
+  return shuffled.slice(0, Math.min(count, src.length));
 }
 
 // Overlay de chargement des rôles
@@ -434,6 +436,13 @@ function attachCardSelectionEvents(gameUI) {
     // Noms vidés pour construire l'ordre à partir de zéro (rôles assignés plus tard, au reveal).
     gameUI.gm.state.rolesPreassigned = false;
     gameUI.gm.state.players.forEach(p => { p.role = null; p.roleId = null; p.name = ''; });
+    // NOUVELLE PARTIE : on réinitialise le journal / l'historique / les compteurs de la partie précédente
+    gameUI.gm.state.gameJournal = [];
+    gameUI.gm.state.playerHistory = {};
+    gameUI.gm.state._journalStarted = false;
+    gameUI.gm.state.deadAtNightStart = [];
+    gameUI.gm.state.sorciereInv = { life: 1, death: 1 };
+    gameUI.gm.state.sorciereUsage = [];
     gameUI.gm.state.mode = 'deckNames';
     gameUI.gm.state.tableType = 'circle';
     gameUI.gm.saveState();

@@ -12,10 +12,7 @@ function renderWindowsButtons() {
         <div id="gmChrono" style="background:rgba(74, 157, 111, 0.2); border:2px solid #66d999; padding:4px 10px; border-radius:4px; color:#66d999; font-weight:700; font-size:12px; min-width:55px; text-align:center;">00:00</div>
         <button id="gmBtnReset" title="Réinitialiser la partie" style="width:24px; height:24px; padding:0; border:1px solid rgba(199,125,255,0.4); background:rgba(220,100,100,0.3); border-radius:3px; color:#ff6b6b; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;">↻</button>
         <button id="gmBtnRefresh" title="Recharger (bypass cache)" style="width:24px; height:24px; padding:0; border:1px solid rgba(199,125,255,0.4); background:rgba(100,200,100,0.3); border-radius:3px; color:#66ff66; font-size:14px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;">🆕</button>
-        <button id="gmBtnSkipRole" title="Passer le rôle courant (secours)" style="width:24px; height:24px; padding:0; border:1px solid rgba(199,125,255,0.4); background:rgba(255,180,80,0.25); border-radius:3px; color:#ffb84d; font-size:13px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;">⏭</button>
-        <button id="gmBtnForceSummary" title="Forcer le résumé de la nuit (secours)" style="width:24px; height:24px; padding:0; border:1px solid rgba(199,125,255,0.4); background:rgba(120,160,255,0.25); border-radius:3px; color:#9ec0ff; font-size:13px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;">🌙</button>
         <button id="gmBtnLog" title="Télécharger le journal (debug)" style="width:24px; height:24px; padding:0; border:1px solid rgba(199,125,255,0.4); background:rgba(100,200,150,0.25); border-radius:3px; color:#66e0a0; font-size:13px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;">📥</button>
-        <button id="gmBtnJournal" title="Journal de la partie (horodaté)" style="width:24px; height:24px; padding:0; border:1px solid rgba(199,125,255,0.4); background:rgba(150,90,200,0.3); border-radius:3px; color:#c79cff; font-size:13px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;">📜</button>
         <button id="gmBtnCollapse" title="Réduire/Maximiser" style="width:24px; height:24px; padding:0; border:1px solid rgba(199,125,255,0.4); background:rgba(100,150,255,0.3); border-radius:3px; color:#6699ff; font-size:14px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;">−</button>
         <button id="gmBtnClose" title="Fermer" style="width:24px; height:24px; padding:0; border:1px solid rgba(199,125,255,0.4); background:rgba(200,100,200,0.3); border-radius:3px; color:#dd77ff; font-size:14px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;">✕</button>
       </div>
@@ -67,24 +64,5 @@ function attachWindowsButtonsEvents(gameUI) {
     else alert('Journal indisponible (la partie MDJ n\'est pas active).');
   });
 
-  document.getElementById('gmBtnJournal')?.addEventListener('click', () => {
-    const m = mdj();
-    if (m && typeof m.openJournalOverlay === 'function') m.openJournalOverlay();
-    else alert('Journal indisponible (la partie MDJ n\'est pas active).');
-  });
 
-  document.getElementById('gmBtnForceSummary')?.addEventListener('click', () => {
-    const m = mdj();
-    if (m && typeof m.forceNightSummary === 'function') {
-      if (confirm('Forcer le résumé de la nuit ? (marque les rôles restants comme faits)')) m.forceNightSummary();
-    } else {
-      alert('Résumé indisponible (la partie MDJ n\'est pas active).');
-    }
-  });
-
-  document.getElementById('gmBtnSkipRole')?.addEventListener('click', () => {
-    const m = mdj();
-    if (m && typeof m.forceSkipCurrentRole === 'function') m.forceSkipCurrentRole();
-    else alert('Action indisponible (la partie MDJ n\'est pas active).');
-  });
 }

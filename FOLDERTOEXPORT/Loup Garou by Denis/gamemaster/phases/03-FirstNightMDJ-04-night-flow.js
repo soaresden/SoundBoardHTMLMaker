@@ -264,7 +264,21 @@ Object.assign(FirstNightMDJ.prototype, {
       })
       .join('');
 
-    listbox.innerHTML = playerListHtml || '<div style="color: white; padding: 10px; text-align: center; font-size: 0.75rem;">Aucun joueur</div>';
+    listbox.innerHTML = (playerListHtml || '<div style="color: white; padding: 10px; text-align: center; font-size: 0.75rem;">Aucun joueur</div>')
+      + '<button id="mdj-goto-summary" style="width:100%; margin-top:8px; padding:10px; border:none; border-radius:8px; background:linear-gradient(135deg,#5174db,#c77dff); color:#fff; font-weight:800; font-size:12px; cursor:pointer;">📋 Résumé de la nuit →</button>';
+
+    // Bouton "Résumé de la nuit" : termine le tour des rôles (équivaut à ne rien faire de plus)
+    document.getElementById('mdj-goto-summary')?.addEventListener('click', () => {
+      // Marque les rôles encore "à jouer" comme complétés (aucune action), puis affiche le résumé
+      Object.keys(this.roleStates || {}).forEach(rid => {
+        if (this.roleStates[rid] && !this.roleStates[rid].completed) {
+          this.roleStates[rid].completed = true;
+          if (!this.roleStates[rid].result) this.roleStates[rid].result = { action: 'none', targets: [] };
+        }
+      });
+      if (this.gm && typeof this.gm.saveState === 'function') this.gm.saveState();
+      this.renderNightSummary();
+    });
 
     // Attach click handlers to select player's role
     listbox.querySelectorAll('.listbox-item').forEach(item => {
@@ -568,16 +582,17 @@ Object.assign(FirstNightMDJ.prototype, {
    * Select a role from the listbox
    * @param {string} roleId
    */
-  reopenRole(roleId) {
-    // Rouvre un rôle déjà joué pour RE-SAISIR : annule (best-effort) les morts qu'il a causées,
-    // ré-initialise ses compteurs, et le repasse en "non complété". Pas de bouton reset.
+  reverseRoleEffect(roleId) {
+    // Annule (best-effort) les morts causées par CE rôle lors de sa saisie précédente.
+    // Appelé au moment de RE-VALIDER une saisie (pas au simple clic) -> si on ne re-valide rien,
+    // rien n'est touché.
     const st = this.roleStates[roleId];
     if (!st) return;
     const prev = st.result;
     const causeForRole = {
       'Simple_Loup_Garou': 'wolf', 'Grand_Mechant_Loup': 'wolf', 'Loup_Garou_Blanc': 'wolf',
       'Loup_Garou_Voyant': 'wolf', 'Infect_Pere_Loups': 'wolf'
-      // NB: Sorcière gérée en inventaire verrouillé -> pas d'annulation auto de ses potions ici.
+      // NB: Sorcière gérée en inventaire verrouillé.
     };
     if (prev && Array.isArray(prev.targets)) {
       prev.targets.forEach(t => {
@@ -589,11 +604,6 @@ Object.assign(FirstNightMDJ.prototype, {
         }
       });
     }
-    st.completed = false;
-    st.result = null;
-    this.selectedPlayers = [];
-    this.actionState = {};
-    if (this.gm && typeof this.gm.saveState === 'function') this.gm.saveState();
   }
 ,
 
@@ -602,11 +612,7 @@ Object.assign(FirstNightMDJ.prototype, {
     const players = this.gm.state.players || [];
     const playerWithRole = players.find(p => p.role === roleId);
 
-    // Ré-édition / secours : si on force, on rouvre un rôle déjà complété pour re-saisir
-    if (force && this.roleStates[roleId] && this.roleStates[roleId].completed) {
-      this.reopenRole(roleId);
-    }
-
+    // (Re-cliquer un rôle déjà joué ne change RIEN tant qu'on ne re-valide pas.)
     const _deadAtStart = new Set(this.gm.state.deadAtNightStart || []);
     if (!force && playerWithRole && _deadAtStart.has(playerWithRole.id)) {
       console.log(`[MDJ] ⚠️ SKIP: ${roleId} (${playerWithRole.name}) is DEAD - finding next role`);
@@ -682,6 +688,12 @@ Object.assign(FirstNightMDJ.prototype, {
 
     console.log(`[MDJ] Completing role action: ${roleId} -> ${action}`);
 
+    // Ré-édition : si ce rôle avait déjà été joué, on annule d'abord son effet précédent,
+    // puis on ré-applique la nouvelle saisie ci-dessous (évite le double-comptage).
+    if (roleId && this.roleStates[roleId] && this.roleStates[roleId].completed) {
+      this.reverseRoleEffect(roleId);
+    }
+
     // Log the action
     if (this.selectedPlayers.length > 0) {
       if (this.logger && typeof this.logger.logAction === 'function') {
@@ -704,6 +716,7 @@ Object.assign(FirstNightMDJ.prototype, {
         action: action,
         targets: [...this.selectedPlayers]
       };
+      this.roleStates[roleId]._seq = (this._seqCounter = (this._seqCounter || 0) + 1);
 
       // CRITICAL: Track Salvateur protection (can't protect same person 2 nights in a row)
       if (roleId === 'Salvateur' && action === 'protect' && this.selectedPlayers.length > 0) {

@@ -62,33 +62,23 @@
     }
 
     btnGameMaster.addEventListener('click', function() {
-      console.log('[GameMaster] btnGameMaster clicked');
+      // Ce bouton NE relance JAMAIS une partie : il ne fait que afficher / réduire / agrandir
+      // la fenêtre (en conservant position, taille et état du jeu).
       const overlay = document.getElementById('gameMasterOverlay');
       if (!overlay) {
         console.warn('[GameMaster] Overlay not found');
         return;
       }
-
-      console.log('[GameMaster] Overlay display:', overlay.style.display);
-      console.log('[GameMaster] Overlay minimized:', overlay.classList.contains('minimized'));
-
-      if (overlay.style.display === 'none') {
-        // Montrer l'overlay
-        console.log('[GameMaster] Showing overlay');
+      const hidden = (overlay.style.display === 'none' || overlay.style.display === '');
+      if (hidden) {
         gameMasterUI.show();
-      } else if (overlay.classList.contains('minimized')) {
-        // Si minimisé, le restaurer
-        console.log('[GameMaster] Restoring from minimized');
-        gameMasterUI.toggleMinimized();
+        if (gameMasterUI.minimized) gameMasterUI.toggleMinimized(); // restaure (re-render)
+        else gameMasterUI.render();
+      } else if (gameMasterUI.minimized) {
+        gameMasterUI.toggleMinimized(); // restaure position/taille + re-render
       } else {
-        // Sinon, le réduire
-        console.log('[GameMaster] Minimizing');
-        gameMasterUI.toggleMinimized();
+        gameMasterUI.toggleMinimized(); // réduit en simple barre (aucun re-render -> rien n'est relancé)
       }
-
-      // Toujours afficher le contenu à jour
-      console.log('[GameMaster] Calling render');
-      gameMasterUI.render();
     });
 
     console.log('[GameMaster] ✓ Header button attached');

@@ -88,7 +88,8 @@ class GameMasterUI {
     overlay.innerHTML = `
       ${renderWindowsButtons()}
       <div class="gm-tabs" id="gmTabs" style="display:flex; gap:0; background:rgba(0,0,0,0.3); border-bottom:1px solid rgba(199,125,255,0.2);">
-        <button id="gmTabGame" class="gm-tab" data-tab="game" style="flex:1; padding:8px 12px; border:none; background:rgba(81,116,219,0.3); color:#81dff7; font-weight:600; cursor:pointer; font-size:11px; border-bottom:2px solid #5174db;">Jeu</button>
+        <button id="gmTabGame" class="gm-tab" data-tab="game" style="flex:1; padding:8px 12px; border:none; background:rgba(81,116,219,0.3); color:#81dff7; font-weight:600; cursor:pointer; font-size:11px; border-bottom:2px solid #5174db;">🎮 Jeu</button>
+        <button id="gmTabLog" class="gm-tab" data-tab="log" style="flex:1; padding:8px 12px; border:none; background:transparent; color:#aaa; font-weight:600; cursor:pointer; font-size:11px; border-bottom:2px solid transparent;">📜 Log Jeu</button>
       </div>
       <div class="gm-content" id="gmContent" style="display:flex; flex:1; gap:0; overflow:hidden;">
         <!-- Colonne de gauche: Table (persistante) -->
@@ -165,6 +166,11 @@ class GameMasterUI {
       this.updateTabStyles();
       this.render();
     });
+    document.getElementById('gmTabLog')?.addEventListener('click', () => {
+      this.activeTab = 'log';
+      this.updateTabStyles();
+      this.render();
+    });
   }
 
   updateTabStyles() {
@@ -180,7 +186,37 @@ class GameMasterUI {
         gameTab.style.borderBottom = '2px solid transparent';
       }
     }
+    const logTab = document.getElementById('gmTabLog');
+    if (logTab) {
+      const on = this.activeTab === 'log';
+      logTab.style.background = on ? 'rgba(150,90,200,0.35)' : 'transparent';
+      logTab.style.color = on ? '#c79cff' : '#aaa';
+      logTab.style.borderBottom = on ? '2px solid #c79cff' : '2px solid transparent';
+    }
+  }
 
+  // Onglet "Log Jeu" : rend le journal de partie (horodaté) dans le contenu de l'overlay.
+  renderJournalTab(gmContent) {
+    const j = (this.gm.state && this.gm.state.gameJournal) || [];
+    const rows = j.length ? j.map(e => {
+      if (e.kind === 'nightsep') return '<div style="margin:12px 0 6px; text-align:center; color:#81dff7; font-weight:800; letter-spacing:1px;">' + e.text + '</div>';
+      if (e.kind === 'phase') return '<div style="margin-top:8px; font-weight:800; color:#e0a0ff;"><span style="opacity:.6; font-weight:400; font-size:11px;">' + e.date + ' ' + e.time + '</span> — ' + e.text + '</div>';
+      if (e.kind === 'assign') return '<div style="padding-left:16px; color:#bfe9ff; font-size:12px;">' + e.text + '</div>';
+      return '<div style="font-size:12px; color:#e8e8f0; padding:1px 0;"><span style="opacity:.55;">' + e.date + ' ' + e.time + '</span> : ' + e.text + '</div>';
+    }).join('') : '<div style="opacity:.6;">Journal vide pour l\'instant — il se remplira au fil de la partie.</div>';
+    const plain = j.map(e => (e.kind === 'nightsep' ? '\n' + e.text + '\n' : (e.date + ' ' + e.time + ' : ' + e.text))).join('\n');
+    gmContent.style.display = 'block';
+    gmContent.style.overflow = 'hidden';
+    gmContent.innerHTML =
+      '<div style="height:100%; display:flex; flex-direction:column;">'
+      + '<div style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-bottom:1px solid rgba(199,125,255,0.25);">'
+      +   '<span style="font-weight:800; color:#c79cff;">📜 Log Complet de la Partie</span><span style="flex:1;"></span>'
+      +   '<button id="gmJournalCopy" style="padding:6px 11px; border:1px solid rgba(255,255,255,0.25); border-radius:6px; background:rgba(90,120,200,0.6); color:#fff; font-weight:700; cursor:pointer;">📋 Copier</button>'
+      + '</div>'
+      + '<div style="flex:1; overflow:auto; padding:12px 16px; font-family:ui-monospace,Menlo,Consolas,monospace; line-height:1.45;">' + rows + '</div>'
+      + '</div>';
+    const cp = document.getElementById('gmJournalCopy');
+    if (cp) cp.addEventListener('click', () => { try { navigator.clipboard.writeText(plain); cp.textContent = '✅ Copié'; setTimeout(() => { cp.textContent = '📋 Copier'; }, 1500); } catch (_) {} });
   }
 
   render() {
@@ -191,6 +227,12 @@ class GameMasterUI {
 
     if (!gmContent) {
       console.error('[GameMasterUI.render] gmContent NOT FOUND - cannot render');
+      return;
+    }
+
+    if (!this.activeTab) this.activeTab = 'game';
+    if (this.activeTab === 'log') {
+      this.renderJournalTab(gmContent);
       return;
     }
 
@@ -925,8 +967,10 @@ class GameMasterUI {
         const deltaX = clientX - startX;
         const deltaY = clientY - startY;
 
-        const newWidth = Math.max(300, startWidth + deltaX);
-        const newHeight = Math.max(200, startHeight + deltaY);
+        const maxW = Math.max(300, window.innerWidth - overlay.offsetLeft - 4);
+        const maxH = Math.max(200, window.innerHeight - overlay.offsetTop - 4);
+        const newWidth = Math.min(Math.max(300, startWidth + deltaX), maxW);
+        const newHeight = Math.min(Math.max(200, startHeight + deltaY), maxH);
 
         overlay.style.width = newWidth + 'px';
         overlay.style.height = newHeight + 'px';
@@ -986,9 +1030,16 @@ class GameMasterUI {
 
     // Fonction helper pour faire le drag
     const moveDrag = (clientX, clientY) => {
-      if (isDragging && !this.minimized) {
-        overlay.style.left = (clientX - offsetX) + 'px';
-        overlay.style.top = (clientY - offsetY) + 'px';
+      if (isDragging) {
+        let nl = clientX - offsetX, nt = clientY - offsetY;
+        const w = overlay.offsetWidth, h = overlay.offsetHeight;
+        const maxL = Math.max(0, window.innerWidth - w);
+        const maxT = Math.max(0, window.innerHeight - h);
+        nl = Math.max(0, Math.min(nl, maxL));
+        nt = Math.max(0, Math.min(nt, maxT));
+        overlay.style.left = nl + 'px';
+        overlay.style.top = nt + 'px';
+        overlay.style.bottom = 'auto';
       }
     };
 
@@ -1029,41 +1080,58 @@ class GameMasterUI {
   toggleMinimized() {
     const overlay = document.getElementById('gameMasterOverlay');
     const content = document.getElementById('gmContent');
+    const tabs = document.getElementById('gmTabs');
     const header = document.getElementById('gmHeader');
     const collapseBtn = document.getElementById('gmBtnCollapse');
+    // Boutons d'en-tête masqués en mode réduit (on ne garde que titre + agrandir + fermer)
+    const miniHideIds = ['gmChrono', 'gmBtnReset', 'gmBtnRefresh', 'gmBtnLog'];
+    const title = header ? header.querySelector('.gm-title') : null;
 
     if (!this.minimized) {
-      // Minimiser en bas à gauche
+      // Mémorise la position + taille AVANT de réduire (pour les restaurer ensuite)
+      this._restoreBox = {
+        width: overlay.style.width || (overlay.offsetWidth + 'px'),
+        height: overlay.style.height || (overlay.offsetHeight + 'px'),
+        left: overlay.style.left || (overlay.offsetLeft + 'px'),
+        top: overlay.style.top || (overlay.offsetTop + 'px')
+      };
       this.minimized = true;
-      overlay.style.width = '220px';
-      overlay.style.height = '32px';
-      overlay.style.bottom = '20px';
-      overlay.style.top = 'auto';
-      overlay.style.left = '20px';
-      content.style.display = 'none';
-      overlay.style.borderRadius = '4px';
-      header.style.borderRadius = '4px';
-      header.style.height = '32px';
-      header.style.padding = '4px 8px';
-      // Changer l'icône en + pour maximiser
-      if (collapseBtn) collapseBtn.textContent = '▢';
-      console.log('[GameMaster UI] Minimized');
-    } else {
-      // Restaurer
-      this.minimized = false;
-      overlay.style.width = '650px';
-      overlay.style.height = '620px';
+      // Réduit SUR PLACE en une simple barre
+      overlay.style.height = 'auto';
+      overlay.style.width = '260px';
       overlay.style.bottom = 'auto';
-      overlay.style.top = '100px';
-      overlay.style.left = '320px';
-      content.style.display = 'block';
+      if (content) content.style.display = 'none';
+      if (tabs) tabs.style.display = 'none';
+      const rz = document.getElementById('gmResizeOverlay');
+      if (rz) rz.style.display = 'none';
       overlay.style.borderRadius = '8px';
-      header.style.borderRadius = '8px 8px 0 0';
-      header.style.height = 'auto';
-      header.style.padding = '12px 16px';
-      // Changer l'icône en − pour minimiser
-      if (collapseBtn) collapseBtn.textContent = '−';
-      console.log('[GameMaster UI] Restored');
+      if (header) { header.style.borderRadius = '8px'; header.style.padding = '6px 10px'; }
+      miniHideIds.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+      if (title) { this._savedTitle = title.textContent; title.textContent = 'Interface de jeu MDJ'; }
+      if (collapseBtn) { collapseBtn.textContent = '▢'; collapseBtn.title = 'Agrandir'; }
+      // Garde la barre dans la zone visible
+      const maxL = Math.max(0, window.innerWidth - overlay.offsetWidth);
+      const maxT = Math.max(0, window.innerHeight - overlay.offsetHeight);
+      overlay.style.left = Math.max(0, Math.min(overlay.offsetLeft, maxL)) + 'px';
+      overlay.style.top = Math.max(0, Math.min(overlay.offsetTop, maxT)) + 'px';
+    } else {
+      this.minimized = false;
+      const b = this._restoreBox || { width: '650px', height: '620px', left: '320px', top: '100px' };
+      overlay.style.width = b.width;
+      overlay.style.height = b.height;
+      overlay.style.left = b.left;
+      overlay.style.top = b.top;
+      overlay.style.bottom = 'auto';
+      if (tabs) tabs.style.display = 'flex';
+      const rz = document.getElementById('gmResizeOverlay');
+      if (rz) rz.style.display = '';
+      overlay.style.borderRadius = '8px';
+      if (header) { header.style.borderRadius = '8px 8px 0 0'; header.style.padding = '12px 16px'; }
+      miniHideIds.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = ''; });
+      if (title && this._savedTitle) title.textContent = this._savedTitle;
+      if (collapseBtn) { collapseBtn.textContent = '−'; collapseBtn.title = 'Réduire'; }
+      if (content) content.style.display = '';
+      this.render();
     }
   }
 
