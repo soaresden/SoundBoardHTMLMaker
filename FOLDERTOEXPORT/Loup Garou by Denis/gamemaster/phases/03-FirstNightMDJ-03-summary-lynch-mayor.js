@@ -186,7 +186,7 @@ Object.assign(FirstNightMDJ.prototype, {
 
     if (actionInfo) {
       const _braisesAlive = (this.gm.state.players||[]).some(p => p.role === 'Custom_Chauffeur_Braises' && !this.deadPlayerIds.has(p.id));
-      const _braisesWarn = _braisesAlive ? `<div style="margin-bottom:10px; padding:9px 12px; background:rgba(255,106,0,0.15); border:1px solid #ff6a00; border-radius:8px; color:#ffce9e; font-size:12px; font-weight:700; line-height:1.35;">\U0001F525 Attention \u00e0 bien compter <u>DOUBLE</u> la voix du Chauffeur de Braises (sans dire qui c'est).</div>` : '';
+      const _braisesWarn = _braisesAlive ? `<div style="margin-bottom:10px; padding:9px 12px; background:rgba(255,106,0,0.15); border:1px solid #ff6a00; border-radius:8px; color:#ffce9e; font-size:12px; font-weight:700; line-height:1.35;">🔥 Attention \u00e0 bien compter <u>DOUBLE</u> la voix du Chauffeur de Braises (sans dire qui c'est).</div>` : '';
       actionInfo.innerHTML = `
         ${_braisesWarn}
         <button id="night-summary-btn-lynch" class="btn-validate-action lg-fire-btn"
@@ -265,7 +265,7 @@ Object.assign(FirstNightMDJ.prototype, {
         });
       }
 
-      // \U0001F68C Chauffeur de Bus mort cette nuit : reporter la mort sur quelqu'un d'autre
+      // 🚌 Chauffeur de Bus mort cette nuit : reporter la mort sur quelqu'un d'autre
       const busSelect = document.getElementById('bus-target');
       if (busSelect) {
         busSelect.addEventListener('change', () => {
@@ -279,7 +279,7 @@ Object.assign(FirstNightMDJ.prototype, {
           this.deathCauses[targetId] = 'bus';
           this.busHasRedirected = true;
           if (typeof this.checkCupidonCascadingDeath === 'function') this.checkCupidonCascadingDeath(targetId);
-          if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(busP.id, '\U0001F68C a balance ' + this.getPlayerName(targetId) + ' a sa place (survit, demasque)');
+          if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(busP.id, '🚌 a balance ' + this.getPlayerName(targetId) + ' a sa place (survit, demasque)');
           this.quickSave?.();
           this.renderNightSummary();
         });
@@ -318,24 +318,24 @@ Object.assign(FirstNightMDJ.prototype, {
             }
           }
 
-          // \U0001F68C Chauffeur de Bus lynche : il balance un remplacant et survit (1 fois)
+          // 🚌 Chauffeur de Bus lynche : il balance un remplacant et survit (1 fois)
           if (lynchVictim && lynchVictim.role === 'Custom_Chauffeur_Bus' && !this.busHasRedirected) {
             const aliveRepl = players.filter(p => !this.deadPlayerIds.has(p.id) && p.id !== victimId);
             actionInfo.innerHTML = `
               <div style="padding:10px; background:rgba(74,163,255,0.15); border:2px solid #4aa3ff; border-radius:8px;">
-                <div style="color:#bfe0ff; font-weight:700; font-size:12px; margin-bottom:6px;">\U0001F68C Chauffeur de Bus : il balance quelqu'un a sa place (il survit cette fois, puis devient villageois)</div>
+                <div style="color:#bfe0ff; font-weight:700; font-size:12px; margin-bottom:6px;">🚌 Chauffeur de Bus : il balance quelqu'un a sa place (il survit cette fois, puis devient villageois)</div>
                 <select id="bus-lynch-target" style="width:100%; padding:6px; background:#333; color:#fff; border:1px solid #4aa3ff; border-radius:4px; font-size:12px;">
                   <option value="">-- Choisir le remplacant --</option>
                   ${aliveRepl.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
                 </select>
-                <button id="bus-lynch-confirm" class="lg-fire-btn" style="width:100%; margin-top:8px; padding:10px; border-radius:6px; font-weight:800; cursor:pointer; font-size:12px;">\U0001FA93 Envoyer le remplacant au bucher \U0001F525</button>
+                <button id="bus-lynch-confirm" class="lg-fire-btn" style="width:100%; margin-top:8px; padding:10px; border-radius:6px; font-weight:800; cursor:pointer; font-size:12px;">🪓 Envoyer le remplacant au bucher 🔥</button>
               </div>`;
             const confirmBtn = actionInfo.querySelector('#bus-lynch-confirm');
             if (confirmBtn) confirmBtn.addEventListener('click', () => {
               const tid = document.getElementById('bus-lynch-target')?.value;
               if (!tid) { alert('Choisis un remplacant !'); return; }
               this.busHasRedirected = true;
-              if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(victimId, '\U0001F68C a balance ' + this.getPlayerName(tid) + ' au bucher a sa place (survit, demasque)');
+              if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(victimId, '🚌 a balance ' + this.getPlayerName(tid) + ' au bucher a sa place (survit, demasque)');
               this.executeLynch(tid);
             });
             return;
@@ -594,7 +594,7 @@ Object.assign(FirstNightMDJ.prototype, {
     if (actionInfo) {
       const isDisabled = !selectedVictim;
       const _braisesAlive = (this.gm.state.players||[]).some(p => p.role === 'Custom_Chauffeur_Braises' && !this.deadPlayerIds.has(p.id));
-      const _braisesWarn = _braisesAlive ? `<div style="margin-bottom:10px; padding:9px 12px; background:rgba(255,106,0,0.15); border:1px solid #ff6a00; border-radius:8px; color:#ffce9e; font-size:12px; font-weight:700; line-height:1.35;">\U0001F525 Attention \u00e0 bien compter <u>DOUBLE</u> la voix du Chauffeur de Braises (sans dire qui c'est).</div>` : '';
+      const _braisesWarn = _braisesAlive ? `<div style="margin-bottom:10px; padding:9px 12px; background:rgba(255,106,0,0.15); border:1px solid #ff6a00; border-radius:8px; color:#ffce9e; font-size:12px; font-weight:700; line-height:1.35;">🔥 Attention \u00e0 bien compter <u>DOUBLE</u> la voix du Chauffeur de Braises (sans dire qui c'est).</div>` : '';
       actionInfo.innerHTML = `
         ${_braisesWarn}
         <button id="btn-lynch" class="btn-validate-action ${isDisabled ? '' : 'lg-fire-btn'}"
@@ -880,14 +880,14 @@ Object.assign(FirstNightMDJ.prototype, {
       `;
     }
 
-    // \U0001F68C Chauffeur de Bus mort cette nuit : balance quelqu'un a sa place (survit 1 fois)
+    // 🚌 Chauffeur de Bus mort cette nuit : balance quelqu'un a sa place (survit 1 fois)
     const busDeadNight = players.find(p => p.role === 'Custom_Chauffeur_Bus' && deadThisNight.includes(p.id) && !this.busHasRedirected) || null;
     if (busDeadNight) {
       const busTargets = players.filter(p => !this.deadPlayerIds.has(p.id) && p.id !== busDeadNight.id);
       const busOpts = busTargets.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
       specialSectionsHtml += `
         <div style="border: 1px solid rgba(74,163,255,0.5); border-radius: 3px; padding: 6px; background: rgba(74,163,255,0.08); margin-bottom: 6px;">
-          <div style="color: #8fc4ff; font-size: 9px; font-weight: 700; margin-bottom: 3px;">\U0001F68C ${busDeadNight.name} (Chauffeur de Bus) \u2014 balance quelqu'un a sa place</div>
+          <div style="color: #8fc4ff; font-size: 9px; font-weight: 700; margin-bottom: 3px;">🚌 ${busDeadNight.name} (Chauffeur de Bus) \u2014 balance quelqu'un a sa place</div>
           <select id="bus-target" style="width: 100%; padding: 4px; font-size: 9px; border-radius: 2px; border: 1px solid #4aa3ff; background: #333; color: #fff;">
             <option value="">-- Il meurt (pas de report) --</option>
             ${busOpts}

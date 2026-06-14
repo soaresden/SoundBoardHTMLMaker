@@ -27,7 +27,7 @@
       "borderColor": "#ff2d00"
     }
   },
-  "pouvoir": "À sa mort, il emporte dans l'explosion UN seul voisin vivant : celui à sa GAUCHE OU celui à sa DROITE (au choix du MDJ).",
+  "pouvoir": "À sa mort, il emporte dans l'explosion UN seul voisin vivant : celui à sa GAUCHE OU celui à sa DROITE",
   "actionType": "DayActive",
   "tips": "Personne ne veut s'asseoir à côté de toi."
 }
