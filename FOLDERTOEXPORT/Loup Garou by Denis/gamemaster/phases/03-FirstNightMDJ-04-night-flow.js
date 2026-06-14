@@ -214,10 +214,12 @@ Object.assign(FirstNightMDJ.prototype, {
       }
     });
 
+    const isolatedSet = (typeof this.getIsolatedPlayers === 'function') ? this.getIsolatedPlayers() : new Set();
     const playerListHtml = sortedPlayers
       .map(player => {
         const roleData = this.rolesLoader.getRole(player.role);
         const isDead = this.deadPlayerIds.has(player.id);
+        const isIsolated = isolatedSet.has(player.id);
         const actsThisNight = this.roleActsThisNight(player.role);
         const isSelected = this.selectedRoleId === player.role;
         const isCompleted = this.roleStates[player.role]?.completed;
@@ -238,7 +240,7 @@ Object.assign(FirstNightMDJ.prototype, {
             : 'rgba(100, 255, 100, 0.2)';
 
         return `
-          <div class="listbox-item ${isSelected ? 'selected breathing' : ''} ${isCompleted ? 'completed' : ''} ${isGreyedOut ? 'disabled' : ''}"
+          <div class="listbox-item ${isSelected && !isDead ? 'selected breathing' : isSelected ? 'selected' : ''} ${isCompleted ? 'completed' : ''} ${isGreyedOut ? 'disabled' : ''}"
                data-player-id="${player.id}"
                data-role-id="${player.role}"
                style="background: ${bgColor};
@@ -254,7 +256,7 @@ Object.assign(FirstNightMDJ.prototype, {
               ${isDead ? '💀' : roleData?.emoji || '❓'}
             </span>
             <span class="item-name">
-              ${isDead ? '💀 ' : ''}${this.mayorId === player.id ? '🎖️ ' : ''}${player.name}
+              ${isDead ? '💀 ' : ''}${!isDead && isIsolated ? '⛏️ ' : ''}${this.mayorId === player.id ? '🎖️ ' : ''}${player.name}
               ${!isDead && roleData?.name ? `<span style="font-size: 0.85em; opacity: 0.8;"> (${roleData.name})</span>` : ''}
             </span>
             ${isCompleted ? '<span class="item-status">✓</span>' : ''}

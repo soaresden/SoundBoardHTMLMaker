@@ -285,6 +285,21 @@ Object.assign(FirstNightMDJ.prototype, {
         });
       }
 
+      // 🔥 Chauffeur de Braises : sacrifice s'il a pointé un innocent
+      const braisesBtn = document.getElementById('braises-sacrifice-btn');
+      if (braisesBtn) {
+        braisesBtn.addEventListener('click', () => {
+          const bid = braisesBtn.dataset.bid;
+          if (!bid || this.deadPlayerIds.has(bid)) return;
+          this.deadPlayerIds.add(bid);
+          this.deathCauses[bid] = 'braises';
+          if (typeof this.checkCupidonCascadingDeath === 'function') this.checkCupidonCascadingDeath(bid);
+          if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(bid, '🔥 Sacrifié : a pointé un innocent envoyé au bûcher');
+          this.quickSave?.();
+          this.renderNightSummary();
+        });
+      }
+
       const lynchBtn = actionInfo.querySelector('#night-summary-btn-lynch');
       if (lynchBtn) {
         lynchBtn.addEventListener('click', () => {
@@ -754,6 +769,8 @@ Object.assign(FirstNightMDJ.prototype, {
         cause = 'Maudit par le Chevalier';
       } else if (deathCause === 'tunnel') {
         cause = 'Mort — a creusé un tunnel vers un Loup-Garou';
+      } else if (deathCause === 'braises') {
+        cause = 'Sacrifié — a pointé un innocent au bûcher';
       } else if (deathCause === 'wolf') {
         // Determine which wolf killed them
         if (this.roleStates['Grand_Mechant_Loup']?.result?.targets?.includes(p.id)) {
@@ -892,6 +909,19 @@ Object.assign(FirstNightMDJ.prototype, {
             <option value="">-- Il meurt (pas de report) --</option>
             ${busOpts}
           </select>
+        </div>
+      `;
+    }
+
+    // 🔥 Chauffeur de Braises : bouton de sacrifice s'il a pointé un innocent (envoyé au bûcher).
+    const braisesAlive = players.find(p => p.role === 'Custom_Chauffeur_Braises' && !this.deadPlayerIds.has(p.id)) || null;
+    if (braisesAlive) {
+      specialSectionsHtml += `
+        <div style="border: 1px solid rgba(255,106,0,0.5); border-radius: 3px; padding: 6px; background: rgba(255,106,0,0.08); margin-bottom: 6px;">
+          <div style="color: #ffce9e; font-size: 9px; font-weight: 700; margin-bottom: 4px;">🔥 ${braisesAlive.name} (Chauffeur de Braises)</div>
+          <button id="braises-sacrifice-btn" data-bid="${braisesAlive.id}" style="width:100%; padding:7px; font-size:10px; font-weight:700; border:1px solid #ff6a00; border-radius:4px; background:rgba(255,106,0,0.25); color:#ffd9b0; cursor:pointer;">
+            A-t-il pointé un innocent (envoyé au bûcher) ? → ☠️ Le sacrifier
+          </button>
         </div>
       `;
     }
@@ -1420,6 +1450,7 @@ Object.assign(FirstNightMDJ.prototype, {
           continueBtn.addEventListener('click', () => {
             console.log('[MDJ] Moving to Night 2');
             if (this.gm && typeof this.gm.saveState === 'function') {
+              this.gm.saveState();
             }
             if (window.gameUI && typeof window.gameUI.saveGameStateToCache === 'function') {
               window.gameUI.saveGameStateToCache();

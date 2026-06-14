@@ -204,6 +204,7 @@ Object.assign(FirstNightMDJ.prototype, {
         chevalier: { emoji: '⚔️', bg: _killerColor('Chevalier_Epee_Rouille', '#FFD700'), label: 'le Chevalier' },
         love:      { emoji: '💔', bg: _killerColor('Cupidon', '#D6899E'), label: 'amour (Cupidon)' },
         tunnel:    { emoji: '🕳️', bg: _killerColor('Custom_Creuseur_Tunnel', '#6b5b3a'), label: 'a isolé un Loup (Creuseur de Tunnel)' },
+        braises:   { emoji: '🔥', bg: _killerColor('Custom_Chauffeur_Braises', '#7a2e10'), label: 'sacrifice (a pointé un innocent)' },
         mdj:       { emoji: '🛟', bg: '#888', label: 'le Maître du Jeu (secours)' }
       };
       const killerInfo = _cause ? killerInfoMap[_cause] : null;
@@ -563,6 +564,26 @@ Object.assign(FirstNightMDJ.prototype, {
               dot.style.setProperty('--affected-border', borderColor);
             }
           }
+        }
+      }
+
+      // 🕳️ Creuseur de Tunnel (isolate) : la cible isolée prend la bordure du Creuseur,
+      //    uniquement les nuits où il agit (revient à la normale au matin).
+      {
+        const _blocks = roleData?.actions ? Object.values(roleData.actions) : [];
+        const _isIsolate = _blocks.some(b => b && typeof b === 'object' && b.type === 'isolate');
+        const _acts = (typeof this.roleActsThisNight !== 'function') || this.roleActsThisNight(roleId);
+        if (_isIsolate && _acts && state.result.targets && state.result.targets.length > 0) {
+          const borderColor = roleData?.visual?.affectedColor?.borderColor || roleData?.visual?.roleColor?.fondColor;
+          state.result.targets.forEach(tid => {
+            if (!tid || String(tid).startsWith('potion-')) return;
+            const point = mdjMap.querySelector(`[data-player-id="${tid}"]`);
+            if (point && borderColor) {
+              point.classList.add('affected');
+              const dot = point.querySelector('.mdj-point-dot');
+              if (dot) dot.style.setProperty('--affected-border', borderColor);
+            }
+          });
         }
       }
 
@@ -1093,8 +1114,7 @@ Object.assign(FirstNightMDJ.prototype, {
 
 
   /**
-   * Update map visualization for Cupidon's selected lovers
-   * Uses Cupidon's affectedColor for border
+   * Update map to show Cupidon/Clubbeur selected lovers (affected border)
    */
   updateMapForCupidon() {
     const mdjMap = document.getElementById('mdj-live-map');
@@ -1104,7 +1124,7 @@ Object.assign(FirstNightMDJ.prototype, {
     const cupidonRole = this.rolesLoader.getRole(this.selectedRoleId || 'Cupidon');
     const cupidonBorderColor = cupidonRole?.visual?.affectedColor?.borderColor || 'rgba(255,255,255,0.5)';
 
-    // Apply affected state to selected lovers with Cupidon's color
+    // Apply affected state to selected lovers with the role's color
     this.selectedPlayers.forEach(playerKey => {
       const point = mdjMap.querySelector(`[data-player-id="${playerKey}"]`);
       if (point) {
@@ -1117,10 +1137,7 @@ Object.assign(FirstNightMDJ.prototype, {
     });
 
     // IMPORTANT: Do NOT clear other role effects!
-    // Other completed roles' borders should remain visible alongside Cupidon's selection
     console.log('[MDJ] Cupidon map updated - preserving other role borders');
   }
 
 });
-
-
