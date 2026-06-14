@@ -419,6 +419,7 @@ Object.assign(FirstNightMDJ.prototype, {
       renard: 'renderRenardSelection',
       wolfKill: 'renderWolfKillSelection',
       sorciere: 'renderSorciereSelection',
+      apprentiSorcier: 'renderApprentiSorcierSelection',
       corbeau: 'renderCorbeauSelection',
       voleur: 'renderVoleurSelection',
       recognition: 'renderRecognitionSelection'
@@ -784,21 +785,8 @@ Object.assign(FirstNightMDJ.prototype, {
             const attackType = action === 'poison' && isProtected ? '☠️💜 (poison ignores protection!)' : '☠️';
             console.log(`${attackType} ${roleName} killed ${playerName} (${playerId})`);
 
-            // Check for cascading Cupidon death
-            // If one lover dies, the other should also die (but from love, not from the attack)
-            if (this.roleStates['Cupidon']?.completed && this.roleStates['Cupidon']?.result?.targets) {
-              const lovers = this.roleStates['Cupidon'].result.targets;
-              if (lovers.includes(playerId) && lovers.length === 2) {
-                const otherLoverId = lovers.find(id => id !== playerId);
-                if (otherLoverId && !this.deadPlayerIds.has(otherLoverId)) {
-                  this.deadPlayerIds.add(otherLoverId);
-                  const otherLoverName = this.getPlayerName(otherLoverId);
-                  this.deathCauses[otherLoverId] = 'love'; // Died from love, not attack
-                  this.logPlayerEvent(otherLoverId, 'Mort de chagrin (amoureux)');
-                  console.log(`[MDJ] 💔 Cascading death: ${otherLoverName} (${otherLoverId}) dies with lover ${playerName}`);
-                }
-              }
-            }
+            // Check for cascading lover death (Cupidon / Clubbeur) — généralisé
+            if (typeof this.checkCupidonCascadingDeath === 'function') this.checkCupidonCascadingDeath(playerId);
 
             // Record the actual cause of death
             if (!this.deathCauses[playerId]) {
@@ -991,26 +979,23 @@ Object.assign(FirstNightMDJ.prototype, {
    * CRITICAL: Called when ANY death occurs (wolf kill, Chasseur shot, lynch, etc.)
    */
   checkCupidonCascadingDeath(victimId) {
-    if (!this.roleStates['Cupidon']?.completed || !this.roleStates['Cupidon']?.result?.targets) {
-      return; // Cupidon hasn't acted or no lovers defined
-    }
-
-    const lovers = this.roleStates['Cupidon'].result.targets;
-    if (!lovers.includes(victimId) || lovers.length !== 2) {
-      return; // Victim is not a lover or invalid state
-    }
-
-    const otherLoverId = lovers.find(id => id !== victimId);
-    if (!otherLoverId || this.deadPlayerIds.has(otherLoverId)) {
-      return; // Other lover already dead
-    }
-
-    // Apply cascading death
-    this.deadPlayerIds.add(otherLoverId);
-    const victimName = this.getPlayerName(victimId);
-    const otherLoverName = this.getPlayerName(otherLoverId);
-    this.deathCauses[otherLoverId] = 'love'; // Died from love, not from the attack
-    console.log(`[MDJ] 💔 Cascading death: ${otherLoverName} (${otherLoverId}) dies with lover ${victimName} (${victimId})`);
+    // Couvre Cupidon (2 amoureux) ET Clubbeur (3 amoureux). Si un amoureux meurt,
+    // TOUS les autres amoureux vivants du même groupe meurent aussi (de chagrin).
+    const LOVE_ROLES = ['Cupidon', 'Custom_Clubbeur'];
+    LOVE_ROLES.forEach(rid => {
+      const st = this.roleStates[rid];
+      if (!st || !st.completed || !st.result || !Array.isArray(st.result.targets)) return;
+      const lovers = st.result.targets;
+      if (!lovers.includes(victimId)) return;
+      const victimName = this.getPlayerName(victimId);
+      lovers.forEach(id => {
+        if (id === victimId || this.deadPlayerIds.has(id)) return;
+        this.deadPlayerIds.add(id);
+        this.deathCauses[id] = 'love';
+        if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(id, 'Mort de chagrin (amoureux)');
+        console.log(`[MDJ] 💔 Cascading death: ${this.getPlayerName(id)} (${id}) meurt avec l'amoureux ${victimName} (${victimId})`);
+      });
+    });
   }
 ,
 

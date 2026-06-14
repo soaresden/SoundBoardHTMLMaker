@@ -1,6 +1,6 @@
 {
   "description": "Index dynamique - Généré automatiquement au démarrage du serveur",
-  "totalRoles": 62,
+  "totalRoles": 64,
   "roles": [
     {
       "id": "template",
@@ -9,6 +9,10 @@
     {
       "id": "Cupidon",
       "file": "01-Cupidon"
+    },
+    {
+      "id": "Custom_Clubbeur",
+      "file": "01a-Custom_Clubbeur"
     },
     {
       "id": "Enfant_Sauvage",
@@ -163,8 +167,12 @@
       "file": "42-Louveteau"
     },
     {
+      "id": "Custom_Apprenti_Sorcier",
+      "file": "43a-Custom_Apprenti_Sorcier"
+    },
+    {
       "id": "Sorciere",
-      "file": "43-Sorciere"
+      "file": "43b-Sorciere"
     },
     {
       "id": "Lepreux",

@@ -501,7 +501,7 @@ Object.assign(FirstNightMDJ.prototype, {
       if (!roleData) return;
 
       // Re-apply effects based on role type and result
-      if (roleId === 'Cupidon' && state.result.targets && state.result.targets.length >= 2) {
+      if ((roleId === 'Cupidon' || roleId === 'Custom_Clubbeur') && state.result.targets && state.result.targets.length >= 2) {
         // Restore lover bordures (pink/red)
         const borderColor = roleData?.visual?.affectedColor?.borderColor;
         console.log(`[MDJ] Cupidon - detection de visual affected colors: border color ${borderColor ? '✓ ' + borderColor : '✗ NOT FOUND'}`);
@@ -744,8 +744,8 @@ Object.assign(FirstNightMDJ.prototype, {
     Object.entries(this.roleStates).forEach(([roleId, state]) => {
       if (!state.completed || !state.result) return;
 
-      if (roleId === 'Cupidon' && state.result.targets) {
-        // Add Cupidon's lovers to protected list
+      if ((roleId === 'Cupidon' || roleId === 'Custom_Clubbeur') && state.result.targets) {
+        // Add Cupidon/Clubbeur's lovers to protected list
         // targets are stored as IDs, not names!
         state.result.targets.forEach(targetId => {
           if (targetId && !targetId.startsWith('potion-')) {
@@ -1099,8 +1099,8 @@ Object.assign(FirstNightMDJ.prototype, {
     const mdjMap = document.getElementById('mdj-live-map');
     if (!mdjMap) return;
 
-    // Get Cupidon's affectedColor for border
-    const cupidonRole = this.rolesLoader.getRole('Cupidon');
+    // Get Cupidon/Clubbeur affectedColor for border (selon le rôle sélectionné)
+    const cupidonRole = this.rolesLoader.getRole(this.selectedRoleId || 'Cupidon');
     const cupidonBorderColor = cupidonRole?.visual?.affectedColor?.borderColor || 'rgba(255,255,255,0.5)';
 
     // Apply affected state to selected lovers with Cupidon's color

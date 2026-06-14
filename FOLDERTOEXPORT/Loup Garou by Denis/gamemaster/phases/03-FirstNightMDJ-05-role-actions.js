@@ -11,6 +11,8 @@ Object.assign(FirstNightMDJ.prototype, {
 
     const players = this.gm.state.players || [];
     const selectedLovers = this.selectedPlayers || [];
+    const _loverRid = this.selectedRoleId || 'Cupidon';
+    const _loverCount = (this.rolesLoader.getRole(_loverRid) || {}).loverCount || 2;
 
     // Filter out dead players AND last protected player (can't protect 2 nights in a row)
     const alivePlayers = this.playerRegistry.getAlive().filter(p => p.id !== this.lastSalvateurProtected);
@@ -38,7 +40,7 @@ Object.assign(FirstNightMDJ.prototype, {
       .join('');
 
     actionControls.innerHTML = `
-      <div style="font-size:11px; color:#ffd6e6; background:rgba(214,137,158,0.15); border:1px solid rgba(214,137,158,0.45); border-radius:6px; padding:7px 9px; margin-bottom:8px; line-height:1.35;">💡 <b>Astuce MJ</b> : une fois les 2 amoureux désignés, tu peux les réveiller ensemble pour qu'ils se reconnaissent (comme les Sœurs).</div>
+      <div style="font-size:11px; color:#ffd6e6; background:rgba(214,137,158,0.15); border:1px solid rgba(214,137,158,0.45); border-radius:6px; padding:7px 9px; margin-bottom:8px; line-height:1.35;">💡 <b>Astuce MJ</b> : une fois les ${_loverCount} amoureux désignés, tu peux les réveiller ensemble pour qu'ils se reconnaissent (comme les Sœurs).</div>
     ` + playerListHtml;
 
     // Attach click handlers for player selection
@@ -52,7 +54,7 @@ Object.assign(FirstNightMDJ.prototype, {
 
     // Show validation button only if 2 lovers selected
     if (actionInfo) {
-      if (selectedLovers.length === 2) {
+      if (selectedLovers.length === _loverCount) {
         actionInfo.innerHTML = `
           <button class="btn-validate-action">✓ Valider les amoureux</button>
         `;
@@ -63,7 +65,7 @@ Object.assign(FirstNightMDJ.prototype, {
       } else if (state.completed) {
         actionInfo.innerHTML = '✅ Amoureux liés';
       } else {
-        actionInfo.innerHTML = `Sélectionnez 2 joueurs (${selectedLovers.length}/2)`;
+        actionInfo.innerHTML = `Sélectionnez ${_loverCount} joueurs (${selectedLovers.length}/${_loverCount})`;
       }
     }
   }
@@ -76,22 +78,24 @@ Object.assign(FirstNightMDJ.prototype, {
    * @param {string} playerName
    */
   toggleCupidonLover(playerKey, playerName) {
+    const _rid = this.selectedRoleId || 'Cupidon';
+    const _cnt = (this.rolesLoader.getRole(_rid) || {}).loverCount || 2;
     const index = this.selectedPlayers.indexOf(playerKey);
     if (index >= 0) {
       // Deselect
       this.selectedPlayers.splice(index, 1);
     } else {
-      // Select (max 2)
-      if (this.selectedPlayers.length < 2) {
+      // Select (max = nombre d'amoureux du rôle)
+      if (this.selectedPlayers.length < _cnt) {
         this.selectedPlayers.push(playerKey);
       }
     }
 
     // Setup actionState for validation (if not already set)
     if (!this.actionState.roleId) {
-      const roleData = this.rolesLoader.getRole('Cupidon');
+      const roleData = this.rolesLoader.getRole(_rid);
       this.actionState = {
-        roleId: 'Cupidon',
+        roleId: _rid,
         action: 'lover',
         roleName: roleData?.name || 'Cupidon',
         roleEmoji: roleData?.emoji || '💘'
@@ -652,6 +656,10 @@ Object.assign(FirstNightMDJ.prototype, {
   renderWolfKillSelection(actionControls, actionInfo, bgColor, textColor, state) {
     if (!actionControls) return;
     const players = this.gm.state.players || [];
+    // Re-edition : si aucun choix courant, pre-selectionne la victime precedemment validee
+    if ((!this.selectedPlayers || !this.selectedPlayers.length) && state && state.completed && state.result && Array.isArray(state.result.targets) && state.result.targets[0] && !String(state.result.targets[0]).startsWith('potion-')) {
+      this.selectedPlayers = [state.result.targets[0]];
+    }
     const selectedVictim = this.selectedPlayers[0] || null;
     const currentPlayerRole = this.rolesLoader.getRole(this.selectedRoleId);
     const protectedPlayers = this.getProtectedPlayers();
@@ -687,6 +695,11 @@ Object.assign(FirstNightMDJ.prototype, {
       console.log(`[MDJ]   - Normal wolf mode (${this.selectedRoleId}): filtering for NON-WOLVES only (excluding dead)`);
     }
 
+    // Re-edition : reintegre la victime deja validee meme si elle apparait "morte" (mort due a CE choix)
+    if (selectedVictim && !validTargets.some(p => p.id === selectedVictim)) {
+      const _sv = players.find(p => p.id === selectedVictim);
+      if (_sv) validTargets.push(_sv);
+    }
     console.log(`[MDJ]   - Valid targets (after filtering dead and protected):`, validTargets.map(p => ({ id: p.id, name: p.name, role: p.role })));
 
     const playerListHtml = validTargets
@@ -960,6 +973,113 @@ Object.assign(FirstNightMDJ.prototype, {
 ,
 
 
+  renderApprentiSorcierSelection(actionControls, actionInfo, bgColor, textColor, state) {
+    if (!actionControls) return;
+    const players = this.gm.state.players || [];
+    const rid = this.selectedRoleId || 'Custom_Apprenti_Sorcier';
+    const role = this.rolesLoader.getRole(rid) || {};
+    const night = this.currentNight || 1;
+
+    // Inventaire persistant : 1 seule potion de MORT pour toute la partie
+    if (!this.gm.state.apprentiInv) this.gm.state.apprentiInv = { death: 1 };
+    if (!Array.isArray(this.gm.state.apprentiUsage)) this.gm.state.apprentiUsage = [];
+    const inv = this.gm.state.apprentiInv;
+    const usage = this.gm.state.apprentiUsage;
+
+    const protectedPlayers = this.getProtectedPlayers();
+    const self = players.find(p => p.role === rid);
+    const poisonOptions = players.filter(p => p.id !== (self && self.id)).map(p => {
+      const dead = this.deadPlayerIds.has(p.id);
+      const prot = protectedPlayers.has(p.id) ? ' (immunise)' : '';
+      return `<option value="${p.id}">${p.name}${dead ? ' (mort)' : ''}${prot}</option>`;
+    }).join('');
+
+    const deathUsedThisNight = usage.find(u => u.type === 'death' && u.night === night);
+    const stepBtn = 'border:none;border-radius:5px;width:auto;padding:0 10px;height:28px;font-weight:800;font-size:14px;cursor:pointer;color:#fff;';
+
+    let deathBlock;
+    if (deathUsedThisNight) {
+      deathBlock = `<div style="display:flex; align-items:center; gap:8px;">
+          <span style="flex:1; color:#ff9a9a; font-size:12px;">✔ Utilisee sur <b>${deathUsedThisNight.targetName}</b></span>
+          <button class="appr-death-plus" title="Annuler (ce tour)" style="${stepBtn} background:rgba(90,120,200,0.8);">+1</button>
+        </div>`;
+    } else if (inv.death > 0) {
+      deathBlock = `<div style="display:flex; gap:6px; align-items:center;">
+          <select class="appr-death-target" style="flex:1; padding:7px; background:rgba(30,30,60,0.9); color:#fff; border:1px solid #ff6666; border-radius:4px; font-size:12px;">
+            <option value="">-- Empoisonner... --</option>
+            ${poisonOptions}
+          </select>
+          <button class="appr-death-minus" style="${stepBtn} background:rgba(190,80,80,0.9);">−1</button>
+        </div>`;
+    } else {
+      deathBlock = `<div style="font-size:11px; opacity:.6;">Plus de potion de mort (deja utilisee)</div>`;
+    }
+
+    const usageHtml = usage.length
+      ? usage.map(u => `<div style="font-size:11px; padding:2px 0; border-bottom:1px solid rgba(255,255,255,0.07);"><b>\U0001F480 Mort</b> → ${u.targetName} <span style="opacity:.6;">(Nuit ${u.night})</span></div>`).join('')
+      : '<div style="opacity:.55; font-size:11px;">Aucune potion utilisee</div>';
+
+    actionControls.innerHTML = `
+      <div class="sorciere-controls">
+        <div style="color:#fff; font-size:0.78rem; margin-bottom:8px; padding:7px; background:rgba(0,0,0,0.3); border-radius:4px; border-left:3px solid ${bgColor};">
+          \U0001F9EA <strong>Apprenti Sorcier</strong> — une seule potion de <b>MORT</b> pour toute la partie.
+        </div>
+        <div style="background:rgba(190,80,80,0.12); border:1px solid rgba(255,120,120,0.35); border-radius:6px; padding:8px; margin-bottom:8px;">
+          <div style="font-size:12px; font-weight:700; color:#ff9a9a; margin-bottom:6px;">\U0001F480 Potion de Mort — reste : ${inv.death}</div>
+          ${deathBlock}
+        </div>
+        <div style="background:rgba(0,0,0,0.22); border-radius:6px; padding:7px 9px;">
+          <div style="font-size:11px; color:#81dff7; font-weight:700; margin-bottom:3px;">\U0001F4DC Usage</div>
+          ${usageHtml}
+        </div>
+      </div>
+    `;
+
+    const rerender = () => {
+      if (this.gm && typeof this.gm.saveState === 'function') this.gm.saveState();
+      this.renderActionButtons();
+      this.renderLiveMap();
+      if (typeof this.renderLegend === 'function') this.renderLegend();
+    };
+
+    actionControls.querySelector('.appr-death-minus')?.addEventListener('click', () => {
+      if (inv.death <= 0 || deathUsedThisNight) return;
+      const sel = actionControls.querySelector('.appr-death-target');
+      const tgt = sel && sel.value;
+      if (!tgt) { alert('Choisissez un joueur a empoisonner.'); return; }
+      const tgtName = this.getPlayerName(tgt);
+      this.deadPlayerIds.add(tgt);
+      if (this.deathCauses) this.deathCauses[tgt] = 'poison';
+      if (typeof this.checkCupidonCascadingDeath === 'function') this.checkCupidonCascadingDeath(tgt);
+      inv.death -= 1;
+      usage.push({ type: 'death', targetId: tgt, targetName: tgtName, night });
+      if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(tgt, "Empoisonne par l'Apprenti Sorcier");
+      rerender();
+      if (typeof this.checkVictoryNow === 'function') this.checkVictoryNow();
+    });
+
+    actionControls.querySelector('.appr-death-plus')?.addEventListener('click', () => {
+      if (!deathUsedThisNight) return;
+      this.deadPlayerIds.delete(deathUsedThisNight.targetId);
+      if (this.deathCauses) delete this.deathCauses[deathUsedThisNight.targetId];
+      inv.death += 1;
+      const i = usage.indexOf(deathUsedThisNight);
+      if (i >= 0) usage.splice(i, 1);
+      rerender();
+    });
+
+    if (actionInfo) {
+      actionInfo.innerHTML = `<button class="btn-validate-action">✓ Terminer le tour de l'Apprenti</button>`;
+      actionInfo.querySelector('.btn-validate-action')?.addEventListener('click', () => {
+        this.selectedPlayers = [];
+        this.actionState = { roleId: rid, action: 'apprenti-turn', roleName: role.name || 'Apprenti Sorcier', roleEmoji: role.emoji || '\U0001F9EA' };
+        this.completeRoleAction();
+      });
+    }
+  }
+,
+
+
   /**
    * Render Corbeau player selection
    * Select player, changes background to dark navy on map
@@ -1152,32 +1272,33 @@ Object.assign(FirstNightMDJ.prototype, {
    * Complete Cupidon action with selected lovers
    */
   completeCupidonAction() {
-    if (this.selectedPlayers.length !== 2) return;
+    const _rid = this.selectedRoleId || 'Cupidon';
+    const _cnt = (this.rolesLoader.getRole(_rid) || {}).loverCount || 2;
+    if (this.selectedPlayers.length !== _cnt) return;
 
     const players = this.gm.state.players || [];
-    // selectedPlayers now contains player IDs like "player_0", "player_1"
-    const lover1 = players.find(p => p.id === this.selectedPlayers[0]);
-    const lover2 = players.find(p => p.id === this.selectedPlayers[1]);
-    const lover1Name = lover1?.name || '?';
-    const lover2Name = lover2?.name || '?';
+    const _roleName = (this.rolesLoader.getRole(_rid) || {}).name || 'Cupidon';
+    const loverIds = this.selectedPlayers.slice();
+    const loverNames = loverIds.map(id => (players.find(p => p.id === id) || {}).name || '?');
 
     // Log action
     if (this.logger && typeof this.logger.logAction === 'function') {
-      this.logger.logAction('💘 Cupidon', 'a lié les amoureux', [lover1Name, lover2Name]);
+      this.logger.logAction('💘 ' + _roleName, 'a lié les amoureux', loverNames);
     }
 
     // Mark role as completed
-    if (this.roleStates['Cupidon']) {
-      this.roleStates['Cupidon'].completed = true;
-      this.roleStates['Cupidon'].result = {
+    if (this.roleStates[_rid]) {
+      this.roleStates[_rid].completed = true;
+      this.roleStates[_rid].result = {
         action: 'lover',
-        targets: [lover1.id, lover2.id]  // Store IDs not names!
+        targets: loverIds.slice()  // Store IDs not names!
       };
     }
     if (typeof this.logPlayerEvent === 'function') {
-      this.logPlayerEvent(lover1.id, 'Désigné amoureux par Cupidon');
-      this.logPlayerEvent(lover2.id, 'Désigné amoureux par Cupidon');
+      loverIds.forEach(id => this.logPlayerEvent(id, 'Désigné amoureux par ' + _roleName));
     }
+    const lover1Name = loverNames[0] || '?';
+    const lover2Name = loverNames.slice(1).join(' & ') || '?';
 
     // Clear selections & role state, but KEEP map effects visible
     this.selectedPlayers = [];

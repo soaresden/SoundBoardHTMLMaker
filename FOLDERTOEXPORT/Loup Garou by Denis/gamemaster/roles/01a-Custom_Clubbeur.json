@@ -1,0 +1,36 @@
+{
+  "id": "Custom_Clubbeur",
+  "name": "Clubbeur",
+  "emoji": "🪩",
+  "tag": "Custom",
+  "camp": "Village",
+  "ui": {
+    "selectionRenderer": "cupidonLover"
+  },
+  "loverCount": 3,
+  "pouvoir": "Comme Cupidon, mais il rend TROIS personnes amoureuses la première nuit. Si l'une meurt, les deux autres meurent aussi : les 3 vivent et meurent ensemble.",
+  "visual": {
+    "roleColor": {
+      "fondColor": "#7a3fb0",
+      "emojiColor": "#ffd84a"
+    },
+    "affectedColor": {
+      "borderColor": "#c77dff"
+    }
+  },
+  "actionType": "NightActive",
+  "nightActive": [
+    1
+  ],
+  "borderLifetime": "game",
+  "tips": "Tu ne gagnes que si tes 3 amoureux survivent jusqu'au bout — un trio soudé, quel que soit leur camp.",
+  "actions": {
+    "mdj_night_actions": [
+      {
+        "id": "lover",
+        "icon": "🏹",
+        "label": "Colorer les amoureux (3)"
+      }
+    ]
+  }
+}

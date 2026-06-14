@@ -1,0 +1,37 @@
+{
+  "id": "Custom_Apprenti_Sorcier",
+  "name": "Apprenti Sorcier",
+  "emoji": "🧪",
+  "tag": "Custom",
+  "camp": "Village",
+  "ui": {
+    "selectionRenderer": "apprentiSorcier"
+  },
+  "description": "Rôle: Apprenti Sorcier",
+  "actions": {
+    "PotionMort": {
+      "enabled": true,
+      "type": "potions",
+      "phase": "everyNight",
+      "targets": {},
+      "stateKey": "apprentiInv"
+    },
+    "mdj_night_actions": [
+      {
+        "id": "poison",
+        "icon": "💀",
+        "label": "Empoisonner"
+      }
+    ]
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#5b3a8a",
+      "emojiColor": "#9affb0"
+    }
+  },
+  "pouvoir": "Comme la Sorcière, mais il ne possède QU'UNE seule potion de MORT (pas de potion de vie). Il peut empoisonner un joueur une seule fois de la partie. Appelé avant la Sorcière.",
+  "actionType": "NightActive",
+  "borderLifetime": "current_night",
+  "tips": "Une seule potion de mort pour toute la partie — choisis bien ton moment."
+}

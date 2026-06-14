@@ -118,6 +118,12 @@ Object.assign(FirstNightMDJ.prototype, {
       if (inv && (inv.life || 0) <= 0 && (inv.death || 0) <= 0) return false;
     }
 
+    // Apprenti Sorcier : une seule potion de mort -> dès qu'elle est utilisée, on passe son tour.
+    if (roleId === 'Custom_Apprenti_Sorcier') {
+      const inv = this.gm.state.apprentiInv;
+      if (inv && (inv.death || 0) <= 0) return false;
+    }
+
     // 1) Planning explicite par nightActive (prioritaire). Ex: Loup Blanc n'a PAS
     //    de nightActive -> on passe a la phase ci-dessous.
     const nightActive = roleData.nightActive || [];

@@ -37,17 +37,5 @@
   "pouvoir": "Peut tuer un joueur (potion de mort) ou sauver un joueur d'une élimination (potion de vie) chaque nuit.",
   "actionType": "NightActive",
   "borderLifetime": "current_night",
-  "tips": "Gardez vos potions pour les moments critiques - ne les gaspillez pas.",
-  "nightActive": [
-    1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    7,
-    8,
-    9,
-    10
-  ]
+  "tips": "Gardez vos potions pour les moments critiques - ne les gaspillez pas."
 }

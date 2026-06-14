@@ -4,7 +4,11 @@
 
 // ---- Persistance des profils de joueurs + dernière table (localStorage) ----
 function lgGetProfiles() {
-  try { return JSON.parse(localStorage.getItem('lg_profiles') || '[]').filter(Boolean); }
+  try {
+    return JSON.parse(localStorage.getItem('lg_profiles') || '[]')
+      .filter(Boolean)
+      .sort((x, y) => String(x).localeCompare(String(y), 'fr', { sensitivity: 'base' }));
+  }
   catch (_) { return []; }
 }
 function lgSaveProfiles(arr) {
