@@ -56,14 +56,43 @@ Object.assign(FirstNightMDJ.prototype, {
       if (!st || !st.completed || !st.result || !st.result.targets) return;
       const rd = this.rolesLoader.getRole(roleId) || {};
       const blocks = rd.actions ? Object.values(rd.actions) : [];
-      const isProtector = roleId === 'Salvateur' ||
+      const isIsolate = blocks.some(b => b && typeof b === 'object' && b.type === 'isolate');
+      // Le Creuseur de Tunnel (isolate) n'immunise QUE les nuits où il agit (everyOddNight).
+      if (isIsolate && typeof this.roleActsThisNight === 'function' && !this.roleActsThisNight(roleId)) return;
+      const isProtector = roleId === 'Salvateur' || isIsolate ||
         blocks.some(b => b && typeof b === 'object' && protectTypes.has(b.type));
       if (!isProtector) return;
       st.result.targets.forEach(targetId => {
         if (targetId && !String(targetId).startsWith('potion-')) protectedSet.add(targetId);
       });
+      // isolate : la maison du Creuseur est vide aussi -> il est protégé lui-même cette nuit.
+      if (isIsolate) {
+        const self = (this.gm.state.players || []).find(p => p.role === roleId);
+        if (self) protectedSet.add(self.id);
+      }
     });
     return protectedSet;
+  }
+,
+
+  /**
+   * Joueurs ISOLÉS cette nuit par le Creuseur de Tunnel (cible + lui-même).
+   * Injoignables : ni loups, ni sorcière/apprenti, ni salvateur ne les atteignent.
+   */
+  getIsolatedPlayers() {
+    const set = new Set();
+    Object.entries(this.roleStates).forEach(([roleId, st]) => {
+      if (!st || !st.completed || !st.result || !Array.isArray(st.result.targets)) return;
+      const rd = this.rolesLoader.getRole(roleId) || {};
+      const blocks = rd.actions ? Object.values(rd.actions) : [];
+      const isIsolate = blocks.some(b => b && typeof b === 'object' && b.type === 'isolate');
+      if (!isIsolate) return;
+      if (typeof this.roleActsThisNight === 'function' && !this.roleActsThisNight(roleId)) return;
+      st.result.targets.forEach(t => { if (t && !String(t).startsWith('potion-')) set.add(t); });
+      const self = (this.gm.state.players || []).find(p => p.role === roleId);
+      if (self) set.add(self.id);
+    });
+    return set;
   }
 ,
 
@@ -231,6 +260,13 @@ Object.assign(FirstNightMDJ.prototype, {
           } else if (phase === 'everyOtherNight') {
             // Active on even nights (2, 4, 6, etc.)
             isActiveThisNight = isEvenNight;
+          } else if (phase === 'everyOddNight') {
+            // Active on odd nights (1, 3, 5, etc.) -> Creuseur de Tunnel
+            isActiveThisNight = isOddNight;
+          } else if (phase === 'everyNightFrom2') {
+            isActiveThisNight = (currentNightNumber >= 2);
+          } else if (phase === 'everyNightFirst3') {
+            isActiveThisNight = (currentNightNumber <= 3);
           } else if (phase === 'afterFirstNight') {
             // Active after first night (nights 2+)
             isActiveThisNight = (currentNightNumber > 1);

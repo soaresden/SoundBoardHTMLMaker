@@ -665,6 +665,28 @@ Object.assign(FirstNightMDJ.prototype, {
       this.chevalierCurseSetNight = null;
     }
 
+    // 🕳️ Creuseur de Tunnel : s'il a isolé un Loup-Garou cette nuit (où il agit), il meurt au matin.
+    (players || []).forEach(cr => {
+      const rd = this.rolesLoader.getRole(cr.role) || {};
+      const blocks = rd.actions ? Object.values(rd.actions) : [];
+      const isTunnel = blocks.some(b => b && typeof b === 'object' && b.type === 'isolate');
+      if (!isTunnel) return;
+      const st = this.roleStates[cr.role];
+      if (!st || !st.completed || !st.result || !Array.isArray(st.result.targets)) return;
+      if (typeof this.roleActsThisNight === 'function' && !this.roleActsThisNight(cr.role)) return;
+      const tgtId = st.result.targets.find(x => typeof x === 'string' && !x.startsWith('potion-'));
+      if (!tgtId) return;
+      const tgt = players.find(x => x.id === tgtId);
+      const isWolfTarget = tgt && (typeof this.isWolfRoleId === 'function' ? this.isWolfRoleId(tgt.role) : /Loup|Wolf/.test(tgt.role || ''));
+      if (isWolfTarget && !this.deadPlayerIds.has(cr.id)) {
+        this.deadPlayerIds.add(cr.id);
+        this.deathCauses[cr.id] = 'tunnel';
+        if (typeof this.checkCupidonCascadingDeath === 'function') this.checkCupidonCascadingDeath(cr.id);
+        if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(cr.id, 'Mort — a creusé un tunnel vers un Loup-Garou');
+        if (!deadThisNight.includes(cr.id)) deadThisNight.push(cr.id);
+      }
+    });
+
     // Lynch can include ANYONE alive, even wolves - removed wolf filter
     const alivePlayers = players.filter(p => !this.deadPlayerIds.has(p.id));
 
@@ -730,6 +752,8 @@ Object.assign(FirstNightMDJ.prototype, {
         cause = 'Tué par la vengeance du Chasseur';
       } else if (deathCause === 'chevalier') {
         cause = 'Maudit par le Chevalier';
+      } else if (deathCause === 'tunnel') {
+        cause = 'Mort — a creusé un tunnel vers un Loup-Garou';
       } else if (deathCause === 'wolf') {
         // Determine which wolf killed them
         if (this.roleStates['Grand_Mechant_Loup']?.result?.targets?.includes(p.id)) {

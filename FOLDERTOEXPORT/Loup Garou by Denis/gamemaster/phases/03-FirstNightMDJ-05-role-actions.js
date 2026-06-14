@@ -819,6 +819,7 @@ Object.assign(FirstNightMDJ.prototype, {
     }
     const victimName = victimId ? this.getPlayerName(victimId) : null;
     const protectedPlayers = this.getProtectedPlayers();
+    const isolatedPlayers = (typeof this.getIsolatedPlayers === 'function') ? this.getIsolatedPlayers() : new Set();
     const victimProtected = victimId && protectedPlayers.has(victimId);
 
     const lifeUsedThisNight = usage.find(u => u.type === 'life' && u.night === night);
@@ -826,8 +827,9 @@ Object.assign(FirstNightMDJ.prototype, {
 
     const poisonOptions = players.filter(p => p.role !== 'Sorciere').map(p => {
       const dead = this.deadPlayerIds.has(p.id);
-      const prot = protectedPlayers.has(p.id) ? ' (immunisé)' : '';
-      return `<option value="${p.id}">${p.name}${dead ? ' (mort)' : ''}${prot}</option>`;
+      const iso = isolatedPlayers.has(p.id) ? ' (isolé 🕳️)' : '';
+      const prot = (!iso && protectedPlayers.has(p.id)) ? ' (immunisé)' : '';
+      return `<option value="${p.id}">${p.name}${dead ? ' (mort)' : ''}${iso}${prot}</option>`;
     }).join('');
 
     const usageHtml = usage.length
@@ -934,6 +936,7 @@ Object.assign(FirstNightMDJ.prototype, {
       const sel = actionControls.querySelector('.sorc-death-target');
       const tgt = sel && sel.value;
       if (!tgt) { alert('Choisissez un joueur à empoisonner.'); return; }
+      if (isolatedPlayers.has(tgt)) { alert(this.getPlayerName(tgt) + ' est isolé(e) cette nuit (Creuseur de Tunnel) : la potion ne l\'atteint pas — choix accepté, stock conservé.'); return; }
       const tgtName = this.getPlayerName(tgt);
       this.deadPlayerIds.add(tgt);
       if (this.deathCauses) this.deathCauses[tgt] = 'poison';
@@ -987,11 +990,13 @@ Object.assign(FirstNightMDJ.prototype, {
     const usage = this.gm.state.apprentiUsage;
 
     const protectedPlayers = this.getProtectedPlayers();
+    const isolatedPlayers = (typeof this.getIsolatedPlayers === 'function') ? this.getIsolatedPlayers() : new Set();
     const self = players.find(p => p.role === rid);
     const poisonOptions = players.filter(p => p.id !== (self && self.id)).map(p => {
       const dead = this.deadPlayerIds.has(p.id);
-      const prot = protectedPlayers.has(p.id) ? ' (immunise)' : '';
-      return `<option value="${p.id}">${p.name}${dead ? ' (mort)' : ''}${prot}</option>`;
+      const iso = isolatedPlayers.has(p.id) ? ' (isolé 🕳️)' : '';
+      const prot = (!iso && protectedPlayers.has(p.id)) ? ' (immunise)' : '';
+      return `<option value="${p.id}">${p.name}${dead ? ' (mort)' : ''}${iso}${prot}</option>`;
     }).join('');
 
     const deathUsedThisNight = usage.find(u => u.type === 'death' && u.night === night);
@@ -1016,20 +1021,20 @@ Object.assign(FirstNightMDJ.prototype, {
     }
 
     const usageHtml = usage.length
-      ? usage.map(u => `<div style="font-size:11px; padding:2px 0; border-bottom:1px solid rgba(255,255,255,0.07);"><b>\U0001F480 Mort</b> → ${u.targetName} <span style="opacity:.6;">(Nuit ${u.night})</span></div>`).join('')
+      ? usage.map(u => `<div style="font-size:11px; padding:2px 0; border-bottom:1px solid rgba(255,255,255,0.07);"><b>💀 Mort</b> → ${u.targetName} <span style="opacity:.6;">(Nuit ${u.night})</span></div>`).join('')
       : '<div style="opacity:.55; font-size:11px;">Aucune potion utilisee</div>';
 
     actionControls.innerHTML = `
       <div class="sorciere-controls">
         <div style="color:#fff; font-size:0.78rem; margin-bottom:8px; padding:7px; background:rgba(0,0,0,0.3); border-radius:4px; border-left:3px solid ${bgColor};">
-          \U0001F9EA <strong>Apprenti Sorcier</strong> — une seule potion de <b>MORT</b> pour toute la partie.
+          🧪 <strong>Apprenti Sorcier</strong> — une seule potion de <b>MORT</b> pour toute la partie.
         </div>
         <div style="background:rgba(190,80,80,0.12); border:1px solid rgba(255,120,120,0.35); border-radius:6px; padding:8px; margin-bottom:8px;">
-          <div style="font-size:12px; font-weight:700; color:#ff9a9a; margin-bottom:6px;">\U0001F480 Potion de Mort — reste : ${inv.death}</div>
+          <div style="font-size:12px; font-weight:700; color:#ff9a9a; margin-bottom:6px;">💀 Potion de Mort — reste : ${inv.death}</div>
           ${deathBlock}
         </div>
         <div style="background:rgba(0,0,0,0.22); border-radius:6px; padding:7px 9px;">
-          <div style="font-size:11px; color:#81dff7; font-weight:700; margin-bottom:3px;">\U0001F4DC Usage</div>
+          <div style="font-size:11px; color:#81dff7; font-weight:700; margin-bottom:3px;">📜 Usage</div>
           ${usageHtml}
         </div>
       </div>
@@ -1047,6 +1052,7 @@ Object.assign(FirstNightMDJ.prototype, {
       const sel = actionControls.querySelector('.appr-death-target');
       const tgt = sel && sel.value;
       if (!tgt) { alert('Choisissez un joueur a empoisonner.'); return; }
+      if (isolatedPlayers.has(tgt)) { alert(this.getPlayerName(tgt) + ' est isole(e) cette nuit (Creuseur de Tunnel) : la potion ne l\'atteint pas — choix accepte, stock conserve.'); return; }
       const tgtName = this.getPlayerName(tgt);
       this.deadPlayerIds.add(tgt);
       if (this.deathCauses) this.deathCauses[tgt] = 'poison';
@@ -1072,7 +1078,7 @@ Object.assign(FirstNightMDJ.prototype, {
       actionInfo.innerHTML = `<button class="btn-validate-action">✓ Terminer le tour de l'Apprenti</button>`;
       actionInfo.querySelector('.btn-validate-action')?.addEventListener('click', () => {
         this.selectedPlayers = [];
-        this.actionState = { roleId: rid, action: 'apprenti-turn', roleName: role.name || 'Apprenti Sorcier', roleEmoji: role.emoji || '\U0001F9EA' };
+        this.actionState = { roleId: rid, action: 'apprenti-turn', roleName: role.name || 'Apprenti Sorcier', roleEmoji: role.emoji || '🧪' };
         this.completeRoleAction();
       });
     }

@@ -203,6 +203,7 @@ Object.assign(FirstNightMDJ.prototype, {
         chasseur:  { emoji: '🏹', bg: _killerColor('Chasseur', '#D4A574'), label: 'le Chasseur' },
         chevalier: { emoji: '⚔️', bg: _killerColor('Chevalier_Epee_Rouille', '#FFD700'), label: 'le Chevalier' },
         love:      { emoji: '💔', bg: _killerColor('Cupidon', '#D6899E'), label: 'amour (Cupidon)' },
+        tunnel:    { emoji: '🕳️', bg: _killerColor('Custom_Creuseur_Tunnel', '#6b5b3a'), label: 'a isolé un Loup (Creuseur de Tunnel)' },
         mdj:       { emoji: '🛟', bg: '#888', label: 'le Maître du Jeu (secours)' }
       };
       const killerInfo = _cause ? killerInfoMap[_cause] : null;

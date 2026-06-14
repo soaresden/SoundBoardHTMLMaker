@@ -119,6 +119,10 @@
       "file": "30-Tueur_Serie"
     },
     {
+      "id": "Custom_Creuseur_Tunnel",
+      "file": "30a-Custom_Creuseur_Tunnel"
+    },
+    {
       "id": "Pyromane",
       "file": "31-Pyromane"
     },
@@ -229,10 +233,6 @@
     {
       "id": "Montreur_Ours",
       "file": "58-Montreur_Ours"
-    },
-    {
-      "id": "Custom_Creuseur_Tunnel",
-      "file": "59-Custom_Creuseur_Tunnel"
     },
     {
       "id": "Custom_Chauffeur_Braises",
