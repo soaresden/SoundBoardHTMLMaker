@@ -1,0 +1,33 @@
+{
+  "id": "Custom_Chauffeur_Braises",
+  "name": "Chauffeur de Braises",
+  "emoji": "🔥",
+  "tag": "Custom",
+  "camp": "Village",
+  "description": "Rôle custom : Chauffeur de Braises",
+  "actions": {
+    "VoixSacrifice": {
+      "enabled": true,
+      "type": "voteWeightSacrifice",
+      "phase": "onVote",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "braisesPoint"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#7a2e10",
+      "emojiColor": "#ffb347",
+      "borderColor": "#ff6a00"
+    },
+    "affectedColor": {
+      "fondColor": "#7a2e10",
+      "borderColor": "#ff6a00"
+    }
+  },
+  "pouvoir": "Il pèse +1 voix au vote (sa voix compte double). MAIS s'il pointe (désigne) une personne de l'équipe Village, par sacrifice il se jette au feu et MEURT.",
+  "actionType": "DayActive",
+  "tips": "Ta voix compte double — mais ne pointe jamais un villageois, sinon tu brûles."
+}

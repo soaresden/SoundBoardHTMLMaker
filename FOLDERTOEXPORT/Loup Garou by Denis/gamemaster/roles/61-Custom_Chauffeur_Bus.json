@@ -1,0 +1,33 @@
+{
+  "id": "Custom_Chauffeur_Bus",
+  "name": "Chauffeur de Bus",
+  "emoji": "🚌",
+  "tag": "Custom",
+  "camp": "Village",
+  "description": "Rôle custom : Chauffeur de Bus",
+  "actions": {
+    "Redirige": {
+      "enabled": true,
+      "type": "redirectDeathOnce",
+      "phase": "onDeath",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "busRedirect"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#2e5b7a",
+      "emojiColor": "#ffd54a",
+      "borderColor": "#4aa3ff"
+    },
+    "affectedColor": {
+      "fondColor": "#2e5b7a",
+      "borderColor": "#4aa3ff"
+    }
+  },
+  "pouvoir": "Comme le Chasseur : la première fois qu'il devrait mourir, il balance un autre joueur à sa place et SURVIT. Ensuite tout le monde sait qui il est : il devient un simple villageois.",
+  "actionType": "DayActive",
+  "tips": "Envoie sous le bus la personne dont tu te méfies le plus."
+}

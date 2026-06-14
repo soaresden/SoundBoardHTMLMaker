@@ -135,6 +135,7 @@ Object.assign(FirstNightMDJ.prototype, {
       switch (phase) {
         case 'everyNight': return true;
         case 'everyOtherNight': return even;        // nuits paires (2,4,6...) -> Loup Blanc
+        case 'everyOddNight': return !even;         // nuits impaires (1,3,5...) -> Creuseur de Tunnel
         case 'everyNightFrom2': return n >= 2;
         case 'everyNightFirst3': return n <= 3;
         case 'firstNight': return n === 1;

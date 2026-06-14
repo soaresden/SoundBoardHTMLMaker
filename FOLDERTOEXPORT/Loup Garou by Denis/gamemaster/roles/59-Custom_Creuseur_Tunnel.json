@@ -1,0 +1,37 @@
+{
+  "id": "Custom_Creuseur_Tunnel",
+  "name": "Creuseur de Tunnel",
+  "emoji": "⛏️",
+  "tag": "Custom",
+  "camp": "Village",
+  "description": "Rôle custom : Creuseur de Tunnel",
+  "ui": {
+    "selectionRenderer": ""
+  },
+  "actions": {
+    "Tunnel": {
+      "enabled": true,
+      "type": "isolate",
+      "phase": "everyOddNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "tunnelTarget"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b5b3a",
+      "emojiColor": "#ffd27a",
+      "borderColor": "#caa15a"
+    },
+    "affectedColor": {
+      "fondColor": "#6b5b3a",
+      "borderColor": "#caa15a"
+    }
+  },
+  "pouvoir": "Réveillé nuits 1, 3, 5… Il isole un joueur avec lui dans son tunnel : leurs deux maisons sont vides, donc AUCUN des deux ne peut mourir cette nuit. MAIS s'il isole un Loup-Garou, le Creuseur meurt au matin. Si c'est un villageois, celui-ci est séquestré une nuit et revient au village au matin.",
+  "actionType": "NightActive",
+  "nightActive": [],
+  "tips": "Choisis bien : t'enfermer avec un loup te coûte la vie."
+}

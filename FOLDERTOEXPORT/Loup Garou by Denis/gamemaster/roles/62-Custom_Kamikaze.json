@@ -1,0 +1,33 @@
+{
+  "id": "Custom_Kamikaze",
+  "name": "Kamikaze",
+  "emoji": "💥",
+  "tag": "Custom",
+  "camp": "Village",
+  "description": "Rôle custom : Kamikaze",
+  "actions": {
+    "Explosion": {
+      "enabled": true,
+      "type": "killOneNeighbor",
+      "phase": "onDeath",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "kamikazeExplosion"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#5a1a1a",
+      "emojiColor": "#ff5a3c",
+      "borderColor": "#ff2d00"
+    },
+    "affectedColor": {
+      "fondColor": "#5a1a1a",
+      "borderColor": "#ff2d00"
+    }
+  },
+  "pouvoir": "À sa mort, il emporte dans l'explosion UN seul voisin vivant : celui à sa GAUCHE OU celui à sa DROITE (au choix du MDJ).",
+  "actionType": "DayActive",
+  "tips": "Personne ne veut s'asseoir à côté de toi."
+}

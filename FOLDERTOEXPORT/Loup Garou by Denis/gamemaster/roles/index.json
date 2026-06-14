@@ -1,6 +1,6 @@
 {
   "description": "Index dynamique - Généré automatiquement au démarrage du serveur",
-  "totalRoles": 58,
+  "totalRoles": 62,
   "roles": [
     {
       "id": "template",
@@ -221,6 +221,22 @@
     {
       "id": "Montreur_Ours",
       "file": "58-Montreur_Ours"
+    },
+    {
+      "id": "Custom_Creuseur_Tunnel",
+      "file": "59-Custom_Creuseur_Tunnel"
+    },
+    {
+      "id": "Custom_Chauffeur_Braises",
+      "file": "60-Custom_Chauffeur_Braises"
+    },
+    {
+      "id": "Custom_Chauffeur_Bus",
+      "file": "61-Custom_Chauffeur_Bus"
+    },
+    {
+      "id": "Custom_Kamikaze",
+      "file": "62-Custom_Kamikaze"
     },
     {
       "id": "Corbeau",

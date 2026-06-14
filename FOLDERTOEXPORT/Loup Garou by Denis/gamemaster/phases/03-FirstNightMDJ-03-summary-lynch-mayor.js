@@ -983,7 +983,7 @@ Object.assign(FirstNightMDJ.prototype, {
     }
     const rd = this.rolesLoader.getRole(roleId) || {};
     const blocks = rd.actions ? Object.values(rd.actions) : [];
-    const special = ['surviveDayKill','dieOnTie','killVoters','killNeighbors','bonusKill','pauseWolfKill','winOnFirstDeath','vultureCondition'];
+    const special = ['surviveDayKill','surviveFireOnce','redirectDeathOnce','dieOnTie','killVoters','killNeighbors','killOneNeighbor','voteWeightSacrifice','bonusKill','pauseWolfKill','winOnFirstDeath','vultureCondition'];
     let type = null;
     for (const b of blocks) {
       if (b && typeof b === 'object' && special.includes(b.type)) { type = b.type; break; }
@@ -996,9 +996,13 @@ Object.assign(FirstNightMDJ.prototype, {
       pauseWolfKill: "🌙 Fils de la Lune mort : les loups ne tueront personne la prochaine nuit — à appliquer.",
       winOnFirstDeath: "👼 Ange Déchu : s'il est éliminé très tôt, il gagne SEUL — vérifier la condition !",
       dieOnTie: "🐐 Bouc Émissaire : meurt automatiquement en cas d'ÉGALITÉ des votes.",
-      vultureCondition: "🦅 Président : condition de victoire spéciale — vérifier."
+      vultureCondition: "🦅 Président : condition de victoire spéciale — vérifier.",
+      surviveFireOnce: "🔥 Chauffeur de Braises : il RÉSISTE au feu une fois et SURVIT au bûcher. Renvoie-le au bûcher une 2e fois (ou un loup le tue) ; ensuite c'est un simple villageois.",
+      redirectDeathOnce: "🚌 Chauffeur de Bus : il balance un autre joueur à sa place et SURVIT (1 fois). Désigne la victime de substitution sur la carte ; ensuite c'est un simple villageois.",
+      killOneNeighbor: "💥 Kamikaze : à sa mort, il emporte UN voisin vivant — celui à sa GAUCHE OU celui à sa DROITE (TON choix). Force la mort du voisin choisi via la carte.",
+      voteWeightSacrifice: "🔥 Chauffeur de Braises : sa voix compte DOUBLE (+1 voix au vote). MAIS s'il pointe un joueur de l'équipe Village, il se sacrifie et MEURT au feu."
     };
-    return { survives: type === 'surviveDayKill', type, note: type ? (notes[type] || '') : '' };
+    return { survives: (type === 'surviveDayKill' || type === 'surviveFireOnce'), type, note: type ? (notes[type] || '') : '' };
   }
 ,
 
@@ -1327,7 +1331,6 @@ Object.assign(FirstNightMDJ.prototype, {
           continueBtn.addEventListener('click', () => {
             console.log('[MDJ] Moving to Night 2');
             if (this.gm && typeof this.gm.saveState === 'function') {
-              this.gm.saveState();
             }
             if (window.gameUI && typeof window.gameUI.saveGameStateToCache === 'function') {
               window.gameUI.saveGameStateToCache();

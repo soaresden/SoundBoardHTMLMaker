@@ -148,15 +148,18 @@ function renderCardSelection(gameUI) {
       description = role.description;
     }
 
+    const _rd = (window.ROLES_DATA && window.ROLES_DATA.roles && window.ROLES_DATA.roles[roleId]) || {};
+    const isCustom = (role && role.tag === 'Custom') || _rd.tag === 'Custom';
     return {
       id: roleId,
-      name: roleId.replace(/_/g, ' '),
+      name: (role && role.name) || _rd.name || roleId.replace(/_/g, ' '),
       description: description,
       emoji: getRoleEmoji(roleId),
       origin: origin,
       isFavorite: isFavorite,
+      isCustom: isCustom,
       count: count,
-      sortOrder: isFavorite ? 0 : extensionOrder[origin]?.order || 999
+      sortOrder: isFavorite ? 0 : (isCustom ? 0.5 : (extensionOrder[origin]?.order || 999))
     };
   });
 
@@ -201,7 +204,10 @@ function renderCardSelection(gameUI) {
       currentSection = 'favorites';
       sectionLabel = `⭐ FAVORIS (${favoriteCount} rôles)`;
       tableRows += `<tr style="background:rgba(255,215,0,0.15);"><td colspan="5" style="padding:4px 8px; font-size:9px; font-weight:bold; color:#FFD700; border-bottom:2px solid rgba(255,215,0,0.3);">${sectionLabel}</td></tr>`;
-    } else if (!role.isFavorite && currentSection !== role.origin) {
+    } else if (role.isCustom && currentSection !== 'custom') {
+      currentSection = 'custom';
+      tableRows += `<tr style="background:rgba(255,140,60,0.18);"><td colspan="5" style="padding:4px 8px; font-size:9px; font-weight:bold; color:#ffb066; border-bottom:2px solid rgba(255,140,60,0.35);">🛠️ CUSTOM (mes cartes)</td></tr>`;
+    } else if (!role.isFavorite && !role.isCustom && currentSection !== role.origin) {
       currentSection = role.origin;
       const extName = extensionOrder[role.origin]?.name || role.origin;
       sectionLabel = extName;
@@ -219,7 +225,7 @@ function renderCardSelection(gameUI) {
 
     tableRows += `
       <tr class="gm-table-role" data-role-id="${role.id}" style="cursor:pointer; border-bottom:1px solid rgba(199,125,255,0.1); transition:all 0.2s; ${role.count > 0 ? 'background:rgba(81,116,219,0.1);' : ''} hover {background:rgba(81,116,219,0.15);}">
-        <td style="padding:4px 8px; font-size:9px; color:#c1a8ff; width:15%;">${role.isFavorite ? '⭐' : (role.origin === 'base' ? '🎮' : '✨')}</td>
+        <td style="padding:4px 8px; font-size:9px; color:#c1a8ff; width:15%;">${role.isFavorite ? '⭐' : (role.isCustom ? '🛠️' : (role.origin === 'base' ? '🎮' : '✨'))}</td>
         <td style="padding:4px 6px; text-align:center; width:50px;">
           ${visualCell}
         </td>
