@@ -29,6 +29,8 @@ Object.assign(FirstNightMDJ.prototype, {
     // Instantané des morts AU DÉBUT de la nuit : un joueur tué PENDANT cette nuit
     // doit quand même jouer son tour (on ne saute que ceux déjà morts avant).
     this.gm.state.deadAtNightStart = Array.from(this.deadPlayerIds);
+    // Nouvelle nuit : les morts à venir sont MASQUÉES sur la map jusqu'au débrief
+    this.gm.state.revealDeaths = false;
 
     this.initializeNight2RoleStates();
 
@@ -372,6 +374,9 @@ Object.assign(FirstNightMDJ.prototype, {
 
     if (!actionZone) return;
 
+    // ☠️ Panneau LIVE des morts de la nuit (mis à jour à chaque interaction)
+    if (typeof this.renderLiveDeaths === 'function') this.renderLiveDeaths();
+
     if (!this.selectedRoleId) {
       if (titleBig) titleBig.innerHTML = '';
       if (actionControls) actionControls.innerHTML = '';
@@ -600,6 +605,21 @@ Object.assign(FirstNightMDJ.prototype, {
       'Loup_Garou_Voyant': 'wolf', 'Infect_Pere_Loups': 'wolf'
       // NB: Sorcière gérée en inventaire verrouillé.
     };
+    // Creuseur de Tunnel : re-saisie -> on annule sa mort "tunnel" (elle sera
+    // ré-appliquée par completeRoleAction si la nouvelle cible est encore un loup).
+    {
+      const _rdT = this.rolesLoader.getRole(roleId) || {};
+      const _blT = _rdT.actions ? Object.values(_rdT.actions) : [];
+      if (_blT.some(b => b && typeof b === 'object' && b.type === 'isolate')) {
+        const _psT = this.gm?.state?.players || [];
+        const _crT = _psT.find(pp => pp.role === roleId);
+        if (_crT && this.deadPlayerIds.has(_crT.id) && this.deathCauses[_crT.id] === 'tunnel') {
+          this.deadPlayerIds.delete(_crT.id);
+          delete this.deathCauses[_crT.id];
+          console.log(`[MDJ] 🕳️↩️ Mort tunnel de ${_crT.name} annulée (re-saisie du Creuseur)`);
+        }
+      }
+    }
     if (prev && Array.isArray(prev.targets)) {
       prev.targets.forEach(t => {
         if (String(t).startsWith('potion-')) return;
@@ -723,6 +743,8 @@ Object.assign(FirstNightMDJ.prototype, {
         targets: [...this.selectedPlayers]
       };
       this.roleStates[roleId]._seq = (this._seqCounter = (this._seqCounter || 0) + 1);
+      // Nuit de la saisie : permet au résumé de n'afficher QUE les actions de la nuit courante
+      this.roleStates[roleId]._night = this.currentNight || 1;
 
       // CRITICAL: Track Salvateur protection (can't protect same person 2 nights in a row)
       if (roleId === 'Salvateur' && action === 'protect' && this.selectedPlayers.length > 0) {
@@ -756,6 +778,44 @@ Object.assign(FirstNightMDJ.prototype, {
       }
     }
 
+    // 🕳️ CREUSEUR DE TUNNEL — appliqué EN DIRECT à la validation (visible dans « Morts en cours »).
+    // S'il isole un LOUP, il mourra au matin — SAUF s'il est immunisé (protection type Salvateur).
+    if (roleId && this.roleStates[roleId] && this.roleStates[roleId].result) {
+      const _rdTun = this.rolesLoader.getRole(roleId) || {};
+      const _blTun = _rdTun.actions ? Object.values(_rdTun.actions) : [];
+      const _isTun = _blTun.some(b => b && typeof b === 'object' && b.type === 'isolate');
+      if (_isTun && this.roleActsThisNight(roleId)) {
+        const _ps = this.gm?.state?.players || [];
+        const _creuseur = _ps.find(pp => pp.role === roleId);
+        const _tgtId = (this.roleStates[roleId].result.targets || []).find(t => t && !String(t).startsWith('potion-'));
+        const _tgt = _tgtId && _ps.find(pp => pp.id === _tgtId);
+        const _isWolfTgt = _tgt && this.isWolfRoleId(_tgt.role);
+        if (_creuseur && _isWolfTgt && !this.deadPlayerIds.has(_creuseur.id)) {
+          // Immunisé ? (protection type Salvateur — PAS sa propre isolation)
+          const _protTypes = new Set(['protect', 'tankProtection', 'amuletProtection', 'bless']);
+          let _shielded = false;
+          Object.entries(this.roleStates).forEach(([rid2, st2]) => {
+            if (!st2 || !st2.completed || !st2.result || !Array.isArray(st2.result.targets)) return;
+            if ((st2._night || 1) !== (this.currentNight || 1)) return;
+            const rd2 = this.rolesLoader.getRole(rid2) || {};
+            const bl2 = rd2.actions ? Object.values(rd2.actions) : [];
+            const isProt = rid2 === 'Salvateur' || bl2.some(b => b && typeof b === 'object' && _protTypes.has(b.type));
+            if (isProt && st2.result.targets.includes(_creuseur.id)) _shielded = true;
+          });
+          if (_shielded) {
+            console.log(`[MDJ] 🕳️🛡️ ${_creuseur.name} a isolé un LOUP mais est IMMUNISÉ — il survit`);
+            if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(_creuseur.id, '🕳️🛡️ A isolé un Loup mais était protégé : il survit');
+          } else {
+            this.deadPlayerIds.add(_creuseur.id);
+            this.deathCauses[_creuseur.id] = 'tunnel';
+            if (typeof this.checkCupidonCascadingDeath === 'function') this.checkCupidonCascadingDeath(_creuseur.id);
+            if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(_creuseur.id, 'Mort au matin — a creusé un tunnel vers un Loup-Garou');
+            console.log(`[MDJ] 🕳️☠️ ${_creuseur.name} a isolé un LOUP → mort enregistrée en direct (appliquée au matin)`);
+          }
+        }
+      }
+    }
+
     // Track dead players from kill actions
     // NOTE: Protected players (e.g., Salvateur-protected) can be selected but don't count as dead
     if ((action === 'kill' || action === 'poison') && this.selectedPlayers.length > 0) {
@@ -768,7 +828,12 @@ Object.assign(FirstNightMDJ.prototype, {
           const isWolfKill = (action === 'kill');
           const isProtected = protectedPlayers.has(playerId);
 
-          if (isWolfKill && isProtected) {
+          if (isWolfKill && typeof this.areAllWolvesIsolated === 'function' && this.areAllWolvesIsolated()) {
+            // 🕳️ Tous les loups vivants sont isolés (Creuseur de Tunnel) : l'attaque est ANNULÉE
+            const playerName = this.getPlayerName(playerId);
+            console.log(`[MDJ] 🕳️ Attaque annulée : tous les loups vivants sont isolés — ${playerName} épargné`);
+            if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(playerId, 'Épargné : tous les loups étaient isolés (Creuseur de Tunnel)');
+          } else if (isWolfKill && isProtected) {
             const playerName = this.getPlayerName(playerId);
             console.log(`[MDJ] 🛡️ ${playerName} (${playerId}) is PROTECTED (immunisé) - wolf attack blocked, no death recorded`);
           } else if (isWolfKill && this.skipNextWolfKill) {
@@ -983,21 +1048,31 @@ Object.assign(FirstNightMDJ.prototype, {
   checkCupidonCascadingDeath(victimId) {
     // Couvre Cupidon (2 amoureux) ET Clubbeur (3 amoureux). Si un amoureux meurt,
     // TOUS les autres amoureux vivants du même groupe meurent aussi (de chagrin).
+    // TRANSITIF : si un joueur appartient aux DEUX groupes (Cupidon + Clubbeur),
+    // sa mort de chagrin propage aussi à l'AUTRE groupe (chaîne d'amour complète).
     const LOVE_ROLES = ['Cupidon', 'Custom_Clubbeur'];
-    LOVE_ROLES.forEach(rid => {
-      const st = this.roleStates[rid];
-      if (!st || !st.completed || !st.result || !Array.isArray(st.result.targets)) return;
-      const lovers = st.result.targets;
-      if (!lovers.includes(victimId)) return;
-      const victimName = this.getPlayerName(victimId);
-      lovers.forEach(id => {
-        if (id === victimId || this.deadPlayerIds.has(id)) return;
-        this.deadPlayerIds.add(id);
-        this.deathCauses[id] = 'love';
-        if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(id, 'Mort de chagrin (amoureux)');
-        console.log(`[MDJ] 💔 Cascading death: ${this.getPlayerName(id)} (${id}) meurt avec l'amoureux ${victimName} (${victimId})`);
+    const queue = [victimId];
+    const processed = new Set();
+    while (queue.length) {
+      const vid = queue.shift();
+      if (processed.has(vid)) continue;
+      processed.add(vid);
+      LOVE_ROLES.forEach(rid => {
+        const st = this.roleStates[rid];
+        if (!st || !st.completed || !st.result || !Array.isArray(st.result.targets)) return;
+        const lovers = st.result.targets;
+        if (!lovers.includes(vid)) return;
+        const victimName = this.getPlayerName(vid);
+        lovers.forEach(id => {
+          if (id === vid || this.deadPlayerIds.has(id)) return;
+          this.deadPlayerIds.add(id);
+          this.deathCauses[id] = 'love';
+          if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(id, 'Mort de chagrin (amoureux)');
+          console.log(`[MDJ] 💔 Cascading death: ${this.getPlayerName(id)} (${id}) meurt avec l'amoureux ${victimName} (${vid})`);
+          queue.push(id); // s'il est aussi amoureux dans l'AUTRE groupe → cascade
+        });
       });
-    });
+    }
   }
 ,
 
@@ -1105,10 +1180,12 @@ Object.assign(FirstNightMDJ.prototype, {
   checkIfNightComplete() {
     const players = this.gm.state.players || [];
 
-    // Only check roles for ALIVE players
+    // IMPORTANT: un joueur tué PENDANT la nuit joue quand même son tour (il découvre
+    // sa mort au matin). On ne dispense que les joueurs morts AVANT la nuit.
+    const _deadStartNC = new Set(this.gm.state.deadAtNightStart || []);
     const allCompleted = Object.entries(this.roleStates).every(([roleId, state]) => {
       const playerWithRole = players.find(p => p.role === roleId);
-      const isAlive = playerWithRole && !this.deadPlayerIds.has(playerWithRole.id);
+      const isAlive = playerWithRole && !_deadStartNC.has(playerWithRole.id);
       // Role qui n'agit pas cette nuit (ex: Loup Blanc nuit impaire) => ne pas attendre
       const acts = this.roleActsThisNight(roleId);
       return !isAlive || !acts || state.completed;
@@ -1119,7 +1196,7 @@ Object.assign(FirstNightMDJ.prototype, {
     const pendingRoles = Object.entries(this.roleStates)
       .filter(([roleId, s]) => {
         const playerWithRole = players.find(p => p.role === roleId);
-        const isAlive = playerWithRole && !this.deadPlayerIds.has(playerWithRole.id);
+        const isAlive = playerWithRole && !_deadStartNC.has(playerWithRole.id);
         return isAlive && this.roleActsThisNight(roleId) && !s.completed;
       })
       .map(([id]) => id);
@@ -1128,7 +1205,6 @@ Object.assign(FirstNightMDJ.prototype, {
 
     if (allCompleted) {
       console.log('[MDJ] ✓ First night complete! Night summary is ready.');
-
       // Log morning phase if function exists
       if (this.logger && typeof this.logger.logMorning === 'function') {
         this.logger.logMorning(1);

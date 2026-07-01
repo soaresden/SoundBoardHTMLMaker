@@ -268,9 +268,9 @@ function renderCardSelection(gameUI) {
           ${rolesGrid}
         </div>
         <!-- DECK EN BAS -->
-        <div style="background:linear-gradient(135deg, rgba(199,125,255,0.08), rgba(81,116,219,0.08)); border:1px solid rgba(199,125,255,0.3); border-radius:8px; margin-top:6px; padding:0; display:flex; flex-direction:column; height:70px; box-shadow:inset 0 2px 8px rgba(0,0,0,0.3), 0 4px 12px rgba(199,125,255,0.1);">
+        <div style="background:linear-gradient(135deg, rgba(199,125,255,0.08), rgba(81,116,219,0.08)); border:1px solid rgba(199,125,255,0.3); border-radius:8px; margin-top:6px; padding:0; display:flex; flex-direction:column; height:96px; box-shadow:inset 0 2px 8px rgba(0,0,0,0.3), 0 4px 12px rgba(199,125,255,0.1);">
           <div style="font-size:9px; color:#81dff7; padding:6px 8px; margin:0; font-weight:600; text-shadow:0 1px 2px rgba(0,0,0,0.4);">Deck <span style="color:#999;">(${totalCards})</span></div>
-          <div id="gmDeckCardsVisual" style="display:flex; flex-wrap:nowrap; gap:4px; overflow-x:auto; overflow-y:hidden; flex:1; padding:4px 8px; align-items:center;">
+          <div id="gmDeckCardsVisual" style="display:flex; flex-wrap:nowrap; gap:4px; overflow-x:auto; overflow-y:hidden; flex:1; padding:4px 8px 14px; align-items:flex-start;">
             ${deckVisual || '<div style="color:#666; font-size:8px; padding:0 10px; white-space:nowrap; margin:auto;">Sélectionnez les cartes →</div>'}
           </div>
         </div>
@@ -449,6 +449,13 @@ function attachCardSelectionEvents(gameUI) {
     gameUI.gm.state.deadAtNightStart = [];
     gameUI.gm.state.sorciereInv = { life: 1, death: 1 };
     gameUI.gm.state.sorciereUsage = [];
+    // FIX: l'Apprenti Sorcier gardait son inventaire de la partie précédente
+    // (potion déjà utilisée → son bouton ne faisait plus rien). On remet TOUT à neuf.
+    gameUI.gm.state.apprentiInv = { death: 1 };
+    gameUI.gm.state.apprentiUsage = [];
+    gameUI.gm.state.busUndo = null;
+    gameUI.gm.state.braisesUndo = [];
+    gameUI.gm.state.revealDeaths = false;
     // Nouvelle partie : on jette l'ancienne instance MDJ pour repartir d'un état propre
     gameUI.gm.mdj = null;
     gameUI.gm.state.mode = 'deckNames';

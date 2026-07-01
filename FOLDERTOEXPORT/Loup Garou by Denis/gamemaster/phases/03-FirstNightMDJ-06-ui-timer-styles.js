@@ -396,11 +396,10 @@ Object.assign(FirstNightMDJ.prototype, {
 
       .mdj-table-visual {
         position: relative;
-        width: 90%;
-        height: 90%;
-        max-width: 420px;
-        max-height: 420px;
-        aspect-ratio: 1;
+        width: 94%;
+        height: 94%;
+        max-width: 560px;
+        max-height: 720px;
         overflow: visible;
         border-radius: 40px;
       }

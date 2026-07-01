@@ -1236,8 +1236,6 @@ input[type="range"]{ width:100%; accent-color:var(--accent); }
         <button class="btn btn-switch" id="btnGameMaster"
                 title="Ouvrir le gestionnaire de partie Loup-Garou"
                 style="font-size: 16px; padding: 12px 20px; font-weight: 800;">🐺 Maître du Jeu</button>
-        <button class="btn btn-switch" id="btnOffline"
-                title="Charger tous les sons en cache pour une utilisation hors-ligne">📥 Hors-ligne</button>
         <button class="btn btn-green" id="btnStopAll" title="Stop music + sfx">⏹ Stop all</button>
       </div>
     </div>
@@ -1859,22 +1857,24 @@ input[type="range"]{ width:100%; accent-color:var(--accent); }
     });
   }
 
-  // ----- Mode hors-ligne : met tous les sons en cache via Service Worker -----
+  // ----- Mode hors-ligne AUTOMATIQUE : tout est mis en cache au chargement (persistant).
+  //       (Plus de bouton : ça se fait tout seul en arrière-plan, popup "Version locale" quand c'est prêt.)
   (function setupOffline(){
-    const btn = document.getElementById("btnOffline");
-    if (!btn) return;
     const httpOK = (location.protocol === "http:" || location.protocol === "https:");
     const supported = ("serviceWorker" in navigator) && httpOK;
     if (!supported) {
-      btn.textContent = "📥 Hors-ligne (http requis)";
-      btn.title = "Le mode hors-ligne nécessite que la page soit servie via http(s) (GitHub Pages ou un serveur local), pas en ouverture directe du fichier (file://).";
-      btn.addEventListener("click", () => {
-        alert("Le mode hors-ligne nécessite que la page soit servie via http(s) — par ex. GitHub Pages ou un petit serveur local — et non en double-cliquant le fichier (file://).");
-      });
+      console.warn("[offline] indisponible : la page doit être servie via http(s), pas en file://");
       return;
     }
 
     navigator.serviceWorker.register("sw.js").catch(e => console.warn("[offline] SW register KO:", e));
+
+    // Demande au navigateur de rendre le stockage PERSISTANT (le cache ne sera pas purgé).
+    try {
+      if (navigator.storage && navigator.storage.persist) {
+        navigator.storage.persist().then(ok => console.log("[offline] stockage persistant :", ok ? "accordé ✅" : "refusé (cache quand même conservé sauf manque d'espace)"));
+      }
+    } catch (_) {}
 
     const buildUrlList = () => {
       const set = new Set();
@@ -1888,6 +1888,15 @@ input[type="range"]{ width:100%; accent-color:var(--accent); }
         }
         if (t.cover && !String(t.cover).startsWith("data:")) set.add(t.cover);
       });
+      // Rôles : index + JSONs + images de cartes (pour le MDJ hors-ligne)
+      try {
+        set.add("gamemaster/roles/index.json");
+        const mapping = window.ROLE_FILE_MAPPING || {};
+        Object.entries(mapping).forEach(([rid, file]) => {
+          if (file) set.add("gamemaster/roles/" + file + ".json");
+          if (window.getRoleImagePath) set.add(window.getRoleImagePath(rid));
+        });
+      } catch (_) {}
       return [...set];
     };
 
@@ -1904,27 +1913,6 @@ input[type="range"]{ width:100%; accent-color:var(--accent); }
         };
         sw.postMessage({ type: "PRECACHE", urls }, [ch.port2]);
       } catch (e) { reject(e); }
-    });
-
-    let busy = false;
-    btn.addEventListener("click", async () => {
-      if (busy) return; busy = true;
-      const orig = "📥 Hors-ligne";
-      btn.disabled = true;
-      try {
-        const urls = buildUrlList();
-        const res = await precacheViaSW(urls, (done, total) => {
-          btn.textContent = "📥 " + done + "/" + total + "…";
-        });
-        btn.textContent = "✅ Hors-ligne prêt (" + res.ok + ")";
-        setTimeout(() => { btn.textContent = orig; }, 3000);
-      } catch (e) {
-        console.error("[offline] KO:", e);
-        alert("Échec du chargement hors-ligne : " + e.message);
-        btn.textContent = orig;
-      } finally {
-        btn.disabled = false; busy = false;
-      }
     });
 
     // ----- AUTO : precache des sons en arriere-plan + popup "Version locale" -----
@@ -1950,7 +1938,7 @@ input[type="range"]{ width:100%; accent-color:var(--accent); }
         pop.innerHTML = '<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:18px;">\u2705</span><div><div style="color:#66d999;">Version locale</div><div style="font-weight:400;opacity:0.78;font-size:11px;">' + n + ' fichiers en cache \u2014 hors-ligne OK</div></div></div>';
         setTimeout(() => { if (pop) { pop.style.opacity = '0'; setTimeout(() => { if (pop) { pop.remove(); pop = null; } }, 400); } }, 5000);
       };
-      const run = async () => {
+      const run = async (attempt = 1) => {
         try {
           await navigator.serviceWorker.ready;
           const urls = buildUrlList();
@@ -1961,9 +1949,22 @@ input[type="range"]{ width:100%; accent-color:var(--accent); }
           } catch (_) {}
           if (!missing.length) { showLocal(urls.length); return; }
           setProg('Telechargement des sons... 0/' + missing.length, 2);
+          // WATCHDOG : si plus aucun progres pendant 60s (SW tue / fichier qui pend),
+          // on relance automatiquement (les fichiers deja en cache sont sautes).
+          let lastTick = Date.now();
+          const watchdog = setInterval(() => {
+            if (Date.now() - lastTick > 60000) {
+              clearInterval(watchdog);
+              console.warn('[offline auto] blocage detecte -> relance (tentative ' + (attempt + 1) + ')');
+              if (attempt < 4) run(attempt + 1);
+              else if (pop) { pop.remove(); pop = null; }
+            }
+          }, 5000);
           await precacheViaSW(missing, (done, total) => {
+            lastTick = Date.now();
             setProg('Telechargement des sons... ' + done + '/' + total, total ? Math.round(done / total * 100) : 0);
           });
+          clearInterval(watchdog);
           showLocal(urls.length);
         } catch (e) {
           console.warn('[offline auto] KO:', e);
@@ -2019,12 +2020,12 @@ input[type="range"]{ width:100%; accent-color:var(--accent); }
   <script src="gamemaster/phases/03-FirstNight.js?v=1"></script>
   <!-- FirstNightMDJ split en modules (core d'abord, puis augmentations de prototype) -->
   <script src="gamemaster/phases/03-FirstNightMDJ-00-core.js?v=79"></script>
-  <script src="gamemaster/phases/03-FirstNightMDJ-01-init-render.js?v=86"></script>
-  <script src="gamemaster/phases/03-FirstNightMDJ-02-map.js?v=87"></script>
-  <script src="gamemaster/phases/03-FirstNightMDJ-03-summary-lynch-mayor.js?v=87"></script>
-  <script src="gamemaster/phases/03-FirstNightMDJ-04-night-flow.js?v=87"></script>
-  <script src="gamemaster/phases/03-FirstNightMDJ-05-role-actions.js?v=87"></script>
-  <script src="gamemaster/phases/03-FirstNightMDJ-06-ui-timer-styles.js?v=79"></script>
+  <script src="gamemaster/phases/03-FirstNightMDJ-01-init-render.js?v=90"></script>
+  <script src="gamemaster/phases/03-FirstNightMDJ-02-map.js?v=96"></script>
+  <script src="gamemaster/phases/03-FirstNightMDJ-03-summary-lynch-mayor.js?v=93"></script>
+  <script src="gamemaster/phases/03-FirstNightMDJ-04-night-flow.js?v=92"></script>
+  <script src="gamemaster/phases/03-FirstNightMDJ-05-role-actions.js?v=90"></script>
+  <script src="gamemaster/phases/03-FirstNightMDJ-06-ui-timer-styles.js?v=80"></script>
   <script src="gamemaster/phases/04-FirstNight-Actions.js?v=1"></script>
   <script src="gamemaster/phases/04-MayorElection.js?v=1"></script>
   <script src="gamemaster/phases/05-Day.js?v=2"></script>
@@ -2034,7 +2035,7 @@ input[type="range"]{ width:100%; accent-color:var(--accent); }
   <script src="gamemaster/phases/05-ModeAssiste.js?v=1"></script>
   <!-- UI Modules -->
   <script src="gamemaster/ui/01-WindowsButtons.js?v=5"></script>
-  <script src="gamemaster/ui/02-CardSelection.js?v=73"></script>
+  <script src="gamemaster/ui/02-CardSelection.js?v=75"></script>
   <script src="gamemaster/ui/02b-ModeSelection.js?v=1"></script>
   <script src="gamemaster/ui/03-LiveMap.js?v=68"></script>
   <script src="gamemaster/ui/04-RoleDetailandTips.js?v=1"></script>

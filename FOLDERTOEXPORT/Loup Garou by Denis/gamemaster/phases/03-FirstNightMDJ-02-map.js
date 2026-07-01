@@ -2,6 +2,137 @@
 Object.assign(FirstNightMDJ.prototype, {
 
 
+  /**
+   * Disposition de la table :
+   * - ICÔNES équiréparties sur l'anneau EXTÉRIEUR (ellipse)
+   * - ÉTIQUETTES à l'INTÉRIEUR de la table
+   * - SOLVEUR de collisions : aucune étiquette ne chevauche une autre étiquette ni une icône
+   */
+  _computeTableLayout(players, mw, mh) {
+    // RECTANGLE À BORDS ARRONDIS qui épouse le panneau (taille réelle mesurée),
+    // icônes équiréparties sur le pourtour, étiquettes COLLÉES aux icônes (côté intérieur),
+    // avec anti-chevauchement à « laisse courte » (une étiquette reste près de son icône).
+    const W = Math.max(mw || 0, 300) || 340;
+    const H = Math.max(mh || 0, 300) || 430;
+    const n = Math.max(players.length, 1);
+    const DOT = 36;          // encombrement visuel d'une icône
+    const inset = 20;        // marge entre le bord et l'anneau
+    const insetBottom = 46;  // marge PLUS GRANDE en bas : les étiquettes vont SOUS les icônes
+    const R = 40;            // rayon des coins (aligné sur le border-radius CSS)
+
+    // Périmètre du rectangle arrondi (anneau des icônes)
+    const W2 = W - inset * 2, H2 = H - inset - insetBottom;
+    const sw = Math.max(W2 - 2 * R, 0), sh = Math.max(H2 - 2 * R, 0);
+    const quart = Math.PI * R / 2;
+    const P = 2 * sw + 2 * sh + 4 * quart;
+
+    // Point + normale EXTÉRIEURE à la distance d le long du pourtour (départ coin haut-gauche, sens horaire)
+    const pt = (dRaw) => {
+      let d = ((dRaw % P) + P) % P;
+      if (d < sw) return { x: inset + R + d, y: inset, ox: 0, oy: -1 };
+      d -= sw;
+      if (d < quart) { const a = -Math.PI / 2 + d / R, cx = inset + R + sw, cy = inset + R;
+        return { x: cx + R * Math.cos(a), y: cy + R * Math.sin(a), ox: Math.cos(a), oy: Math.sin(a) }; }
+      d -= quart;
+      if (d < sh) return { x: inset + W2, y: inset + R + d, ox: 1, oy: 0 };
+      d -= sh;
+      if (d < quart) { const a = d / R, cx = inset + R + sw, cy = inset + R + sh;
+        return { x: cx + R * Math.cos(a), y: cy + R * Math.sin(a), ox: Math.cos(a), oy: Math.sin(a) }; }
+      d -= quart;
+      if (d < sw) return { x: inset + R + sw - d, y: inset + H2, ox: 0, oy: 1 };
+      d -= sw;
+      if (d < quart) { const a = Math.PI / 2 + d / R, cx = inset + R, cy = inset + R + sh;
+        return { x: cx + R * Math.cos(a), y: cy + R * Math.sin(a), ox: Math.cos(a), oy: Math.sin(a) }; }
+      d -= quart;
+      if (d < sh) return { x: inset, y: inset + R + sh - d, ox: -1, oy: 0 };
+      d -= sh;
+      const a = Math.PI + d / R, cx = inset + R, cy = inset + R;
+      return { x: cx + R * Math.cos(a), y: cy + R * Math.sin(a), ox: Math.cos(a), oy: Math.sin(a) };
+    };
+
+    // Icônes : premier joueur en haut au centre, sens horaire
+    const icons = players.map((pp, idx) => {
+      const q = pt(sw / 2 + (idx * P) / n);
+      return { x: Math.round(q.x), y: Math.round(q.y), nx: -q.ox, ny: -q.oy };
+    });
+
+    // RÈGLE SIMPLE : l'étiquette est TOUJOURS SOUS l'icône.
+    // Calage horizontal : icône à gauche → calée à gauche (s'étend vers la droite),
+    // au centre → centrée, à droite → calée à droite (s'étend vers la gauche).
+    // Quinconce 1 sur 2 (un peu plus bas) sur les bords haut/bas pour éviter tout contact.
+    const labels = players.map((pp, idx) => {
+      const ic = icons[idx];
+      const name = String(pp.name || '?');
+      const est = 14 + name.length * 6.2;
+      const small = est > 74;
+      pp.nameSmall = small;
+      const w = small ? Math.min(78, 12 + name.length * 5.2) : est;
+      const h = 17;
+      const horizontalEdge = Math.abs(ic.ny) >= 0.6;
+      const alt = (horizontalEdge && idx % 2 === 1) ? 17 : 0;
+      const by = ic.y + 20 + alt; // sous l'icône (bord bas de l'icône ≈ +18)
+      let bx;
+      if (ic.x < W * 0.35) bx = ic.x - 18;           // gauche : calée à gauche de l'icône
+      else if (ic.x > W * 0.65) bx = ic.x + 18 - w;  // droite : calée à droite de l'icône
+      else bx = ic.x - w / 2;                        // centre : centrée sous l'icône
+      return { x: bx, y: by, w, h };
+    });
+    // Position de base (référence de la « laisse » du solveur)
+    const baseLbl = labels.map(A => ({ x: A.x, y: A.y }));
+
+    // Anti-chevauchement à LAISSE COURTE : petites poussées, mais l'étiquette
+    // reste toujours proche de SON icône (distance centre-à-centre <= 64px).
+    const inter = (A, B) => A.x < B.x + B.w && B.x < A.x + A.w && A.y < B.y + B.h && B.y < A.y + A.h;
+    const iconBoxes = icons.map(ic => ({ x: ic.x - DOT / 2, y: ic.y - DOT / 2, w: DOT, h: DOT }));
+    for (let iter = 0; iter < 80; iter++) {
+      let moved = false;
+      for (let i = 0; i < labels.length; i++) {
+        for (let j = i + 1; j < labels.length; j++) {
+          const A = labels[i], B = labels[j];
+          if (!inter(A, B)) continue;
+          const overlapY = Math.min(A.y + A.h, B.y + B.h) - Math.max(A.y, B.y);
+          const push = overlapY / 2 + 1;
+          if (A.y <= B.y) { A.y -= push; B.y += push; } else { A.y += push; B.y -= push; }
+          moved = true;
+        }
+      }
+      for (let i = 0; i < labels.length; i++) {
+        for (let j = 0; j < iconBoxes.length; j++) {
+          const A = labels[i], B = iconBoxes[j];
+          if (!inter(A, B)) continue;
+          // pousse l'étiquette à l'opposé de l'icône gênante
+          const dx = (A.x + A.w / 2) - (B.x + B.w / 2), dy = (A.y + A.h / 2) - (B.y + B.h / 2);
+          const len = Math.max(Math.hypot(dx, dy), 0.01);
+          A.x += (dx / len) * 5; A.y += (dy / len) * 5;
+          moved = true;
+        }
+      }
+      // LAISSE COURTE : une étiquette ne s'écarte JAMAIS de plus de 22px de sa
+      // position de base (collée à l'icône) + bornes du rectangle
+      labels.forEach((A, i) => {
+        const dx = A.x - baseLbl[i].x, dy = A.y - baseLbl[i].y;
+        const d = Math.hypot(dx, dy);
+        if (d > 22) {
+          const k = 22 / d;
+          A.x = baseLbl[i].x + dx * k;
+          A.y = baseLbl[i].y + dy * k;
+        }
+        A.x = Math.max(2, Math.min(W - A.w - 2, A.x));
+        A.y = Math.max(2, Math.min(H - A.h - 2, A.y));
+      });
+      if (!moved) break;
+    }
+
+    players.forEach((pp, idx) => {
+      pp.tableX = icons[idx].x;
+      pp.tableY = icons[idx].y;
+      pp.nameLeft = Math.round(labels[idx].x - icons[idx].x) + 'px';
+      pp.nameTop = Math.round(labels[idx].y - icons[idx].y) + 'px';
+      pp.textAlign = 'center';
+    });
+  }
+,
+
   renderLiveMap() {
     const mapContainer = document.getElementById('mdj-live-map');
     if (!mapContainer) return;
@@ -19,135 +150,28 @@ Object.assign(FirstNightMDJ.prototype, {
       this.gm.state.playerPositions = {};
     }
 
+    // ☠️ Les morts sont affichées IMMÉDIATEMENT sur la map (grisé + badge tueur).
+    // NB: un joueur mort pendant la nuit JOUE quand même son tour jusqu'au débrief.
+    const _deadVisibleSet = new Set(this.deadPlayerIds);
+
     // Afficher les joueurs avec leur rôle (couleur + emoji du JSON)
     // Disposition "piste de course" - joueurs sur les bords, noms à l'opposé, équidistant
+    // Layout global : rectangle arrondi qui épouse la taille RÉELLE du panneau.
+    // Recalculé si des positions manquent OU si la taille mesurée a changé.
+    const _prevVisual = mapContainer.querySelector('.mdj-table-visual');
+    const _mw = _prevVisual ? Math.round(_prevVisual.clientWidth) : 0;
+    const _mh = _prevVisual ? Math.round(_prevVisual.clientHeight) : 0;
+    const _allCached = players.length > 0 && players.every(pp => pp.tableX !== undefined && pp.tableY !== undefined);
+    const _layoutKey = _mw + 'x' + _mh + 'x' + players.length;
+    if ((!_allCached || this._lastLayoutKey !== _layoutKey) && typeof this._computeTableLayout === 'function') {
+      this._computeTableLayout(players, _mw, _mh);
+      this._lastLayoutKey = _layoutKey;
+    }
+
     const playerPoints = players.map((p, idx) => {
-      let x, y, nameTop, nameLeft;
-
-      if (p.tableX !== undefined && p.tableY !== undefined) {
-        x = p.tableX;
-        y = p.tableY;
-        nameTop = p.nameTop || '30px';
-        nameLeft = p.nameLeft || '-40px';
-      } else {
-        const tableSize = 340; // Logical size; CSS will scale it - increased for better spacing
-        const perimeter = 2 * (tableSize + tableSize);
-        const playerSpacing = perimeter / players.length;
-        const pos = idx * playerSpacing;
-
-        // Place players around the perimeter
-        let textAlign = 'center';
-
-        if (pos < tableSize) {
-          // TOP edge: left to right
-          x = pos;
-          y = 0;
-          // All TOP positions: label goes BELOW and CENTERED
-          if (pos < 50) {
-            // TOP-LEFT corner: label goes bottom-right diagonal
-            x = Math.max(30, pos);
-            y = 15;
-            nameTop = '22px';
-            nameLeft = '6px';
-            textAlign = 'left';
-          } else if (pos > tableSize - 50) {
-            // TOP-RIGHT corner: label goes bottom-left diagonal
-            x = Math.min(tableSize - 30, pos);
-            y = 15;
-            nameTop = '22px';
-            nameLeft = '-44px';
-            textAlign = 'right';
-          } else {
-            // TOP middle: label centered below
-            nameTop = '22px';
-            nameLeft = '-28px';
-            textAlign = 'center';
-          }
-        } else if (pos < tableSize * 2) {
-          // RIGHT edge: top to bottom
-          x = tableSize - 20;
-          y = pos - tableSize;
-          const yPos = y;
-          // All RIGHT positions: label goes LEFT
-          if (yPos < 50) {
-            // TOP-RIGHT corner: label goes bottom-left diagonal
-            x = tableSize - 30;
-            y = Math.max(15, yPos);
-            nameTop = '16px';
-            nameLeft = '-42px';
-            textAlign = 'right';
-          } else if (yPos > tableSize - 50) {
-            // BOTTOM-RIGHT corner: label goes top-left diagonal
-            x = tableSize - 30;
-            y = Math.min(tableSize - 15, yPos);
-            nameTop = '-34px';
-            nameLeft = '-42px';
-            textAlign = 'right';
-          } else {
-            // RIGHT middle: label goes left, centered vertically
-            nameTop = '-8px';
-            nameLeft = '-42px';
-            textAlign = 'right';
-          }
-        } else if (pos < tableSize * 3) {
-          // BOTTOM edge: right to left
-          x = tableSize - (pos - tableSize * 2);
-          y = tableSize;
-          // All BOTTOM positions: label goes ABOVE and CENTERED
-          if (x < 50) {
-            // BOTTOM-LEFT corner: label goes top-right diagonal
-            x = Math.max(30, x);
-            y = tableSize - 15;
-            nameTop = '-34px';
-            nameLeft = '6px';
-            textAlign = 'left';
-          } else if (x > tableSize - 50) {
-            // BOTTOM-RIGHT corner: label goes top-left diagonal
-            x = Math.min(tableSize - 30, x);
-            y = tableSize - 15;
-            nameTop = '-34px';
-            nameLeft = '-44px';
-            textAlign = 'right';
-          } else {
-            // BOTTOM middle: label centered above
-            nameTop = '-34px';
-            nameLeft = '-28px';
-            textAlign = 'center';
-          }
-        } else {
-          // LEFT edge: bottom to top
-          x = 0;
-          y = tableSize - (pos - tableSize * 3);
-          const yPos = y;
-          // All LEFT positions: label goes RIGHT
-          if (yPos < 50) {
-            // TOP-LEFT corner: label goes bottom-right diagonal
-            x = 30;
-            y = Math.max(15, yPos);
-            nameTop = '16px';
-            nameLeft = '6px';
-            textAlign = 'left';
-          } else if (yPos > tableSize - 50) {
-            // BOTTOM-LEFT corner: label goes top-right diagonal
-            x = 30;
-            y = Math.min(tableSize - 15, yPos);
-            nameTop = '-34px';
-            nameLeft = '6px';
-            textAlign = 'left';
-          } else {
-            // LEFT middle: label goes right, centered vertically
-            nameTop = '-8px';
-            nameLeft = '6px';
-            textAlign = 'left';
-          }
-        }
-
-        p.tableX = x;
-        p.tableY = y;
-        p.nameTop = nameTop;
-        p.nameLeft = nameLeft;
-        p.textAlign = textAlign;
-      }
+      const x = p.tableX || 0, y = p.tableY || 0;
+      const nameTop = p.nameTop || '30px';
+      const nameLeft = p.nameLeft || '-40px';
 
       // Récupérer les infos du rôle assigné
       const roleData = rolesData[p.role] || {};
@@ -168,7 +192,7 @@ Object.assign(FirstNightMDJ.prototype, {
         // EXCEPT dead wolves - don't breathe if dead
         const isChienLoupStayVillager = p.role === 'Chien_Loup' &&
           this.roleStates['Chien_Loup']?.result?.targets?.includes('stay_villager');
-        const isDead = this.deadPlayerIds.has(p.id);
+        const isDead = _deadVisibleSet.has(p.id);
 
         isCurrentRole = !isDead && !isChienLoupStayVillager && p.role && (p.role.includes('Loup') || p.role.includes('Wolf'));
         if (isCurrentRole) {
@@ -184,7 +208,7 @@ Object.assign(FirstNightMDJ.prototype, {
         }
       }
 
-      const isDead = this.deadPlayerIds.has(p.id);
+      const isDead = _deadVisibleSet.has(p.id);
       const deadStyle = isDead ? 'filter: grayscale(100%) brightness(0.5); opacity: 0.6;' : '';
 
       const isMayor = this.mayorId && this.mayorId === p.id;
@@ -205,6 +229,8 @@ Object.assign(FirstNightMDJ.prototype, {
         love:      { emoji: '💔', bg: _killerColor('Cupidon', '#D6899E'), label: 'amour (Cupidon)' },
         tunnel:    { emoji: '🕳️', bg: _killerColor('Custom_Creuseur_Tunnel', '#6b5b3a'), label: 'a isolé un Loup (Creuseur de Tunnel)' },
         braises:   { emoji: '🔥', bg: _killerColor('Custom_Chauffeur_Braises', '#7a2e10'), label: 'sacrifice (a pointé un innocent)' },
+        bus:       { emoji: '🚌', bg: _killerColor('Custom_Chauffeur_Bus', '#2a5d9c'), label: 'le Chauffeur de Bus (balancé à sa place)' },
+        savant:    { emoji: '🧪', bg: _killerColor('Savant_Fou', '#d9534f'), label: 'le Savant Fou (voisin emporté)' },
         mdj:       { emoji: '🛟', bg: '#888', label: 'le Maître du Jeu (secours)' }
       };
       const killerInfo = _cause ? killerInfoMap[_cause] : null;
@@ -218,7 +244,7 @@ Object.assign(FirstNightMDJ.prototype, {
           <div class="mdj-point-dot" style="background: ${bgColor}; --affected-border: ${affectedBorderColor}; position: relative;">
             <span class="mdj-point-emoji" style="color: ${emojiColor};">${isDead ? '💀' : emoji}</span>
             ${killerBadge}
-            <span class="mdj-point-name" style="top: ${nameTop}; left: ${nameLeft}; text-align: ${p.textAlign};">${isDead ? '💀' : ''} ${displayName}</span>
+            <span class="mdj-point-name" style="top: ${nameTop}; left: ${nameLeft}; width:auto; ${p.nameSmall ? 'font-size:0.5rem;' : ''} text-align: ${p.textAlign};">${isDead ? '💀' : ''} ${displayName}</span>
           </div>
         </div>
       `;
@@ -235,6 +261,15 @@ Object.assign(FirstNightMDJ.prototype, {
     `;
 
     mapContainer.innerHTML = html;
+
+    // Premier rendu : le rectangle n'était pas encore mesurable → re-layout immédiat
+    if (!_prevVisual && !this._relayoutPending) {
+      this._relayoutPending = true;
+      requestAnimationFrame(() => {
+        this._relayoutPending = false;
+        try { this.renderLiveMap(); } catch (_) {}
+      });
+    }
 
     // Tap / clic sur un joueur => ouvre sa fiche (statut + historique + secours tuer/revivre).
     // Fonctionne au tactile. Le clic gauche n'est pas utilisé pour la sélection de cible.
@@ -378,7 +413,8 @@ Object.assign(FirstNightMDJ.prototype, {
     const causeLabel = {
       wolf: 'Loups-Garous', poison: 'Sorcière (poison)', lynch: 'village (vote)',
       chasseur: 'Chasseur', chevalier: 'Chevalier', love: 'chagrin (amoureux)',
-      savant: 'Savant Fou', mdj: 'Maître du Jeu'
+      savant: 'Savant Fou', mdj: 'Maître du Jeu', tunnel: 'tunnel vers un Loup (Creuseur)',
+      braises: 'sacrifice (Chauffeur de Braises)', bus: 'Chauffeur de Bus'
     }[cause] || '';
     const statusHtml = isDead
       ? '<span style="color:#ff8a8a; font-weight:800;">\u2620\uFE0F MORT' + (causeLabel ? ' — ' + causeLabel : '') + '</span>'
@@ -701,6 +737,30 @@ Object.assign(FirstNightMDJ.prototype, {
         });
       }
     });
+
+    // 💘💘 DOUBLE AMOUREUX (Cupidon ET Clubbeur) : contour SUR le contour (double anneau).
+    // Bordure = couleur Cupidon, anneau extérieur = couleur Clubbeur.
+    try {
+      const _cupSt = this.roleStates['Cupidon'];
+      const _clubSt = this.roleStates['Custom_Clubbeur'];
+      const _cupT = (_cupSt && _cupSt.completed && _cupSt.result && _cupSt.result.targets) || [];
+      const _clubT = (_clubSt && _clubSt.completed && _clubSt.result && _clubSt.result.targets) || [];
+      const _both = _cupT.filter(id => _clubT.includes(id));
+      if (_both.length) {
+        const _cupColor = (this.rolesLoader.getRole('Cupidon')?.visual?.affectedColor?.borderColor) || '#ff7bac';
+        const _clubColor = (this.rolesLoader.getRole('Custom_Clubbeur')?.visual?.affectedColor?.borderColor) || '#c77dff';
+        _both.forEach(pid => {
+          const point = mdjMap.querySelector(`[data-player-id="${pid}"]`);
+          const dot = point && point.querySelector('.mdj-point-dot');
+          if (!dot) return;
+          point.classList.add('affected');
+          dot.style.setProperty('--affected-border', _cupColor);
+          dot.style.outline = `3px solid ${_clubColor}`;
+          dot.style.outlineOffset = '3px';
+          console.log(`[MDJ] 💘💘 ${this.getPlayerName(pid)} est DOUBLE amoureux (Cupidon + Clubbeur) → double contour`);
+        });
+      }
+    } catch (_) {}
   }
 ,
 
@@ -835,6 +895,8 @@ Object.assign(FirstNightMDJ.prototype, {
         const dot = point.querySelector('.mdj-point-dot');
         if (dot) {
           dot.style.setProperty('--affected-border', 'transparent');
+          dot.style.outline = '';
+          dot.style.outlineOffset = '';
         }
         
         // Restore dead player visual state (grayscale) if needed
@@ -854,6 +916,10 @@ Object.assign(FirstNightMDJ.prototype, {
       default: {
         // [STANDARDISATION] Comportement par defaut (ex-cases Cupidon/Enfant_Sauvage/Salvateur):
         //  bordure affectedColor du role courant sur les joueurs selectionnes.
+        // FIX Salvateur : repeint D'ABORD les contours des rôles déjà joués (amoureux, voyante…)
+        // pour que les joueurs cliqués puis dé-cliqués retrouvent LEUR couleur au lieu de
+        // garder celle du rôle courant (contours qui « s'empilaient »).
+        if (typeof this.restoreCompletedRoleEffects === 'function') this.restoreCompletedRoleEffects();
         // Border color effect - use the CURRENT ROLE's affectedColor, not the player's role
         const currentRoleData = this.rolesLoader.getRole(this.selectedRoleId);
         const borderColor = currentRoleData?.visual?.affectedColor?.borderColor || 'inherit';
@@ -1117,27 +1183,11 @@ Object.assign(FirstNightMDJ.prototype, {
    * Update map to show Cupidon/Clubbeur selected lovers (affected border)
    */
   updateMapForCupidon() {
-    const mdjMap = document.getElementById('mdj-live-map');
-    if (!mdjMap) return;
-
-    // Get Cupidon/Clubbeur affectedColor for border (selon le rôle sélectionné)
-    const cupidonRole = this.rolesLoader.getRole(this.selectedRoleId || 'Cupidon');
-    const cupidonBorderColor = cupidonRole?.visual?.affectedColor?.borderColor || 'rgba(255,255,255,0.5)';
-
-    // Apply affected state to selected lovers with the role's color
-    this.selectedPlayers.forEach(playerKey => {
-      const point = mdjMap.querySelector(`[data-player-id="${playerKey}"]`);
-      if (point) {
-        point.classList.add('affected');
-        const dot = point.querySelector('.mdj-point-dot');
-        if (dot) {
-          dot.style.setProperty('--affected-border', cupidonBorderColor);
-        }
-      }
-    });
-
-    // IMPORTANT: Do NOT clear other role effects!
-    console.log('[MDJ] Cupidon map updated - preserving other role borders');
+    // FIX désélection : on délègue au pipeline standard (updateMapForRole) qui
+    // NETTOIE d'abord les contours des joueurs dé-sélectionnés, repeint les effets
+    // des rôles déjà validés, puis applique la sélection courante.
+    // (Avant : on ne faisait qu'AJOUTER des contours, jamais les retirer.)
+    this.updateMapForRole();
   }
 
 });

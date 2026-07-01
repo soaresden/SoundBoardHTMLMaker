@@ -723,7 +723,12 @@ Object.assign(FirstNightMDJ.prototype, {
       })
       .join('');
 
-    actionControls.innerHTML = playerListHtml;
+    // 🕳️ TOUS les loups vivants sont isolés (Creuseur de Tunnel) : attaque annulée cette nuit
+    const _allWolvesIsolated = (typeof this.areAllWolvesIsolated === 'function') && this.areAllWolvesIsolated();
+    const _isolatedBanner = _allWolvesIsolated
+      ? `<div style="margin-bottom:8px; padding:9px 11px; background:rgba(107,91,58,0.25); border:2px solid #6b5b3a; border-radius:6px; color:#e8d9b0; font-size:12px; font-weight:700; line-height:1.35;">🕳️ Tous les loups vivants sont isolés cette nuit (Creuseur de Tunnel) : <u>l'attaque des loups est ANNULÉE</u>. Aucune victime ne sera enregistrée.</div>`
+      : '';
+    actionControls.innerHTML = _isolatedBanner + playerListHtml;
 
     actionControls.querySelectorAll('.role-action-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -808,28 +813,34 @@ Object.assign(FirstNightMDJ.prototype, {
     const inv = this.gm.state.sorciereInv;
     const usage = this.gm.state.sorciereUsage;
 
-    // Victime des loups (première attaque)
-    let victimId = null;
+    // Victime de la MEUTE uniquement : la Sorcière ne voit QUE la victime des Loups.
+    // Exclus : Grand Méchant Loup (2e victime secrète) et Loup Blanc (victime = un loup).
+    const wolfVictimIds = [];
     for (const roleId of this.getWolfKillRoleIds()) {
+      if (roleId === 'Loup_Garou_Blanc' || roleId === 'Grand_Mechant_Loup') continue;
       const st = this.roleStates[roleId];
       if (!st || !st.result || st.result.action !== 'kill') continue;
-      const t = st.result.targets && st.result.targets[0];
-      if (!t || !players.some(p => p.id === t)) continue;
-      if (!victimId) victimId = t;
+      if ((st._night || 1) !== night) continue; // saisie d'une autre nuit → périmée
+      (st.result.targets || []).forEach(t => {
+        if (t && !String(t).startsWith('potion-') && players.some(p => p.id === t) && !wolfVictimIds.includes(t)) wolfVictimIds.push(t);
+      });
     }
+    const victimId = wolfVictimIds[0] || null;
     const victimName = victimId ? this.getPlayerName(victimId) : null;
     const protectedPlayers = this.getProtectedPlayers();
     const isolatedPlayers = (typeof this.getIsolatedPlayers === 'function') ? this.getIsolatedPlayers() : new Set();
-    const victimProtected = victimId && protectedPlayers.has(victimId);
+    const victimsLabel = wolfVictimIds.length
+      ? wolfVictimIds.map(v => this.getPlayerName(v) + (protectedPlayers.has(v) ? ' (immunisé)' : '')).join(', ')
+      : 'personne';
 
     const lifeUsedThisNight = usage.find(u => u.type === 'life' && u.night === night);
     const deathUsedThisNight = usage.find(u => u.type === 'death' && u.night === night);
 
-    const poisonOptions = players.filter(p => p.role !== 'Sorciere').map(p => {
-      const dead = this.deadPlayerIds.has(p.id);
+    // UNIQUEMENT les joueurs VIVANTS (on n'empoisonne pas un mort)
+    const poisonOptions = players.filter(p => p.role !== 'Sorciere' && !this.deadPlayerIds.has(p.id)).map(p => {
       const iso = isolatedPlayers.has(p.id) ? ' (isolé 🕳️)' : '';
       const prot = (!iso && protectedPlayers.has(p.id)) ? ' (immunisé)' : '';
-      return `<option value="${p.id}">${p.name}${dead ? ' (mort)' : ''}${iso}${prot}</option>`;
+      return `<option value="${p.id}">${p.name}${iso}${prot}</option>`;
     }).join('');
 
     const usageHtml = usage.length
@@ -847,10 +858,16 @@ Object.assign(FirstNightMDJ.prototype, {
         </div>`;
     } else if (deathUsedThisNight) {
       lifeBlock = `<div style="font-size:11px; opacity:.55;">🚫 Une seule potion par nuit (Mort déjà utilisée)</div>`;
-    } else if (inv.life > 0 && victimId) {
-      lifeBlock = `<div style="display:flex; align-items:center; gap:8px;">
-          <button class="sorc-life-minus" style="${stepBtn} background:rgba(90,170,110,0.9); width:auto; padding:0 10px;">−1 · Sauver ${victimName}${victimProtected ? ' (immunisé)' : ''}</button>
-        </div>`;
+    } else if (inv.life > 0 && wolfVictimIds.length > 0) {
+      // Un bouton par victime des loups (Simple Loup + Grand Méchant Loup, etc.) — 1 seule sauvable
+      const _saveBtns = wolfVictimIds.map(vid => {
+        const nm = this.getPlayerName(vid);
+        const prot = protectedPlayers.has(vid) ? ' (immunisé)' : '';
+        const stillDead = this.deadPlayerIds.has(vid);
+        return `<button class="sorc-life-minus" data-vid="${vid}" ${stillDead ? '' : 'disabled'}
+            style="${stepBtn} background:rgba(90,170,110,0.9); width:auto; padding:0 10px; ${stillDead ? '' : 'opacity:0.45; cursor:not-allowed;'}">−1 · Sauver ${nm}${prot}${stillDead ? '' : ' (déjà en vie)'}</button>`;
+      }).join('');
+      lifeBlock = `<div style="display:flex; flex-direction:column; gap:6px;">${_saveBtns}</div>`;
     } else if (inv.life > 0) {
       lifeBlock = `<div style="font-size:11px; opacity:.6;">Aucune victime à sauver cette nuit</div>`;
     } else {
@@ -881,8 +898,8 @@ Object.assign(FirstNightMDJ.prototype, {
     actionControls.innerHTML = `
       <div class="sorciere-controls">
         <div style="color:#fff; font-size:0.78rem; margin-bottom:8px; padding:7px; background:rgba(0,0,0,0.3); border-radius:4px; border-left:3px solid ${bgColor};">
-          <strong>💀 Victime des Loups :</strong>
-          <span style="font-weight:bold; color:#ffaaaa;">${victimName || "personne"}${victimProtected ? " (immunisé)" : ""}</span>
+          <strong>💀 Victime${wolfVictimIds.length > 1 ? 's' : ''} des Loups :</strong>
+          <span style="font-weight:bold; color:#ffaaaa;">${victimsLabel}</span>
         </div>
 
         <div style="background:rgba(80,160,110,0.12); border:1px solid rgba(120,220,150,0.35); border-radius:6px; padding:8px; margin-bottom:8px;">
@@ -909,15 +926,19 @@ Object.assign(FirstNightMDJ.prototype, {
       if (typeof this.renderLegend === 'function') this.renderLegend();
     };
 
-    // Potion de Vie : −1 (sauver la victime)
-    actionControls.querySelector('.sorc-life-minus')?.addEventListener('click', () => {
-      if (inv.life <= 0 || !victimId || lifeUsedThisNight || deathUsedThisNight) return;
-      this.deadPlayerIds.delete(victimId);
-      if (this.deathCauses) delete this.deathCauses[victimId];
-      inv.life -= 1;
-      usage.push({ type: 'life', targetId: victimId, targetName: victimName, night });
-      if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(victimId, 'Sauvé par la Sorcière (potion de vie)');
-      rerender();
+    // Potion de Vie : −1 (sauver UNE victime des loups, au choix si plusieurs)
+    actionControls.querySelectorAll('.sorc-life-minus').forEach(saveBtn => {
+      saveBtn.addEventListener('click', () => {
+        const vid = saveBtn.dataset.vid || victimId;
+        if (inv.life <= 0 || !vid || lifeUsedThisNight || deathUsedThisNight) return;
+        if (!this.deadPlayerIds.has(vid)) return; // déjà en vie (immunisé / autre sauvetage)
+        this.deadPlayerIds.delete(vid);
+        if (this.deathCauses) delete this.deathCauses[vid];
+        inv.life -= 1;
+        usage.push({ type: 'life', targetId: vid, targetName: this.getPlayerName(vid), night });
+        if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(vid, 'Sauvé par la Sorcière (potion de vie)');
+        rerender();
+      });
     });
     // Potion de Vie : +1 (annuler, ce tour uniquement)
     actionControls.querySelector('.sorc-life-plus')?.addEventListener('click', () => {
@@ -992,11 +1013,11 @@ Object.assign(FirstNightMDJ.prototype, {
     const protectedPlayers = this.getProtectedPlayers();
     const isolatedPlayers = (typeof this.getIsolatedPlayers === 'function') ? this.getIsolatedPlayers() : new Set();
     const self = players.find(p => p.role === rid);
-    const poisonOptions = players.filter(p => p.id !== (self && self.id)).map(p => {
-      const dead = this.deadPlayerIds.has(p.id);
+    // UNIQUEMENT les joueurs VIVANTS (on n'empoisonne pas un mort)
+    const poisonOptions = players.filter(p => p.id !== (self && self.id) && !this.deadPlayerIds.has(p.id)).map(p => {
       const iso = isolatedPlayers.has(p.id) ? ' (isolé 🕳️)' : '';
       const prot = (!iso && protectedPlayers.has(p.id)) ? ' (immunise)' : '';
-      return `<option value="${p.id}">${p.name}${dead ? ' (mort)' : ''}${iso}${prot}</option>`;
+      return `<option value="${p.id}">${p.name}${iso}${prot}</option>`;
     }).join('');
 
     const deathUsedThisNight = usage.find(u => u.type === 'death' && u.night === night);
@@ -1173,14 +1194,20 @@ Object.assign(FirstNightMDJ.prototype, {
     const alive = this.playerRegistry.getAlive().filter(p => p.role !== this.selectedRoleId);
     let selected = this.selectedPlayers.filter(id => !String(id).startsWith('potion-'));
 
+    // 🕳️ Creuseur de Tunnel : signaler les LOUPS dans la liste (isoler un loup = mort au matin)
+    const _isIsolateRole = blocks.some(b => b && typeof b === 'object' && b.type === 'isolate');
+
     const list = alive.map(p => {
       const isSel = selected.includes(p.id);
       const rd = this.rolesLoader.getRole(p.role);
+      const _wolfTag = _isIsolateRole && this.isWolfRoleId(p.role)
+        ? ` <span style="color:#ff8a8a; font-weight:700; font-size:0.85em;">(🐺 Loup — s'il l'isole, le Creuseur mourra au matin !)</span>`
+        : '';
       return `
         <div class="role-action-btn ${isSel ? 'selected' : ''}" data-player-id="${p.id}"
              style="background: ${isSel ? bgColor + '30' : 'rgba(255,255,255,0.08)'}; border: 2px solid ${isSel ? affColor : 'transparent'};">
           <span class="btn-emoji">${rd?.emoji || '?'}</span>
-          <span class="btn-name">${p.name}</span>
+          <span class="btn-name">${p.name}${_wolfTag}</span>
         </div>`;
     }).join('');
 
@@ -1299,6 +1326,8 @@ Object.assign(FirstNightMDJ.prototype, {
         action: 'lover',
         targets: loverIds.slice()  // Store IDs not names!
       };
+      this.roleStates[_rid]._seq = (this._seqCounter = (this._seqCounter || 0) + 1);
+      this.roleStates[_rid]._night = this.currentNight || 1;
     }
     if (typeof this.logPlayerEvent === 'function') {
       loverIds.forEach(id => this.logPlayerEvent(id, 'Désigné amoureux par ' + _roleName));

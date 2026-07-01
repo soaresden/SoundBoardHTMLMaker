@@ -53,9 +53,10 @@ async function networkFirst(req) {
   try {
     const resp = await fetch(req);
     if (resp && resp.ok) putSafe(req, resp);
-    return resp || (await caches.match(req)) || OFFLINE_RESP();
+    // ignoreSearch: les fetch avec cache-buster (?t=123) retombent sur la version en cache
+    return resp || (await caches.match(req, { ignoreSearch: true })) || OFFLINE_RESP();
   } catch (_) {
-    return (await caches.match(req)) || OFFLINE_RESP();
+    return (await caches.match(req, { ignoreSearch: true })) || OFFLINE_RESP();
   }
 }
 
@@ -73,16 +74,23 @@ self.addEventListener('message', (event) => {
   const data = event.data || {};
   if (data.type === 'PRECACHE' && Array.isArray(data.urls)) {
     const port = event.ports && event.ports[0];
-    (async () => {
+    const work = (async () => {
       const cache = await caches.open(CACHE);
       const queue = data.urls.slice();
       const total = queue.length;
       let done = 0, ok = 0;
+      // Timeout par fichier : un telechargement qui pend ne bloque plus la file
+      const fetchWithTimeout = async (u) => {
+        const ctl = new AbortController();
+        const tid = setTimeout(() => ctl.abort(), 45000);
+        try { return await fetch(u, { cache: 'reload', signal: ctl.signal }); }
+        finally { clearTimeout(tid); }
+      };
       const worker = async () => {
         while (queue.length) {
           const u = queue.shift();
           try {
-            const resp = await fetch(u, { cache: 'reload' });
+            const resp = await fetchWithTimeout(u);
             if (resp && (resp.ok || resp.type === 'opaque')) {
               await cache.put(u, resp.clone());
               ok++;
@@ -92,8 +100,11 @@ self.addEventListener('message', (event) => {
           if (port) port.postMessage({ done, total, ok });
         }
       };
-      await Promise.all([worker(), worker(), worker(), worker()]);
+      await Promise.all([worker(), worker(), worker()]);
       if (port) port.postMessage({ finished: true, done, total, ok });
     })();
+    // CRITIQUE : garde le Service Worker EN VIE pendant tout le telechargement.
+    // Sans waitUntil, le navigateur tue le SW au bout de ~30s -> blocage type "42/58".
+    if (typeof event.waitUntil === 'function') { try { event.waitUntil(work); } catch (_) {} }
   }
 });

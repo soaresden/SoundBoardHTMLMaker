@@ -160,6 +160,12 @@ Object.assign(FirstNightMDJ.prototype, {
 
     if (!listbox) return;
 
+    // ☀️ DÉBRIEF : on RÉVÈLE maintenant les morts de la nuit sur la map
+    if (!this.gm.state.revealDeaths) {
+      this.gm.state.revealDeaths = true;
+      if (this.gm && typeof this.gm.saveState === 'function') this.gm.saveState();
+    }
+
     // (Avant: on désactivait les clics de la zone bleue.)
     // On garde la liste CLIQUABLE pour permettre de re-saisir un rôle depuis l'écran de résumé.
     const _lb = document.getElementById('role-listbox');
@@ -184,6 +190,11 @@ Object.assign(FirstNightMDJ.prototype, {
       `;
     }
 
+    // IMPORTANT : la map + le panneau live se rafraîchissent APRÈS le calcul du résumé
+    // (les morts de dernière minute — Chevalier, etc. — y sont appliquées).
+    if (typeof this.renderLiveMap === 'function') this.renderLiveMap();
+    if (typeof this.renderLiveDeaths === 'function') this.renderLiveDeaths();
+
     if (actionInfo) {
       const _braisesAlive = (this.gm.state.players||[]).some(p => p.role === 'Custom_Chauffeur_Braises' && !this.deadPlayerIds.has(p.id));
       const _braisesWarn = _braisesAlive ? `<div style="margin-bottom:10px; padding:9px 12px; background:rgba(255,106,0,0.15); border:1px solid #ff6a00; border-radius:8px; color:#ffce9e; font-size:12px; font-weight:700; line-height:1.35;">🔥 Attention \u00e0 bien compter <u>DOUBLE</u> la voix du Chauffeur de Braises (sans dire qui c'est).</div>` : '';
@@ -200,10 +211,24 @@ Object.assign(FirstNightMDJ.prototype, {
 
       const updateAvatarForCombobox = (selectElement) => {
         const victimId = selectElement.value;
-        if (!victimId) return;
 
         const mdjMap = document.getElementById('mdj-live-map');
         if (!mdjMap) return;
+
+        // FIX « mort fantôme » : restaurer d'abord les 💀 de PREVIEW (joueurs non réellement morts)
+        // posés par une sélection précédente du combobox.
+        mdjMap.querySelectorAll('.mdj-player-point.killed').forEach(pt => {
+          const pid = pt.dataset.playerId;
+          if (pid && !this.deadPlayerIds.has(pid)) {
+            pt.classList.remove('killed');
+            const em = pt.querySelector('.mdj-point-emoji');
+            if (em) { em.textContent = pt.dataset.originalEmoji || em.textContent; em.style.opacity = '1'; }
+            const dt = pt.querySelector('.mdj-point-dot');
+            if (dt) { dt.style.filter = ''; dt.style.opacity = '1'; }
+          }
+        });
+
+        if (!victimId) return;
 
         const victimPoint = mdjMap.querySelector(`[data-player-id="${victimId}"]`);
         if (victimPoint) {
@@ -273,14 +298,44 @@ Object.assign(FirstNightMDJ.prototype, {
           const ps = this.gm.state.players || [];
           const busP = ps.find(p => p.role === 'Custom_Chauffeur_Bus' && this.deadPlayerIds.has(p.id) && !this.busHasRedirected);
           if (!busP || !targetId) return;
+          const _busCause = this.deathCauses ? this.deathCauses[busP.id] : null;
+          const _before = new Set(this.deadPlayerIds);
           this.deadPlayerIds.delete(busP.id);
           if (this.deathCauses) delete this.deathCauses[busP.id];
           this.deadPlayerIds.add(targetId);
           this.deathCauses[targetId] = 'bus';
           this.busHasRedirected = true;
           if (typeof this.checkCupidonCascadingDeath === 'function') this.checkCupidonCascadingDeath(targetId);
+          // Mémorise TOUT (cible + amoureux en cascade + cause d'origine du Bus) pour pouvoir ANNULER
+          this.gm.state.busUndo = {
+            busId: busP.id,
+            busCause: _busCause || 'wolf',
+            killed: Array.from(this.deadPlayerIds).filter(id => !_before.has(id))
+          };
           if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(busP.id, '🚌 a balance ' + this.getPlayerName(targetId) + ' a sa place (survit, demasque)');
           this.quickSave?.();
+          if (typeof this.renderLiveMap === 'function') this.renderLiveMap();
+          this.renderNightSummary();
+        });
+      }
+
+      // ↩️ Annulation du report du Chauffeur de Bus (clic par erreur)
+      const busCancel = document.getElementById('bus-cancel-btn');
+      if (busCancel) {
+        busCancel.addEventListener('click', () => {
+          const bu = this.gm.state.busUndo;
+          if (!bu) return;
+          (bu.killed || []).forEach(id => {
+            this.deadPlayerIds.delete(id);
+            if (this.deathCauses) delete this.deathCauses[id];
+          });
+          this.deadPlayerIds.add(bu.busId);
+          this.deathCauses[bu.busId] = bu.busCause || 'wolf';
+          this.busHasRedirected = false;
+          this.gm.state.busUndo = null;
+          if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(bu.busId, '↩️ Report du Chauffeur de Bus annulé');
+          this.quickSave?.();
+          if (typeof this.renderLiveMap === 'function') this.renderLiveMap();
           this.renderNightSummary();
         });
       }
@@ -291,11 +346,34 @@ Object.assign(FirstNightMDJ.prototype, {
         braisesBtn.addEventListener('click', () => {
           const bid = braisesBtn.dataset.bid;
           if (!bid || this.deadPlayerIds.has(bid)) return;
+          const _before = new Set(this.deadPlayerIds);
           this.deadPlayerIds.add(bid);
           this.deathCauses[bid] = 'braises';
           if (typeof this.checkCupidonCascadingDeath === 'function') this.checkCupidonCascadingDeath(bid);
+          // Mémorise TOUT ce que ce clic a tué (lui + amoureux en cascade) pour pouvoir ANNULER
+          this.gm.state.braisesUndo = Array.from(this.deadPlayerIds).filter(id => !_before.has(id));
           if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(bid, '🔥 Sacrifié : a pointé un innocent envoyé au bûcher');
           this.quickSave?.();
+          if (typeof this.renderLiveMap === 'function') this.renderLiveMap();
+          this.renderNightSummary();
+        });
+      }
+
+      // ↩️ Annulation du sacrifice du Chauffeur de Braises (clic par erreur)
+      const braisesCancel = document.getElementById('braises-cancel-btn');
+      if (braisesCancel) {
+        braisesCancel.addEventListener('click', () => {
+          const bid = braisesCancel.dataset.bid;
+          const ids = (Array.isArray(this.gm.state.braisesUndo) && this.gm.state.braisesUndo.length)
+            ? this.gm.state.braisesUndo : (bid ? [bid] : []);
+          ids.forEach(id => {
+            this.deadPlayerIds.delete(id);
+            if (this.deathCauses) delete this.deathCauses[id];
+            if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(id, '↩️ Sacrifice du Chauffeur de Braises annulé');
+          });
+          this.gm.state.braisesUndo = [];
+          this.quickSave?.();
+          if (typeof this.renderLiveMap === 'function') this.renderLiveMap();
           this.renderNightSummary();
         });
       }
@@ -640,18 +718,14 @@ Object.assign(FirstNightMDJ.prototype, {
     const actions = [];
     const deaths = [];
 
-    // CRITICAL: Track which players died THIS night (not from previous nights)
-    // This is used to show Chasseur revenge box only if he died THIS night
-    const deadThisNight = [];
-    for (const roleId of this.getDeathDealingRoleIds()) {
-      const st = this.roleStates[roleId];
-      if (st?.completed && st?.result?.targets?.length > 0) {
-        // Ne garder que de VRAIS ids joueurs (exclut potion-*, join_wolves, stay_villager, etc.)
-        deadThisNight.push(...st.result.targets.filter(t =>
-          typeof t === 'string' && !t.startsWith('potion-') && players.some(pp => pp.id === t)
-        ));
-      }
-    }
+    // CRITICAL: morts de CETTE nuit = morts actuels − morts au début de la nuit.
+    // Source unique de vérité (deadPlayerIds) : couvre TOUT — loups, potions (Sorcière/Apprenti),
+    // amoureux (chagrin), tunnel, chevalier, bus, savant, MDJ… — et ignore les roleStates
+    // périmés des nuits précédentes (ex: Loup Blanc qui n'agit pas cette nuit).
+    const _deadAtStart = new Set(this.gm.state.deadAtNightStart || []);
+    const deadThisNight = Array.from(this.deadPlayerIds).filter(id =>
+      !_deadAtStart.has(id) && players.some(pp => pp.id === id)
+    );
     // Also add Chasseur revenge kills from THIS night summary
     const chasseurTargetSelect = typeof document !== 'undefined' ? document.getElementById('chasseur-target') : null;
     const chasseurTarget = chasseurTargetSelect?.value;
@@ -680,27 +754,8 @@ Object.assign(FirstNightMDJ.prototype, {
       this.chevalierCurseSetNight = null;
     }
 
-    // 🕳️ Creuseur de Tunnel : s'il a isolé un Loup-Garou cette nuit (où il agit), il meurt au matin.
-    (players || []).forEach(cr => {
-      const rd = this.rolesLoader.getRole(cr.role) || {};
-      const blocks = rd.actions ? Object.values(rd.actions) : [];
-      const isTunnel = blocks.some(b => b && typeof b === 'object' && b.type === 'isolate');
-      if (!isTunnel) return;
-      const st = this.roleStates[cr.role];
-      if (!st || !st.completed || !st.result || !Array.isArray(st.result.targets)) return;
-      if (typeof this.roleActsThisNight === 'function' && !this.roleActsThisNight(cr.role)) return;
-      const tgtId = st.result.targets.find(x => typeof x === 'string' && !x.startsWith('potion-'));
-      if (!tgtId) return;
-      const tgt = players.find(x => x.id === tgtId);
-      const isWolfTarget = tgt && (typeof this.isWolfRoleId === 'function' ? this.isWolfRoleId(tgt.role) : /Loup|Wolf/.test(tgt.role || ''));
-      if (isWolfTarget && !this.deadPlayerIds.has(cr.id)) {
-        this.deadPlayerIds.add(cr.id);
-        this.deathCauses[cr.id] = 'tunnel';
-        if (typeof this.checkCupidonCascadingDeath === 'function') this.checkCupidonCascadingDeath(cr.id);
-        if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(cr.id, 'Mort — a creusé un tunnel vers un Loup-Garou');
-        if (!deadThisNight.includes(cr.id)) deadThisNight.push(cr.id);
-      }
-    });
+    // 🕳️ Creuseur de Tunnel : sa mort (isolement d'un Loup) est désormais appliquée
+    // EN DIRECT à la validation de son action (completeRoleAction) → déjà dans deadThisNight.
 
     // Lynch can include ANYONE alive, even wolves - removed wolf filter
     const alivePlayers = players.filter(p => !this.deadPlayerIds.has(p.id));
@@ -708,6 +763,9 @@ Object.assign(FirstNightMDJ.prototype, {
     // Collect actions (ONLY role actions, not transformations or Montreur_Ours)
     const transformations = [];
     Object.entries(this.roleStates).sort((a, b) => ((a[1] && a[1]._seq) || 0) - ((b[1] && b[1]._seq) || 0)).forEach(([roleId, state]) => {
+      // N'afficher QUE les actions saisies CETTE nuit (les roleStates des rôles
+      // qui n'agissent pas cette nuit gardent leur résultat des nuits précédentes).
+      if ((state && state._night || 1) !== (this.currentNight || 1)) return;
       if (state.completed && state.result?.targets?.length > 0) {
         const roleData = this.rolesLoader.getRole(roleId);
         const roleName = roleData?.name || roleId;
@@ -771,11 +829,24 @@ Object.assign(FirstNightMDJ.prototype, {
         cause = 'Mort — a creusé un tunnel vers un Loup-Garou';
       } else if (deathCause === 'braises') {
         cause = 'Sacrifié — a pointé un innocent au bûcher';
+      } else if (deathCause === 'bus') {
+        cause = 'Balancé par le Chauffeur de Bus à sa place';
+      } else if (deathCause === 'savant') {
+        cause = 'Emporté dans la mort par le Savant Fou';
+      } else if (deathCause === 'mdj') {
+        cause = 'Décision du Maître du Jeu';
       } else if (deathCause === 'wolf') {
-        // Determine which wolf killed them
-        if (this.roleStates['Grand_Mechant_Loup']?.result?.targets?.includes(p.id)) {
+        // Determine which wolf killed them (uniquement saisies de CETTE nuit)
+        const _n = this.currentNight || 1;
+        const _killedBy = (rid) => {
+          const st = this.roleStates[rid];
+          return st && (st._night || 1) === _n && st.result?.targets?.includes(p.id);
+        };
+        if (_killedBy('Loup_Garou_Blanc')) {
+          cause = 'Dévoré par le Loup-Garou Blanc';
+        } else if (_killedBy('Grand_Mechant_Loup')) {
           cause = 'Dévoré par le Grand Méchant Loup';
-        } else if (this.roleStates['Simple_Loup_Garou']?.result?.targets?.includes(p.id)) {
+        } else if (_killedBy('Simple_Loup_Garou')) {
           cause = 'Dévoré par un Simple Loup Garou';
         } else {
           cause = 'Dévoré par les Loups';
@@ -816,10 +887,14 @@ Object.assign(FirstNightMDJ.prototype, {
         ? '🐻 L\'ours du Montreur d\'Ours grogne ! Ça sent le loup !'
         : '🐻 Ça ne grogne pas, pas de loup à proximité de l\'ours';
 
+      // Bouton son UNIQUEMENT si l'ours grogne (pas de bouton si rien à jouer)
+      const growlBtn = hasWolfNearby
+        ? `<button onclick="window.__mdjAudio && window.__mdjAudio.mdjPlaySfx('universfield-bear-191995.mp3')" title="Jouer le son de l'ours" style="border:none; border-radius:6px; padding:4px 9px; background:rgba(139,69,19,0.8); color:#fff; font-size:13px; cursor:pointer;">🔊🐻</button>`
+        : '';
       montreurOursHtml = `
         <div style="padding:5px 7px; margin-bottom:4px; background:rgba(139,69,19,0.12); border-left:2px solid #8B4513; font-size:11px; line-height:1.4; display:flex; align-items:center; gap:8px;">
           <span style="flex:1;">${growlText}</span>
-          <button onclick="window.__mdjAudio && window.__mdjAudio.mdjPlaySfx('universfield-bear-191995.mp3')" title="Jouer le son de l'ours" style="border:none; border-radius:6px; padding:4px 9px; background:rgba(139,69,19,0.8); color:#fff; font-size:13px; cursor:pointer;">🔊🐻</button>
+          ${growlBtn}
         </div>
       `;
     }
@@ -911,6 +986,22 @@ Object.assign(FirstNightMDJ.prototype, {
           </select>
         </div>
       `;
+    } else if (this.busHasRedirected && this.gm.state.busUndo) {
+      // Report déjà validé : afficher la TRACE + possibilité d'ANNULER
+      const _bu = this.gm.state.busUndo;
+      const _busP = players.find(p => p.id === _bu.busId);
+      const _stillDead = (_bu.killed || []).filter(id => this.deadPlayerIds.has(id));
+      if (_busP && _stillDead.length) {
+        const _names = _stillDead.map(id => this.getPlayerName(id)).join(', ');
+        specialSectionsHtml += `
+          <div style="border: 1px solid rgba(74,163,255,0.5); border-radius: 3px; padding: 6px; background: rgba(74,163,255,0.08); margin-bottom: 6px;">
+            <div style="color: #8fc4ff; font-size: 9px; font-weight: 700; margin-bottom: 4px;">🚌 ${_busP.name} a balancé <b>${_names}</b> à sa place — il survit (démasqué, devient villageois)</div>
+            <button id="bus-cancel-btn" style="width:100%; padding:6px; font-size:9px; font-weight:700; border:1px solid #4aa3ff; border-radius:4px; background:rgba(74,163,255,0.18); color:#cfe4ff; cursor:pointer;">
+              ↩️ Annuler le report (clic par erreur)
+            </button>
+          </div>
+        `;
+      }
     }
 
     // 🔥 Chauffeur de Braises : bouton de sacrifice s'il a pointé un innocent (envoyé au bûcher).
@@ -924,6 +1015,19 @@ Object.assign(FirstNightMDJ.prototype, {
           </button>
         </div>
       `;
+    } else {
+      // ↩️ Sacrifice déjà validé (clic par erreur ?) : proposer l'ANNULATION
+      const braisesDead = players.find(p => p.role === 'Custom_Chauffeur_Braises' && this.deadPlayerIds.has(p.id) && this.deathCauses[p.id] === 'braises') || null;
+      if (braisesDead) {
+        specialSectionsHtml += `
+          <div style="border: 1px solid rgba(120,170,255,0.5); border-radius: 3px; padding: 6px; background: rgba(120,170,255,0.08); margin-bottom: 6px;">
+            <div style="color: #bcd6ff; font-size: 9px; font-weight: 700; margin-bottom: 4px;">🔥 ${braisesDead.name} (Chauffeur de Braises) — sacrifié</div>
+            <button id="braises-cancel-btn" data-bid="${braisesDead.id}" style="width:100%; padding:7px; font-size:10px; font-weight:700; border:1px solid #4aa3ff; border-radius:4px; background:rgba(74,163,255,0.2); color:#cfe4ff; cursor:pointer;">
+              ↩️ Annuler le sacrifice (clic par erreur)
+            </button>
+          </div>
+        `;
+      }
     }
 
     if (deadChevalier) {
@@ -1034,7 +1138,10 @@ Object.assign(FirstNightMDJ.prototype, {
           <div style="color:#ffd0a0; font-size: 11px; font-weight:700; margin-bottom: 6px;">Sélectionne la personne à envoyer au bûcher</div>
           <select id="lynch-target" style="width: 100%; padding: 6px; font-size: 11px; border-radius: 4px; border: 1px solid #e0a0ff; background: #1a1a2e; color: #fff; font-weight: 600;">
             <option value="" style="background: #1a1a2e; color: #fff;">-- Sélectionner --</option>
-            ${alivePlayers.map(p => `<option value="${p.id}" style="background: #1a1a2e; color: #fff;">${p.name}</option>`).join('')}
+            ${alivePlayers.map(p => {
+              const _rd = this.rolesLoader.getRole(p.role);
+              return `<option value="${p.id}" style="background: #1a1a2e; color: #fff;">${p.name} (${_rd?.name || p.role || '?'})</option>`;
+            }).join('')}
           </select>
         </div>
       </div>

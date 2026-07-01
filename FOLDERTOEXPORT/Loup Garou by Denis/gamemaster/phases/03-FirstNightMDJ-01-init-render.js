@@ -96,6 +96,21 @@ Object.assign(FirstNightMDJ.prototype, {
   }
 ,
 
+  /**
+   * TOUS les loups vivants sont-ils isolés cette nuit (Creuseur de Tunnel) ?
+   * Si oui, l'attaque des loups est ANNULÉE (aucun loup ne peut sortir).
+   */
+  areAllWolvesIsolated() {
+    const isolated = (typeof this.getIsolatedPlayers === 'function') ? this.getIsolatedPlayers() : new Set();
+    if (isolated.size === 0) return false;
+    const aliveWolves = (this.gm?.state?.players || []).filter(p =>
+      !this.deadPlayerIds.has(p.id) && (this.isWolfRoleId(p.role) || p.camp === 'Loup' || p.camp === 'Loups')
+    );
+    if (aliveWolves.length === 0) return false;
+    return aliveWolves.every(p => isolated.has(p.id));
+  }
+,
+
 
   /**
    * Un role de loup chasse TOUTES les nuits.
@@ -401,6 +416,7 @@ Object.assign(FirstNightMDJ.prototype, {
             <div class="action-title-big" id="action-title-big"></div>
             <div class="action-controls" id="action-controls"></div>
             <div class="action-info" id="action-info"></div>
+            <div id="mdj-live-deaths" style="margin-top:auto;"></div>
           </div>
         </div>
       </div>
@@ -491,6 +507,39 @@ Object.assign(FirstNightMDJ.prototype, {
 ,
   getPlayerHistory(playerId) {
     return (this.gm.state.playerHistory && this.gm.state.playerHistory[playerId]) || [];
+  }
+,
+
+  /**
+   * ☠️ Panneau LIVE des morts de la nuit EN COURS (bas de la zone d'actions).
+   * Ces morts seront comptabilisées au débrief ; la map ne les révèle qu'à ce moment-là.
+   */
+  renderLiveDeaths() {
+    const el = document.getElementById('mdj-live-deaths');
+    if (!el) return;
+    const players = this.gm.state.players || [];
+    const deadAtStart = new Set(this.gm.state.deadAtNightStart || []);
+    const dead = players.filter(p => this.deadPlayerIds.has(p.id) && !deadAtStart.has(p.id));
+    const labels = {
+      wolf: '🐺 Loups', poison: '🧪 Potion', love: "💔 Chagrin d'amour",
+      tunnel: '🕳️ Tunnel vers un loup', chevalier: '⚔️ Chevalier', chasseur: '🏹 Chasseur',
+      braises: '🔥 Sacrifice (Braises)', bus: '🚌 Chauffeur de Bus', savant: '🧪 Savant Fou',
+      lynch: '🪓 Bûcher', mdj: '🛟 MDJ'
+    };
+    if (!dead.length) {
+      el.innerHTML = `
+        <div style="padding:6px 9px; background:rgba(0,0,0,0.25); border:1px dashed rgba(255,120,120,0.35); border-radius:6px; font-size:10px; color:#caa;">
+          ☠️ <b>Morts en cours :</b> <span style="opacity:.6;">aucune pour l'instant</span>
+        </div>`;
+      return;
+    }
+    el.innerHTML = `
+      <div style="padding:7px 9px; background:rgba(120,20,20,0.22); border:1px solid rgba(255,100,100,0.45); border-radius:6px;">
+        <div style="font-size:10px; font-weight:800; color:#ff9a9a; margin-bottom:4px;">
+          ☠️ Morts de la nuit (${dead.length}) — <span style="font-weight:600; color:#e0b090;">ils jouent quand même jusqu'au débrief</span>
+        </div>
+        ${dead.map(p => `<div style="font-size:10px; color:#ffd6d6; padding:1px 0;">💀 <b>${p.name}</b> — ${labels[this.deathCauses[p.id]] || 'cause inconnue'}</div>`).join('')}
+      </div>`;
   }
 ,
 
