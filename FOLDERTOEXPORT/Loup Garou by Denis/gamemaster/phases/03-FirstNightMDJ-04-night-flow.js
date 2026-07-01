@@ -178,7 +178,7 @@ Object.assign(FirstNightMDJ.prototype, {
         const actsThisNight = this.roleActsThisNight(roleId);
         if (!actsThisNight) return false;
 
-        const playerWithRole = players.find(p => p.role === roleId && !(new Set(this.gm.state.deadAtNightStart || [])).has(p.id));
+        const playerWithRole = players.find(p => p.role === roleId && !this.getDeadAtNightStartSet().has(p.id));
         return !!playerWithRole;
       });
 
@@ -311,7 +311,7 @@ Object.assign(FirstNightMDJ.prototype, {
         if (!actsThisNight) return false;
 
         // Also check that at least one player with this role is alive
-        const playerWithRole = players.find(p => p.role === roleId && !(new Set(this.gm.state.deadAtNightStart || [])).has(p.id));
+        const playerWithRole = players.find(p => p.role === roleId && !this.getDeadAtNightStartSet().has(p.id));
         return !!playerWithRole;
       });
 
@@ -639,7 +639,7 @@ Object.assign(FirstNightMDJ.prototype, {
     const playerWithRole = players.find(p => p.role === roleId);
 
     // (Re-cliquer un rôle déjà joué ne change RIEN tant qu'on ne re-valide pas.)
-    const _deadAtStart = new Set(this.gm.state.deadAtNightStart || []);
+    const _deadAtStart = this.getDeadAtNightStartSet();
     if (!force && playerWithRole && _deadAtStart.has(playerWithRole.id)) {
       console.log(`[MDJ] ⚠️ SKIP: ${roleId} (${playerWithRole.name}) is DEAD - finding next role`);
       // Mark this role as completed so we don't try to select it again
@@ -1182,7 +1182,7 @@ Object.assign(FirstNightMDJ.prototype, {
 
     // IMPORTANT: un joueur tué PENDANT la nuit joue quand même son tour (il découvre
     // sa mort au matin). On ne dispense que les joueurs morts AVANT la nuit.
-    const _deadStartNC = new Set(this.gm.state.deadAtNightStart || []);
+    const _deadStartNC = this.getDeadAtNightStartSet();
     const allCompleted = Object.entries(this.roleStates).every(([roleId, state]) => {
       const playerWithRole = players.find(p => p.role === roleId);
       const isAlive = playerWithRole && !_deadStartNC.has(playerWithRole.id);

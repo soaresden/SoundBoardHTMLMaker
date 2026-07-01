@@ -511,6 +511,18 @@ Object.assign(FirstNightMDJ.prototype, {
 ,
 
   /**
+   * Morts au DÉBUT de la nuit courante — source unique de vérité.
+   * ⚠️ Nuit 1 : TOUJOURS vide. gm.state.deadAtNightStart peut contenir des ids
+   * périmés d'une partie précédente (les ids p0, p1... sont réutilisés) :
+   * sans ce garde-fou, un empoisonné de la nuit 1 n'apparaissait pas dans les morts.
+   */
+  getDeadAtNightStartSet() {
+    if ((this.currentNight || 1) === 1) return new Set();
+    return new Set(this.gm.state.deadAtNightStart || []);
+  }
+,
+
+  /**
    * ☠️ Panneau LIVE des morts de la nuit EN COURS (bas de la zone d'actions).
    * Ces morts seront comptabilisées au débrief ; la map ne les révèle qu'à ce moment-là.
    */
@@ -518,7 +530,7 @@ Object.assign(FirstNightMDJ.prototype, {
     const el = document.getElementById('mdj-live-deaths');
     if (!el) return;
     const players = this.gm.state.players || [];
-    const deadAtStart = new Set(this.gm.state.deadAtNightStart || []);
+    const deadAtStart = this.getDeadAtNightStartSet();
     const dead = players.filter(p => this.deadPlayerIds.has(p.id) && !deadAtStart.has(p.id));
     const labels = {
       wolf: '🐺 Loups', poison: '🧪 Potion', love: "💔 Chagrin d'amour",

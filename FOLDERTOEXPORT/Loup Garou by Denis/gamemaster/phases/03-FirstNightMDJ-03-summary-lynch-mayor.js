@@ -722,7 +722,8 @@ Object.assign(FirstNightMDJ.prototype, {
     // Source unique de vérité (deadPlayerIds) : couvre TOUT — loups, potions (Sorcière/Apprenti),
     // amoureux (chagrin), tunnel, chevalier, bus, savant, MDJ… — et ignore les roleStates
     // périmés des nuits précédentes (ex: Loup Blanc qui n'agit pas cette nuit).
-    const _deadAtStart = new Set(this.gm.state.deadAtNightStart || []);
+    const _deadAtStart = (typeof this.getDeadAtNightStartSet === 'function')
+      ? this.getDeadAtNightStartSet() : new Set(this.gm.state.deadAtNightStart || []);
     const deadThisNight = Array.from(this.deadPlayerIds).filter(id =>
       !_deadAtStart.has(id) && players.some(pp => pp.id === id)
     );
