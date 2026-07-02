@@ -25,5 +25,6 @@
   },
   "pouvoir": "Doit éliminer tous les joueurs d'un groupe défini par le Meneur.",
   "actionType": "NightActive",
-  "tips": "Convertissez les villageois à votre cause - plus vous êtes nombreux, plus vous êtes forts."
+  "tips": "Convertissez les villageois à votre cause - plus vous êtes nombreux, plus vous êtes forts.",
+  "isWolf": false
 }

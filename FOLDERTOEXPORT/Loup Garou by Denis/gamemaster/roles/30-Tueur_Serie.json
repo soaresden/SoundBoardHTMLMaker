@@ -27,5 +27,6 @@
   },
   "pouvoir": "Chaque nuit, peut éliminer n'importe quel joueur. Immun aux attaques des Loups.",
   "actionType": "NightActive",
-  "tips": "Frappez dans l'ombre - semblez innocent et inoffensif."
+  "tips": "Frappez dans l'ombre - semblez innocent et inoffensif.",
+  "isWolf": false
 }

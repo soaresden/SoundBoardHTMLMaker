@@ -25,5 +25,6 @@
   },
   "pouvoir": "Doit donner du chocolat à tous les joueurs vivants. Peut en donner 2 par nuit.",
   "actionType": "NightActive",
-  "tips": "Échappez-vous rapidement - vous êtes insaisissable."
+  "tips": "Échappez-vous rapidement - vous êtes insaisissable.",
+  "isWolf": false
 }

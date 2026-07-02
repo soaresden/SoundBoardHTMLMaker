@@ -26,6 +26,7 @@
   },
   "actionType": "DayActive",
   "tips": "Soyez fort chaque nuit - les loups tremblent devant vous.",
+  "isWolf": false,
   "nightActive": [
     2,
     4,

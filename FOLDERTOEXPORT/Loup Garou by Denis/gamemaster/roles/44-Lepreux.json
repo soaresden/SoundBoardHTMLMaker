@@ -25,5 +25,6 @@
   },
   "pouvoir": "Sa mort rend les 3 joueurs qui ont voté pour lui lépreux.",
   "actionType": "DayActive",
-  "tips": "Restez isolé - votre présence décide qui vivra ou mourra."
+  "tips": "Restez isolé - votre présence décide qui vivra ou mourra.",
+  "isWolf": false
 }

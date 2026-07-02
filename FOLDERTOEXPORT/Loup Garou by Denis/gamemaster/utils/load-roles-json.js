@@ -69,7 +69,7 @@ let ROLE_FILE_MAPPING = {
 };
 
 const CACHE_KEY = 'LoupsGarous_RolesJSON_Cache';
-const CACHE_VERSION = 9;
+const CACHE_VERSION = 10;
 
 // ========== CHARGER LE MAPPING DYNAMIQUEMENT DEPUIS L'INDEX ==========
 async function loadRolesIndexDynamically() {

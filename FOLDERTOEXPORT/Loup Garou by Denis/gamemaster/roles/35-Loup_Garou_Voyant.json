@@ -28,17 +28,5 @@
   },
   "pouvoir": "Découvre le rôle exact d'un joueur chaque nuit comme la Voyante.",
   "actionType": "NightActive",
-  "tips": "Espionnez le village la nuit - informez vos frères loups.",
-  "nightActive": [
-    1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    7,
-    8,
-    9,
-    10
-  ]
+  "tips": "Espionnez le village la nuit - informez vos frères loups."
 }

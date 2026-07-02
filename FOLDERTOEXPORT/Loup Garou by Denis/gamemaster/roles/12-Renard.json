@@ -37,16 +37,5 @@
   "pouvoir": "Flaire le nombre de Loups parmi 3 joueurs sélectionnés (0, 1, 2 ou 3).",
   "actionType": "NightActive",
   "tips": "Flairez les mensonges - votre nez ne trompe jamais.",
-  "nightActive": [
-    1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    7,
-    8,
-    9,
-    10
-  ]
+  "isWolf": false
 }

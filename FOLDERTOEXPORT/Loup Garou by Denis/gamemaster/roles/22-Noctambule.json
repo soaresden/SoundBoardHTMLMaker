@@ -27,5 +27,6 @@
   },
   "pouvoir": "Chaque nuit, choisit un joueur dont elle bloque le pouvoir pour cette nuit.",
   "actionType": "NightActive",
-  "tips": "Vaquez la nuit pendant que le village dort - profitez de l'obscurité."
+  "tips": "Vaquez la nuit pendant que le village dort - profitez de l'obscurité.",
+  "isWolf": false
 }

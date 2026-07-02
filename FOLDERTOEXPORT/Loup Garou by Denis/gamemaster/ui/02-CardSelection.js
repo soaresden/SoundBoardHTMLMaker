@@ -454,6 +454,7 @@ function attachCardSelectionEvents(gameUI) {
     gameUI.gm.state.apprentiInv = { death: 1 };
     gameUI.gm.state.apprentiUsage = [];
     gameUI.gm.state.busUndo = null;
+    gameUI.gm.state.chasseurUndo = null;
     gameUI.gm.state.braisesUndo = [];
     gameUI.gm.state.revealDeaths = false;
     // Nouvelle partie : on jette l'ancienne instance MDJ pour repartir d'un état propre

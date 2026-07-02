@@ -29,5 +29,6 @@
   },
   "pouvoir": "Comme le Chasseur : la première fois qu'il devrait mourir, il balance un autre joueur à sa place et SURVIT. Ensuite tout le monde sait qui il est : il devient un simple villageois.",
   "actionType": "DayActive",
-  "tips": "Envoie sous le bus la personne dont tu te méfies le plus."
+  "tips": "Envoie sous le bus la personne dont tu te méfies le plus.",
+  "isWolf": false
 }

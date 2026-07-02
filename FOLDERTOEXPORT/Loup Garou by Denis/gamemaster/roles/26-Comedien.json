@@ -27,5 +27,6 @@
   },
   "pouvoir": "Chaque nuit, choisit parmi 3 cartes pour avoir un pouvoir temporaire.",
   "actionType": "NightActive",
-  "tips": "Jouez la comédie - faites croire à n'importe quel mensonge."
+  "tips": "Jouez la comédie - faites croire à n'importe quel mensonge.",
+  "isWolf": false
 }

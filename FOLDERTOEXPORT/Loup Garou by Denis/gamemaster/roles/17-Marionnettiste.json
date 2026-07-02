@@ -27,5 +27,6 @@
   },
   "pouvoir": "Désigne un joueur comme 'marionnette' qui obéit à ses ordres pendant la journée.",
   "actionType": "NightActive",
-  "tips": "Contrôlez les esprits faibles - façonnez le village à votre image."
+  "tips": "Contrôlez les esprits faibles - façonnez le village à votre image.",
+  "isWolf": false
 }

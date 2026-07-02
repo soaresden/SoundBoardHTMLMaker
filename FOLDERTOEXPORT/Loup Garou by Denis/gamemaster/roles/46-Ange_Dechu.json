@@ -25,5 +25,6 @@
   },
   "pouvoir": "Doit éliminer sa cible pour progresser. Gagne seul avec 15 vies.",
   "actionType": "DayActive",
-  "tips": "Jouez des deux côtés - personne ne connaît vos vrais motifs."
+  "tips": "Jouez des deux côtés - personne ne connaît vos vrais motifs.",
+  "isWolf": false
 }

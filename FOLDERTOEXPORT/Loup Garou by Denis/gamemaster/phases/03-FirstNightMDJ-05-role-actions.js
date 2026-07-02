@@ -340,7 +340,7 @@ Object.assign(FirstNightMDJ.prototype, {
       <div style="font-size:15px; color:#8a8fb0; font-weight:600;">🔮 ${p.name}</div>
       ${img ? `<img src="${img}" alt="" style="max-height:60vh; max-width:82vw; border-radius:14px; box-shadow:0 0 60px rgba(199,125,255,0.35);" onerror="this.style.display='none'; var e=document.getElementById('mdj-rolecard-emoji'); if (e) e.style.display='block';">` : ''}
       <div id="mdj-rolecard-emoji" style="display:${img ? 'none' : 'block'}; font-size:120px; line-height:1;">${rd.emoji || '❓'}</div>
-      <div style="font-size:min(10vw,58px); font-weight:900; letter-spacing:1px; color:${roleColor}; text-shadow:0 0 26px rgba(199,125,255,0.55); text-align:center; padding:0 16px;">${rd.emoji || ''} ${rd.name || p.role}</div>
+      <div style="font-size:min(10vw,58px); font-weight:900; letter-spacing:1px; color:#ffffff; text-shadow:0 0 18px ${roleColor}, 0 0 40px ${roleColor}, 0 2px 4px rgba(0,0,0,0.9); text-align:center; padding:0 16px;">${rd.emoji || ''} ${rd.name || p.role}</div>
       <div style="font-size:12px; color:#777; margin-top:4px;">(toucher l'écran pour fermer)</div>
     `;
     ov.addEventListener('click', () => ov.remove());

@@ -33,5 +33,6 @@
   "pouvoir": "Comme la Sorcière, mais il ne possède QU'UNE seule potion de MORT (pas de potion de vie). Il peut empoisonner un joueur une seule fois de la partie. Appelé avant la Sorcière.",
   "actionType": "NightActive",
   "borderLifetime": "current_night",
-  "tips": "Une seule potion de mort pour toute la partie — choisis bien ton moment."
+  "tips": "Une seule potion de mort pour toute la partie — choisis bien ton moment.",
+  "isWolf": false
 }

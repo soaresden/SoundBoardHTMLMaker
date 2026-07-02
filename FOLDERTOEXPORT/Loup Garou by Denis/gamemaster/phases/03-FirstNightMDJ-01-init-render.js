@@ -526,6 +526,25 @@ Object.assign(FirstNightMDJ.prototype, {
    * ☠️ Panneau LIVE des morts de la nuit EN COURS (bas de la zone d'actions).
    * Ces morts seront comptabilisées au débrief ; la map ne les révèle qu'à ce moment-là.
    */
+  /**
+   * Auteur précis d'une mort "wolf" : quel rôle loup a validé ce joueur CETTE nuit ?
+   * → « Loup Blanc », « Grand Méchant Loup », « Les Loups (meute) », etc.
+   */
+  getWolfKillerLabel(playerId) {
+    const n = this.currentNight || 1;
+    const rids = (typeof this.getWolfKillRoleIds === 'function') ? this.getWolfKillRoleIds() : [];
+    for (const rid of rids) {
+      const st = this.roleStates[rid];
+      if (st && (st._night || 1) === n && st.result && Array.isArray(st.result.targets) && st.result.targets.includes(playerId)) {
+        const rd = this.rolesLoader.getRole(rid) || {};
+        if (rid === 'Simple_Loup_Garou') return '🐺 Les Loups (meute)';
+        return (rd.emoji || '🐺') + ' ' + (rd.name || rid);
+      }
+    }
+    return '🐺 Les Loups';
+  }
+,
+
   renderLiveDeaths() {
     const el = document.getElementById('mdj-live-deaths');
     if (!el) return;
@@ -550,7 +569,11 @@ Object.assign(FirstNightMDJ.prototype, {
         <div style="font-size:10px; font-weight:800; color:#ff9a9a; margin-bottom:4px;">
           ☠️ Morts de la nuit (${dead.length}) — <span style="font-weight:600; color:#e0b090;">ils jouent quand même jusqu'au débrief</span>
         </div>
-        ${dead.map(p => `<div style="font-size:10px; color:#ffd6d6; padding:1px 0;">💀 <b>${p.name}</b> — ${labels[this.deathCauses[p.id]] || 'cause inconnue'}</div>`).join('')}
+        ${dead.map(p => {
+          const c = this.deathCauses[p.id];
+          const who = (c === 'wolf') ? this.getWolfKillerLabel(p.id) : (labels[c] || 'cause inconnue');
+          return `<div style="font-size:10px; color:#ffd6d6; padding:1px 0;">💀 <b>${p.name}</b> — ${who}</div>`;
+        }).join('')}
       </div>`;
   }
 ,
@@ -658,10 +681,17 @@ Object.assign(FirstNightMDJ.prototype, {
         <div style="font-size:64px; margin-bottom:8px;">${win.emoji || '\u{1F3C6}'}</div>
         <div style="font-size:34px; font-weight:900; color:${win.color}; letter-spacing:1px; text-shadow:0 0 18px ${win.color}88;">${win.label}</div>
         <div style="font-size:15px; color:#ddd; margin-top:10px;">${win.sub}</div>
-        <button id="mdj-victory-close" style="margin-top:22px; padding:12px 28px; font-size:15px; font-weight:700; color:#fff; background:${win.color}; border:none; border-radius:10px; cursor:pointer; box-shadow:0 4px 14px ${win.color}55;">🔄 Retour au choix des cartes</button>
+        <div style="display:flex; gap:12px; justify-content:center; margin-top:22px;">
+          <button id="mdj-victory-journal" style="padding:12px 24px; font-size:15px; font-weight:700; color:#fff; background:rgba(90,120,200,0.85); border:none; border-radius:10px; cursor:pointer; box-shadow:0 4px 14px rgba(90,120,200,0.45);">📜 Voir le journal</button>
+          <button id="mdj-victory-close" style="padding:12px 24px; font-size:15px; font-weight:700; color:#fff; background:${win.color}; border:none; border-radius:10px; cursor:pointer; box-shadow:0 4px 14px ${win.color}55;">🔄 Retour au choix des cartes</button>
+        </div>
       </div>
     `;
     document.body.appendChild(ov);
+    // 📜 Journal PAR-DESSUS l'écran de victoire (on peut le fermer et revenir ici)
+    ov.querySelector('#mdj-victory-journal')?.addEventListener('click', () => {
+      if (typeof this.openJournalOverlay === 'function') this.openJournalOverlay();
+    });
     ov.querySelector('#mdj-victory-close')?.addEventListener('click', () => {
       ov.remove();
       try {

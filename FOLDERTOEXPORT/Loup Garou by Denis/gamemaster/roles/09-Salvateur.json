@@ -37,16 +37,5 @@
   "pouvoir": "Protège un joueur de l'élimination par les Loups chaque nuit.",
   "actionType": "NightActive",
   "tips": "Défendez les faibles la nuit - vous êtes leur dernière protection.",
-  "nightActive": [
-    1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    7,
-    8,
-    9,
-    10
-  ]
+  "isWolf": false
 }

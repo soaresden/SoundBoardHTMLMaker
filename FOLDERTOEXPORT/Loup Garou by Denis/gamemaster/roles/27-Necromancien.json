@@ -27,5 +27,6 @@
   },
   "pouvoir": "Peut échanger silencieusement avec les morts pendant la nuit.",
   "actionType": "NightActive",
-  "tips": "Commandez aux morts - les cadavres ont des secrets à révéler."
+  "tips": "Commandez aux morts - les cadavres ont des secrets à révéler.",
+  "isWolf": false
 }

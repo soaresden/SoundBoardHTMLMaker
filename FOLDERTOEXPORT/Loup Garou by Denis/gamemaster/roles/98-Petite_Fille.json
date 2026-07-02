@@ -21,5 +21,6 @@
   },
   "pouvoir": "Observe les réunions nocturnes des Loups-Garous sans être vue.",
   "actionType": "NightActive",
-  "tips": "Observez les loups - personne ne suspecte une enfant."
+  "tips": "Observez les loups - personne ne suspecte une enfant.",
+  "isWolf": false
 }

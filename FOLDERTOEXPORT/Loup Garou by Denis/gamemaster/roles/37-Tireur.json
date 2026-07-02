@@ -27,5 +27,6 @@
   },
   "pouvoir": "Possède deux balles pour éliminer des joueurs pendant le jour.",
   "actionType": "DayActive",
-  "tips": "Tirez juste et sans merci - visez toujours le bon cible."
+  "tips": "Tirez juste et sans merci - visez toujours le bon cible.",
+  "isWolf": false
 }

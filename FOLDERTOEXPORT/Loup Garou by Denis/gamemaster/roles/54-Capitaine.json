@@ -25,5 +25,6 @@
   },
   "pouvoir": "Son vote compte double. En cas d'égalité, son vote désigne la victime.",
   "actionType": "NoActions",
-  "tips": "Commandez avec autorité - les villageois vous suivront."
+  "tips": "Commandez avec autorité - les villageois vous suivront.",
+  "isWolf": false
 }

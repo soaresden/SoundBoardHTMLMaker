@@ -27,5 +27,6 @@
   },
   "pouvoir": "Peut communiquer avec les esprits pour obtenir des informations.",
   "actionType": "NightActive",
-  "tips": "Communiquez avec les esprits - ils vous révèleront la vérité."
+  "tips": "Communiquez avec les esprits - ils vous révèleront la vérité.",
+  "isWolf": false
 }

@@ -27,5 +27,6 @@
   },
   "pouvoir": "Distribue des questions qui seront posées aux morts pendant le jeu.",
   "actionType": "NightActive",
-  "tips": "Lisez dans les cœurs - les cartes ne mentent jamais."
+  "tips": "Lisez dans les cœurs - les cartes ne mentent jamais.",
+  "isWolf": false
 }

@@ -25,5 +25,6 @@
   },
   "pouvoir": "Peut déclencher un feu qui élimine un bâtiment et son occupant.",
   "actionType": "NightActive",
-  "tips": "Enflammez le village - semer le chaos est votre passion."
+  "tips": "Enflammez le village - semer le chaos est votre passion.",
+  "isWolf": false
 }

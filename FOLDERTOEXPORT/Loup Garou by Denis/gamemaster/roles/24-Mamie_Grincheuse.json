@@ -27,5 +27,6 @@
     }
   },
   "actionType": "NightActive",
-  "tips": "Expulsez les importuns - votre maison est votre forteresse."
+  "tips": "Expulsez les importuns - votre maison est votre forteresse.",
+  "isWolf": false
 }

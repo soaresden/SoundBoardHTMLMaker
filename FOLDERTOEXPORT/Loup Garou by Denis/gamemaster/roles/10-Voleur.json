@@ -30,5 +30,6 @@
   },
   "pouvoir": "Échange son rôle avec un autre joueur chaque nuit.",
   "actionType": "NightActive",
-  "tips": "Subtilisez les secrets des autres - l'information est votre arme."
+  "tips": "Subtilisez les secrets des autres - l'information est votre arme.",
+  "isWolf": false
 }

@@ -753,6 +753,25 @@ Object.assign(FirstNightMDJ.prototype, {
         console.log(`[MDJ] Salvateur protected ${this.getPlayerName(this.lastSalvateurProtected)} - can't protect same person next night`);
       }
 
+      // 🐕 CHIEN-LOUP : son choix change RÉELLEMENT son camp (la barre de victoire
+      // en bas se met à jour immédiatement). Avant : seul l'emoji changeait !
+      if (roleId === 'Chien_Loup' && (action === 'join_wolves' || action === 'stay_villager')) {
+        const _chien = (this.gm?.state?.players || []).find(pp => pp.role === 'Chien_Loup');
+        if (_chien) {
+          if (action === 'join_wolves') {
+            _chien.camp = 'Loup';
+            this.transformations[_chien.id] = { from: 'Chien_Loup', to: 'Chien_Loup (camp Loups)', reason: 'a choisi de rejoindre les Loups' };
+            if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(_chien.id, '🐺 A choisi de rejoindre le camp des Loups');
+            console.log(`[MDJ] 🐕➡️🐺 ${_chien.name} (Chien-Loup) rejoint les LOUPS — barre de victoire mise à jour`);
+          } else {
+            _chien.camp = 'Village';
+            if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(_chien.id, '🏘️ A choisi de rester Villageois');
+            console.log(`[MDJ] 🐕🏘️ ${_chien.name} (Chien-Loup) reste VILLAGEOIS`);
+          }
+          if (typeof this.checkVictoryNow === 'function') this.checkVictoryNow();
+        }
+      }
+
       // CRITICAL: Renard — s'il ne renifle AUCUN loup, il perd son pouvoir (ne se reveille plus).
       // On detecte les loups parmi le joueur cible + ses 2 voisins vivants.
       if (roleId === 'Renard' && this.selectedPlayers.length > 0) {
@@ -1072,6 +1091,26 @@ Object.assign(FirstNightMDJ.prototype, {
           queue.push(id); // s'il est aussi amoureux dans l'AUTRE groupe → cascade
         });
       });
+
+      // 🐒➡️🐺 ENFANT SAUVAGE : si le mort est son idole, il devient LOUP —
+      // quelle que soit la cause (loups, potion, bûcher, chasseur, tunnel...).
+      // Ce hook étant appelé par TOUS les chemins de mort, la barre est toujours à jour.
+      const _esSt = this.roleStates['Enfant_Sauvage'];
+      if (_esSt && _esSt.completed && _esSt.result && Array.isArray(_esSt.result.targets) && _esSt.result.targets.includes(vid)) {
+        const _enfant = (this.gm?.state?.players || []).find(pp => pp.role === 'Enfant_Sauvage');
+        if (_enfant && !this.deadPlayerIds.has(_enfant.id)) {
+          this.transformations[_enfant.id] = {
+            from: 'Enfant_Sauvage',
+            to: 'Simple_Loup_Garou',
+            reason: `idole ${this.getPlayerName(vid)} est morte`
+          };
+          _enfant.role = 'Simple_Loup_Garou';
+          _enfant.camp = 'Loup';
+          if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(_enfant.id, '🐒➡️🐺 Son idole est morte : il devient Loup-Garou !');
+          console.log(`[MDJ] 🐒➡️🐺 ${_enfant.name} (Enfant Sauvage) devient LOUP (idole morte) — barre mise à jour`);
+          if (typeof this.checkVictoryNow === 'function') this.checkVictoryNow();
+        }
+      }
     }
   }
 ,

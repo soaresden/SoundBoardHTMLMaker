@@ -27,5 +27,6 @@
   },
   "pouvoir": "Donne sa vie pour sauver un autre joueur désigné.",
   "actionType": "NightActive",
-  "tips": "Servez votre maître loyalement - votre destin est le sien."
+  "tips": "Servez votre maître loyalement - votre destin est le sien.",
+  "isWolf": false
 }

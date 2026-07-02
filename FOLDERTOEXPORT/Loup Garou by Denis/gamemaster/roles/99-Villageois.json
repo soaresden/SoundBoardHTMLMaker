@@ -11,5 +11,6 @@
     }
   },
   "actionType": "NoActions",
-  "tips": "Soyez vigilant - ensemble, vous pouvez vaincre les loups."
+  "tips": "Soyez vigilant - ensemble, vous pouvez vaincre les loups.",
+  "isWolf": false
 }

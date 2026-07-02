@@ -2,7 +2,7 @@
   "id": "Simple_Loup_Garou",
   "name": "Simple Loup Garou",
   "emoji": "🐺",
-  "camp": "Loups-Garous",
+  "camp": "Loups",
   "isWolf": true,
   "ui": {
     "selectionRenderer": "wolfKill"
@@ -15,17 +15,5 @@
     }
   },
   "actionType": "NightActive",
-  "tips": "Travaillez avec vos frères - l'union fait la force.",
-  "nightActive": [
-    1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    7,
-    8,
-    9,
-    10
-  ]
+  "tips": "Travaillez avec vos frères - l'union fait la force."
 }

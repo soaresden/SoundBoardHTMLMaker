@@ -27,5 +27,6 @@
   },
   "pouvoir": "Gagne des amis en dormant avec eux, formant une alliance secrète.",
   "actionType": "NightActive",
-  "tips": "Séduisez et manipulez - le charme est plus puissant que la force."
+  "tips": "Séduisez et manipulez - le charme est plus puissant que la force.",
+  "isWolf": false
 }

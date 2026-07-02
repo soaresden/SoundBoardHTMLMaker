@@ -25,5 +25,6 @@
   },
   "pouvoir": "Porte une amulette qui protège d'une élimination.",
   "actionType": "DayActive",
-  "tips": "Gardez votre amulette secrète - elle est votre assurance-vie."
+  "tips": "Gardez votre amulette secrète - elle est votre assurance-vie.",
+  "isWolf": false
 }

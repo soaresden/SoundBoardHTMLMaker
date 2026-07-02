@@ -21,5 +21,6 @@
   },
   "pouvoir": "Votre ours grogne au matin lorsque vous êtes assis à côté d'un ou plusieurs Loups.",
   "actionType": "DayActive",
-  "tips": "Contrôlez votre ours - il obéit à vos ordres et protège le village."
+  "tips": "Contrôlez votre ours - il obéit à vos ordres et protège le village.",
+  "isWolf": false
 }

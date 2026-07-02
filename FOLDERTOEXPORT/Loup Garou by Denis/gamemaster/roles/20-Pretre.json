@@ -27,5 +27,6 @@
   },
   "pouvoir": "Peut bénir ou maudire un joueur avec des effets spéciaux.",
   "actionType": "NightActive",
-  "tips": "Absolvez les péchés - la rédemption est possible pour tous."
+  "tips": "Absolvez les péchés - la rédemption est possible pour tous.",
+  "isWolf": false
 }

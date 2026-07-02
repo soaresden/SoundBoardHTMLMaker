@@ -25,5 +25,6 @@
   },
   "pouvoir": "A un pouvoir politique spécial au moment du vote.",
   "actionType": "NoActions",
-  "tips": "Menez le vote - votre pouvoir est immense mais précaire."
+  "tips": "Menez le vote - votre pouvoir est immense mais précaire.",
+  "isWolf": false
 }

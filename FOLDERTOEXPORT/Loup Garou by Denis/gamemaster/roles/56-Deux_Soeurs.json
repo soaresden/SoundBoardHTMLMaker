@@ -33,5 +33,6 @@
   "nightActive": [
     1
   ],
-  "tips": "Restez solidaires - votre lien est votre force."
+  "tips": "Restez solidaires - votre lien est votre force.",
+  "isWolf": false
 }

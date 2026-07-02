@@ -25,5 +25,6 @@
   },
   "pouvoir": "A une santé augmentée et survive aux attaques mineures.",
   "actionType": "DayActive",
-  "tips": "Soyez dur comme pierre - rien ne peut vous blesser."
+  "tips": "Soyez dur comme pierre - rien ne peut vous blesser.",
+  "isWolf": false
 }

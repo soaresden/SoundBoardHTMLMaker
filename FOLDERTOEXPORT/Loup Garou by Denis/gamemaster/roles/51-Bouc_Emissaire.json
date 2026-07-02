@@ -25,5 +25,6 @@
   },
   "pouvoir": "Si le vote est égal, c'est lui qui est éliminé à la place des autres.",
   "actionType": "NoActions",
-  "tips": "Acceptez votre destin - votre sacrifice peut sauver le village."
+  "tips": "Acceptez votre destin - votre sacrifice peut sauver le village.",
+  "isWolf": false
 }

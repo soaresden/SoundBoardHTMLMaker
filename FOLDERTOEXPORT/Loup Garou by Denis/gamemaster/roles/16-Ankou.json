@@ -27,5 +27,6 @@
   },
   "pouvoir": "Après sa mort, continue à voter depuis le cimetière pendant 2 tours.",
   "actionType": "NightActive",
-  "tips": "Guidez les morts - vous êtes le passeur entre deux mondes."
+  "tips": "Guidez les morts - vous êtes le passeur entre deux mondes.",
+  "isWolf": false
 }

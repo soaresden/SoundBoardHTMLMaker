@@ -23,5 +23,6 @@
   },
   "pouvoir": "Peut éliminer un dernier joueur avant de mourir.",
   "actionType": "DayActive",
-  "tips": "Défendez le village avec honneur - emportez vos ennemis avec vous."
+  "tips": "Défendez le village avec honneur - emportez vos ennemis avec vous.",
+  "isWolf": false
 }

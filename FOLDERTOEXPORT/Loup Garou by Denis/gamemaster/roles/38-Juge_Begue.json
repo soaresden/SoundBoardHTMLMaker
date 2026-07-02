@@ -25,5 +25,6 @@
   },
   "pouvoir": "Une seule fois, peut forcer un nouveau vote immédiatement.",
   "actionType": "NightActive",
-  "tips": "Bafouille et crée la confusion - le doute est votre allié."
+  "tips": "Bafouille et crée la confusion - le doute est votre allié.",
+  "isWolf": false
 }

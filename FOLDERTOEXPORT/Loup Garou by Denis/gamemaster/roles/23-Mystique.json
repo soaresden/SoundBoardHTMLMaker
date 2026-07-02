@@ -25,5 +25,6 @@
   },
   "pouvoir": "Reçoit des messages cryptiques du Meneur sur les rôles des joueurs.",
   "actionType": "NightActive",
-  "tips": "Cachez votre véritable nature - le secret est votre plus grande arme."
+  "tips": "Cachez votre véritable nature - le secret est votre plus grande arme.",
+  "isWolf": false
 }

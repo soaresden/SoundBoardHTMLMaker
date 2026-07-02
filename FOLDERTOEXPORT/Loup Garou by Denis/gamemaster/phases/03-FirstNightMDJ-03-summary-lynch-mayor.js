@@ -319,6 +319,47 @@ Object.assign(FirstNightMDJ.prototype, {
         });
       }
 
+      // 🏹 Chasseur mort la nuit : CONFIRMER le tir
+      const chasseurShootBtn = document.getElementById('chasseur-shoot-btn');
+      if (chasseurShootBtn) {
+        chasseurShootBtn.addEventListener('click', () => {
+          const sel = document.getElementById('chasseur-target');
+          const tid = sel && sel.value;
+          if (!tid) { alert('Choisis une cible pour le tir du Chasseur !'); return; }
+          if (this.deadPlayerIds.has(tid)) { alert(this.getPlayerName(tid) + ' est déjà mort.'); return; }
+          const _before = new Set(this.deadPlayerIds);
+          this.deadPlayerIds.add(tid);
+          this.deathCauses[tid] = 'chasseur';
+          this.chasseurHasShot = true;
+          if (typeof this.checkCupidonCascadingDeath === 'function') this.checkCupidonCascadingDeath(tid);
+          // Mémorise tout ce que le tir a tué (cible + cascades) pour pouvoir ANNULER
+          this.gm.state.chasseurUndo = { targetId: tid, killed: Array.from(this.deadPlayerIds).filter(id => !_before.has(id)) };
+          if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(tid, '🏹 Abattu par le tir de vengeance du Chasseur');
+          this.quickSave?.();
+          if (typeof this.renderLiveMap === 'function') this.renderLiveMap();
+          if (typeof this.checkVictoryNow === 'function') this.checkVictoryNow();
+          this.renderNightSummary();
+        });
+      }
+      // 🏹↩️ Annulation du tir du Chasseur
+      const chasseurCancelBtn = document.getElementById('chasseur-cancel-btn');
+      if (chasseurCancelBtn) {
+        chasseurCancelBtn.addEventListener('click', () => {
+          const cu = this.gm.state.chasseurUndo;
+          if (!cu) return;
+          (cu.killed || []).forEach(id => {
+            this.deadPlayerIds.delete(id);
+            if (this.deathCauses) delete this.deathCauses[id];
+          });
+          this.chasseurHasShot = false;
+          this.gm.state.chasseurUndo = null;
+          if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(cu.targetId, '↩️ Tir du Chasseur annulé');
+          this.quickSave?.();
+          if (typeof this.renderLiveMap === 'function') this.renderLiveMap();
+          this.renderNightSummary();
+        });
+      }
+
       // ↩️ Annulation du report du Chauffeur de Bus (clic par erreur)
       const busCancel = document.getElementById('bus-cancel-btn');
       if (busCancel) {
@@ -727,12 +768,7 @@ Object.assign(FirstNightMDJ.prototype, {
     const deadThisNight = Array.from(this.deadPlayerIds).filter(id =>
       !_deadAtStart.has(id) && players.some(pp => pp.id === id)
     );
-    // Also add Chasseur revenge kills from THIS night summary
-    const chasseurTargetSelect = typeof document !== 'undefined' ? document.getElementById('chasseur-target') : null;
-    const chasseurTarget = chasseurTargetSelect?.value;
-    if (chasseurTarget) {
-      deadThisNight.push(chasseurTarget);
-    }
+    // (Le tir du Chasseur n'entre dans les morts QUE via le bouton 🏹 TIRER — confirmé.)
     // Add lynch victim
     const lynchSelect = typeof document !== 'undefined' ? document.getElementById('lynch-target') : null;
     const lynchVictim = lynchSelect?.value;
@@ -839,21 +875,10 @@ Object.assign(FirstNightMDJ.prototype, {
       } else if (deathCause === 'mdj') {
         cause = 'Décision du Maître du Jeu';
       } else if (deathCause === 'wolf') {
-        // Determine which wolf killed them (uniquement saisies de CETTE nuit)
-        const _n = this.currentNight || 1;
-        const _killedBy = (rid) => {
-          const st = this.roleStates[rid];
-          return st && (st._night || 1) === _n && st.result?.targets?.includes(p.id);
-        };
-        if (_killedBy('Loup_Garou_Blanc')) {
-          cause = 'Dévoré par le Loup-Garou Blanc';
-        } else if (_killedBy('Grand_Mechant_Loup')) {
-          cause = 'Dévoré par le Grand Méchant Loup';
-        } else if (_killedBy('Simple_Loup_Garou')) {
-          cause = 'Dévoré par un Simple Loup Garou';
-        } else {
-          cause = 'Dévoré par les Loups';
-        }
+        // Auteur PRÉCIS : quel rôle loup a validé cette victime cette nuit
+        // (Loup Blanc, Grand Méchant Loup, meute, Loup Voyant, futur rôle loup...)
+        const _who = (typeof this.getWolfKillerLabel === 'function') ? this.getWolfKillerLabel(p.id) : '🐺 Les Loups';
+        cause = 'Dévoré par ' + _who;
       }
 
       deaths.push({ name: p.name, role: p.role, emoji: emoji, cause: cause });
@@ -963,16 +988,37 @@ Object.assign(FirstNightMDJ.prototype, {
 
     if (deadChaseur) {
       const alivePlayers = players.filter(p => !this.deadPlayerIds.has(p.id));
-      const playerOptions = alivePlayers.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+      const playerOptions = alivePlayers.map(p => {
+        const _rd = this.rolesLoader.getRole(p.role);
+        return `<option value="${p.id}">${p.name} (${_rd?.name || p.role})</option>`;
+      }).join('');
       specialSectionsHtml += `
         <div style="border: 1px solid rgba(200,150,100,0.3); border-radius: 3px; padding: 6px; background: rgba(200,150,100,0.05); margin-bottom: 6px;">
-          <div style="color: #d4a574; font-size: 9px; font-weight: 600; margin-bottom: 3px;">🏹 Chasseur - Vengeance</div>
+          <div style="color: #d4a574; font-size: 9px; font-weight: 600; margin-bottom: 3px;">🏹 ${deadChaseur.name} (Chasseur) — tir de vengeance avant de mourir</div>
           <select id="chasseur-target" style="width: 100%; padding: 4px; font-size: 9px; border-radius: 2px; border: 1px solid #555; background: #333; color: #fff;">
             <option value="">-- Cible --</option>
             ${playerOptions}
           </select>
+          <button id="chasseur-shoot-btn" style="width:100%; margin-top:5px; padding:7px; font-size:10px; font-weight:800; border:1px solid #d4a574; border-radius:4px; background:rgba(212,165,116,0.3); color:#ffe3c2; cursor:pointer;">
+            🏹 TIRER (confirmer)
+          </button>
         </div>
       `;
+    } else {
+      // Tir déjà confirmé (Chasseur mort cette nuit) : trace + possibilité d'ANNULER
+      const _chDead = players.find(p => p.role === 'Chasseur' && deadThisNight.includes(p.id));
+      const _cu = this.gm.state.chasseurUndo;
+      if (_chDead && this.chasseurHasShot && _cu && (_cu.killed || []).some(id => this.deadPlayerIds.has(id))) {
+        const _names = (_cu.killed || []).filter(id => this.deadPlayerIds.has(id)).map(id => this.getPlayerName(id)).join(', ');
+        specialSectionsHtml += `
+          <div style="border: 1px solid rgba(212,165,116,0.5); border-radius: 3px; padding: 6px; background: rgba(212,165,116,0.08); margin-bottom: 6px;">
+            <div style="color: #ffe3c2; font-size: 9px; font-weight: 700; margin-bottom: 4px;">🏹 ${_chDead.name} (Chasseur) a abattu <b>${_names}</b></div>
+            <button id="chasseur-cancel-btn" style="width:100%; padding:6px; font-size:9px; font-weight:700; border:1px solid #4aa3ff; border-radius:4px; background:rgba(74,163,255,0.18); color:#cfe4ff; cursor:pointer;">
+              ↩️ Annuler le tir (clic par erreur)
+            </button>
+          </div>
+        `;
+      }
     }
 
     // 🚌 Chauffeur de Bus mort cette nuit : balance quelqu'un a sa place (survit 1 fois)

@@ -27,5 +27,6 @@
   },
   "pouvoir": "Protège un joueur en prenant l'attaque à sa place. A deux vies.",
   "actionType": "NightActive",
-  "tips": "Protégez votre charge - soyez le mur inébranlable."
+  "tips": "Protégez votre charge - soyez le mur inébranlable.",
+  "isWolf": false
 }

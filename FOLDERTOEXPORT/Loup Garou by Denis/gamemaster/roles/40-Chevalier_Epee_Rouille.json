@@ -21,5 +21,6 @@
   },
   "pouvoir": "A sa mort, il tuera automatiquement le premier loup à sa gauche. Innocentant au passage des villageois",
   "actionType": "DayActive",
-  "tips": "Combattez jusqu'au bout - votre courage inspire les autres."
+  "tips": "Combattez jusqu'au bout - votre courage inspire les autres.",
+  "isWolf": false
 }

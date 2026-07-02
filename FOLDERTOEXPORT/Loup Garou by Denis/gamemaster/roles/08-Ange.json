@@ -27,5 +27,6 @@
   },
   "pouvoir": "Doit se faire éliminer lors du premier vote du jour pour gagner.",
   "actionType": "NightActive",
-  "tips": "Guidez le village vers la lumière - évitez les ténèbres des loups."
+  "tips": "Guidez le village vers la lumière - évitez les ténèbres des loups.",
+  "isWolf": false
 }

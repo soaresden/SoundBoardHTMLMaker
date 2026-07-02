@@ -163,6 +163,10 @@ const server = http.createServer((req, res) => {
 // ========== DÉMARRAGE ==========
 generateIndex();
 
+// Validation du format des rôles (avertissements en console, non bloquant)
+try { require('./validate-roles.js').validate(ROLES_DIR); }
+catch (e) { console.warn('⚠️  validate-roles.js indisponible :', e.message); }
+
 server.listen(PORT, () => {
   console.log(`🚀 Serveur Loup Garou démarré`);
   console.log(`📍 http://localhost:${PORT}`);

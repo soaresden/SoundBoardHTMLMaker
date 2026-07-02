@@ -27,5 +27,6 @@
   },
   "pouvoir": "Peut faire dormir (endormir) deux joueurs qui ne pourront pas agir la nuit suivante.",
   "actionType": "NightActive",
-  "tips": "Hypnotisez vos cibles - elles deviendront vos alliés."
+  "tips": "Hypnotisez vos cibles - elles deviendront vos alliés.",
+  "isWolf": false
 }

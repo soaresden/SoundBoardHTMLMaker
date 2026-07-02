@@ -30,5 +30,6 @@
         "label": "Désigner l'idole (1)"
       }
     ]
-  }
+  },
+  "isWolf": false
 }

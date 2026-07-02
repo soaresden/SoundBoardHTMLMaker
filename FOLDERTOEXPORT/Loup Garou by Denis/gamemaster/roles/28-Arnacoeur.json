@@ -27,5 +27,6 @@
   },
   "pouvoir": "Peut remplacer un des amoureux du Cupidon si découvert.",
   "actionType": "NightActive",
-  "tips": "Trompez et dupez - l'arnaque est votre métier."
+  "tips": "Trompez et dupez - l'arnaque est votre métier.",
+  "isWolf": false
 }

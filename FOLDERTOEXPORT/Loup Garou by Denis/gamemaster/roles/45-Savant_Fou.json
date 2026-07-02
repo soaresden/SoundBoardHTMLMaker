@@ -25,5 +25,6 @@
   },
   "pouvoir": "Doit reconnaître la position exacte de joueurs importants chaque nuit.",
   "actionType": "DayActive",
-  "tips": "Cumulez les savoirs - le savoir est le pouvoir suprême."
+  "tips": "Cumulez les savoirs - le savoir est le pouvoir suprême.",
+  "isWolf": false
 }
