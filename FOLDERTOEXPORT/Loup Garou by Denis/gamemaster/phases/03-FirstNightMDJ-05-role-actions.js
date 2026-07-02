@@ -321,6 +321,34 @@ Object.assign(FirstNightMDJ.prototype, {
 
 
   /**
+   * 🔮 Carte de rôle PLEIN ÉCRAN (pour la Voyante) : fond opaque — on peut tendre
+   * l'écran au joueur sans rien dévoiler d'autre. Toucher l'écran pour fermer.
+   */
+  showRoleCardFullscreen(playerId) {
+    const players = this.gm.state.players || [];
+    const p = players.find(pp => pp.id === playerId);
+    if (!p) return;
+    const rd = this.rolesLoader.getRole(p.role) || {};
+    const img = (typeof window.getRoleImagePath === 'function') ? window.getRoleImagePath(p.role) : null;
+    const old = document.getElementById('mdj-rolecard-overlay');
+    if (old) old.remove();
+    const ov = document.createElement('div');
+    ov.id = 'mdj-rolecard-overlay';
+    ov.style.cssText = 'position:fixed; inset:0; z-index:100002; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; background:rgba(6,6,14,0.99); cursor:pointer;';
+    const roleColor = (rd.visual && rd.visual.roleColor && rd.visual.roleColor.fondColor) || '#c77dff';
+    ov.innerHTML = `
+      <div style="font-size:15px; color:#8a8fb0; font-weight:600;">🔮 ${p.name}</div>
+      ${img ? `<img src="${img}" alt="" style="max-height:60vh; max-width:82vw; border-radius:14px; box-shadow:0 0 60px rgba(199,125,255,0.35);" onerror="this.style.display='none'; var e=document.getElementById('mdj-rolecard-emoji'); if (e) e.style.display='block';">` : ''}
+      <div id="mdj-rolecard-emoji" style="display:${img ? 'none' : 'block'}; font-size:120px; line-height:1;">${rd.emoji || '❓'}</div>
+      <div style="font-size:min(10vw,58px); font-weight:900; letter-spacing:1px; color:${roleColor}; text-shadow:0 0 26px rgba(199,125,255,0.55); text-align:center; padding:0 16px;">${rd.emoji || ''} ${rd.name || p.role}</div>
+      <div style="font-size:12px; color:#777; margin-top:4px;">(toucher l'écran pour fermer)</div>
+    `;
+    ov.addEventListener('click', () => ov.remove());
+    document.body.appendChild(ov);
+  }
+,
+
+  /**
    * Render Voyante player selection
    * Show all players with their role names
    */
@@ -373,6 +401,11 @@ Object.assign(FirstNightMDJ.prototype, {
 
         this.renderActionButtons();
         this.updateMapForRole();
+
+        // 🔮 PLEIN ÉCRAN : montrer la carte du rôle au joueur Voyante (fond opaque)
+        if (this.selectedPlayers.length > 0 && typeof this.showRoleCardFullscreen === 'function') {
+          this.showRoleCardFullscreen(playerId);
+        }
       });
     });
 
@@ -865,7 +898,7 @@ Object.assign(FirstNightMDJ.prototype, {
         const prot = protectedPlayers.has(vid) ? ' (immunisé)' : '';
         const stillDead = this.deadPlayerIds.has(vid);
         return `<button class="sorc-life-minus" data-vid="${vid}" ${stillDead ? '' : 'disabled'}
-            style="${stepBtn} background:rgba(90,170,110,0.9); width:auto; padding:0 10px; ${stillDead ? '' : 'opacity:0.45; cursor:not-allowed;'}">−1 · Sauver ${nm}${prot}${stillDead ? '' : ' (déjà en vie)'}</button>`;
+            style="${stepBtn} background:rgba(90,170,110,0.9); width:auto; padding:0 10px; ${stillDead ? '' : 'opacity:0.45; cursor:not-allowed;'}">💚 Sauver ${nm}${prot}${stillDead ? '' : ' (déjà en vie)'}</button>`;
       }).join('');
       lifeBlock = `<div style="display:flex; flex-direction:column; gap:6px;">${_saveBtns}</div>`;
     } else if (inv.life > 0) {
@@ -889,7 +922,7 @@ Object.assign(FirstNightMDJ.prototype, {
             <option value="">-- Empoisonner… --</option>
             ${poisonOptions}
           </select>
-          <button class="sorc-death-minus" style="${stepBtn} background:rgba(190,80,80,0.9); width:auto; padding:0 10px;">−1</button>
+          <button class="sorc-death-minus" style="${stepBtn} background:rgba(190,80,80,0.9); width:auto; padding:0 10px;">☠️ Empoisonner</button>
         </div>`;
     } else {
       deathBlock = `<div style="font-size:11px; opacity:.6;">Plus de potion de mort</div>`;
@@ -951,13 +984,15 @@ Object.assign(FirstNightMDJ.prototype, {
       rerender();
     });
 
-    // Potion de Mort : −1 (empoisonner la cible choisie)
-    actionControls.querySelector('.sorc-death-minus')?.addEventListener('click', () => {
-      if (inv.death <= 0 || deathUsedThisNight || lifeUsedThisNight) return;
+    // Applique la potion de MORT sur la cible de la combobox (retourne true si appliquée).
+    // Utilisée par le bouton ☠️ ET comme FILET si on clique « Terminer » avec une cible choisie.
+    const applyDeathPotion = (interactive) => {
+      if (inv.death <= 0 || lifeUsedThisNight) return false;
+      if (usage.find(u => u.type === 'death' && u.night === night)) return false;
       const sel = actionControls.querySelector('.sorc-death-target');
       const tgt = sel && sel.value;
-      if (!tgt) { alert('Choisissez un joueur à empoisonner.'); return; }
-      if (isolatedPlayers.has(tgt)) { alert(this.getPlayerName(tgt) + ' est isolé(e) cette nuit (Creuseur de Tunnel) : la potion ne l\'atteint pas — choix accepté, stock conservé.'); return; }
+      if (!tgt) { if (interactive) alert('Choisissez un joueur à empoisonner.'); return false; }
+      if (isolatedPlayers.has(tgt)) { if (interactive) alert(this.getPlayerName(tgt) + ' est isolé(e) cette nuit (Creuseur de Tunnel) : la potion ne l\'atteint pas — choix accepté, stock conservé.'); return false; }
       const tgtName = this.getPlayerName(tgt);
       this.deadPlayerIds.add(tgt);
       if (this.deathCauses) this.deathCauses[tgt] = 'poison';
@@ -965,8 +1000,13 @@ Object.assign(FirstNightMDJ.prototype, {
       inv.death -= 1;
       usage.push({ type: 'death', targetId: tgt, targetName: tgtName, night });
       if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(tgt, 'Empoisonné par la Sorcière');
-      rerender();
       if (typeof this.checkVictoryNow === 'function') this.checkVictoryNow();
+      console.log('[MDJ] 🧙‍♀️☠️ Sorcière empoisonne ' + tgtName);
+      return true;
+    };
+    // Potion de Mort : bouton ☠️ Empoisonner
+    actionControls.querySelector('.sorc-death-minus')?.addEventListener('click', () => {
+      if (applyDeathPotion(true)) rerender();
     });
     // Potion de Mort : +1 (annuler, ce tour uniquement)
     actionControls.querySelector('.sorc-death-plus')?.addEventListener('click', () => {
@@ -983,6 +1023,8 @@ Object.assign(FirstNightMDJ.prototype, {
     if (actionInfo) {
       actionInfo.innerHTML = `<button class="btn-validate-action">✓ Terminer le tour de la Sorcière</button>`;
       actionInfo.querySelector('.btn-validate-action')?.addEventListener('click', () => {
+        // FILET : cible choisie dans la combobox mais bouton ☠️ oublié → on applique quand même
+        applyDeathPotion(false);
         this.selectedPlayers = [];
         this.actionState = {
           roleId: 'Sorciere',
@@ -1035,7 +1077,7 @@ Object.assign(FirstNightMDJ.prototype, {
             <option value="">-- Empoisonner... --</option>
             ${poisonOptions}
           </select>
-          <button class="appr-death-minus" style="${stepBtn} background:rgba(190,80,80,0.9);">−1</button>
+          <button class="appr-death-minus" style="${stepBtn} background:rgba(190,80,80,0.9);">☠️ Empoisonner</button>
         </div>`;
     } else {
       deathBlock = `<div style="font-size:11px; opacity:.6;">Plus de potion de mort (deja utilisee)</div>`;
@@ -1068,21 +1110,28 @@ Object.assign(FirstNightMDJ.prototype, {
       if (typeof this.renderLegend === 'function') this.renderLegend();
     };
 
-    actionControls.querySelector('.appr-death-minus')?.addEventListener('click', () => {
-      if (inv.death <= 0 || deathUsedThisNight) return;
+    // Applique la potion (bouton ☠️ OU filet au clic sur « Terminer »)
+    const applyApprPotion = (interactive) => {
+      if (inv.death <= 0) return false;
+      if (usage.find(u => u.type === 'death' && u.night === night)) return false;
       const sel = actionControls.querySelector('.appr-death-target');
       const tgt = sel && sel.value;
-      if (!tgt) { alert('Choisissez un joueur a empoisonner.'); return; }
-      if (isolatedPlayers.has(tgt)) { alert(this.getPlayerName(tgt) + ' est isole(e) cette nuit (Creuseur de Tunnel) : la potion ne l\'atteint pas — choix accepte, stock conserve.'); return; }
+      if (!tgt) { if (interactive) alert('Choisissez un joueur a empoisonner.'); return false; }
+      if (isolatedPlayers.has(tgt)) { if (interactive) alert(this.getPlayerName(tgt) + ' est isole(e) cette nuit (Creuseur de Tunnel) : la potion ne l\'atteint pas — choix accepte, stock conserve.'); return false; }
       const tgtName = this.getPlayerName(tgt);
       this.deadPlayerIds.add(tgt);
-      if (this.deathCauses) this.deathCauses[tgt] = 'poison';
+      // Cause DISTINCTE de la Sorcière (badge + résumé différents)
+      if (this.deathCauses) this.deathCauses[tgt] = 'poisonApprenti';
       if (typeof this.checkCupidonCascadingDeath === 'function') this.checkCupidonCascadingDeath(tgt);
       inv.death -= 1;
       usage.push({ type: 'death', targetId: tgt, targetName: tgtName, night });
       if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(tgt, "Empoisonne par l'Apprenti Sorcier");
-      rerender();
       if (typeof this.checkVictoryNow === 'function') this.checkVictoryNow();
+      console.log('[MDJ] 🧪☠️ Apprenti Sorcier empoisonne ' + tgtName);
+      return true;
+    };
+    actionControls.querySelector('.appr-death-minus')?.addEventListener('click', () => {
+      if (applyApprPotion(true)) rerender();
     });
 
     actionControls.querySelector('.appr-death-plus')?.addEventListener('click', () => {
@@ -1098,6 +1147,8 @@ Object.assign(FirstNightMDJ.prototype, {
     if (actionInfo) {
       actionInfo.innerHTML = `<button class="btn-validate-action">✓ Terminer le tour de l'Apprenti</button>`;
       actionInfo.querySelector('.btn-validate-action')?.addEventListener('click', () => {
+        // FILET : cible choisie dans la combobox mais bouton ☠️ oublié → on applique quand même
+        applyApprPotion(false);
         this.selectedPlayers = [];
         this.actionState = { roleId: rid, action: 'apprenti-turn', roleName: role.name || 'Apprenti Sorcier', roleEmoji: role.emoji || '🧪' };
         this.completeRoleAction();

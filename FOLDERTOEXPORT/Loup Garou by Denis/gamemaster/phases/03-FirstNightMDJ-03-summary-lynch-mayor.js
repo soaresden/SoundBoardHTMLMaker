@@ -820,6 +820,8 @@ Object.assign(FirstNightMDJ.prototype, {
         cause = 'Mort d\'amour';
       } else if (deathCause === 'poison') {
         cause = 'Tué par la potion de la Sorcière';
+      } else if (deathCause === 'poisonApprenti') {
+        cause = "Tué par la potion de l'Apprenti Sorcier";
       } else if (deathCause === 'lynch') {
         cause = 'Lynché par le village';
       } else if (deathCause === 'chasseur') {

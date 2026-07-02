@@ -141,7 +141,7 @@ Object.assign(FirstNightMDJ.prototype, {
     const ancien = ps.find(p => p.role === 'Ancien');
     if (!ancien || !this.deadPlayerIds.has(ancien.id)) return false;
     const c = this.deathCauses && this.deathCauses[ancien.id];
-    return c === 'lynch' || c === 'poison' || c === 'chasseur';
+    return c === 'lynch' || c === 'poison' || c === 'poisonApprenti' || c === 'chasseur';
   }
 ,
 
@@ -533,7 +533,7 @@ Object.assign(FirstNightMDJ.prototype, {
     const deadAtStart = this.getDeadAtNightStartSet();
     const dead = players.filter(p => this.deadPlayerIds.has(p.id) && !deadAtStart.has(p.id));
     const labels = {
-      wolf: '🐺 Loups', poison: '🧪 Potion', love: "💔 Chagrin d'amour",
+      wolf: '🐺 Loups', poison: '🧙‍♀️ Potion de la Sorcière', poisonApprenti: "🧪 Potion de l'Apprenti", love: "💔 Chagrin d'amour",
       tunnel: '🕳️ Tunnel vers un loup', chevalier: '⚔️ Chevalier', chasseur: '🏹 Chasseur',
       braises: '🔥 Sacrifice (Braises)', bus: '🚌 Chauffeur de Bus', savant: '🧪 Savant Fou',
       lynch: '🪓 Bûcher', mdj: '🛟 MDJ'

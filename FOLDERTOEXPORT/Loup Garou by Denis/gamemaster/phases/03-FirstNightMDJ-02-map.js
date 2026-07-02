@@ -223,6 +223,7 @@ Object.assign(FirstNightMDJ.prototype, {
       const killerInfoMap = {
         wolf:      { emoji: '🐺', bg: _killerColor('Simple_Loup_Garou', '#b03030'), label: 'les Loups-Garous' },
         poison:    { emoji: '🧙‍♀️', bg: _killerColor('Sorciere', '#7a3aa0'), label: 'la Sorcière (potion)' },
+        poisonApprenti: { emoji: '🧪', bg: _killerColor('Custom_Apprenti_Sorcier', '#2e7d5b'), label: "l'Apprenti Sorcier (potion)" },
         lynch:     { emoji: '🪓', bg: '#9966CC', label: 'le village (bûcher)' },
         chasseur:  { emoji: '🏹', bg: _killerColor('Chasseur', '#D4A574'), label: 'le Chasseur' },
         chevalier: { emoji: '⚔️', bg: _killerColor('Chevalier_Epee_Rouille', '#FFD700'), label: 'le Chevalier' },
@@ -411,7 +412,7 @@ Object.assign(FirstNightMDJ.prototype, {
     const isDead = this.deadPlayerIds.has(playerId);
     const cause = this.deathCauses && this.deathCauses[playerId];
     const causeLabel = {
-      wolf: 'Loups-Garous', poison: 'Sorcière (poison)', lynch: 'village (vote)',
+      wolf: 'Loups-Garous', poison: 'Sorcière (poison)', poisonApprenti: 'Apprenti Sorcier (poison)', lynch: 'village (vote)',
       chasseur: 'Chasseur', chevalier: 'Chevalier', love: 'chagrin (amoureux)',
       savant: 'Savant Fou', mdj: 'Maître du Jeu', tunnel: 'tunnel vers un Loup (Creuseur)',
       braises: 'sacrifice (Chauffeur de Braises)', bus: 'Chauffeur de Bus'
