@@ -298,6 +298,7 @@ Object.assign(FirstNightMDJ.prototype, {
           const ps = this.gm.state.players || [];
           const busP = ps.find(p => p.role === 'Custom_Chauffeur_Bus' && this.deadPlayerIds.has(p.id) && !this.busHasRedirected);
           if (!busP || !targetId) return;
+          if (typeof this.pushUndo === 'function') this.pushUndo('Report du Bus sur ' + this.getPlayerName(targetId));
           const _busCause = this.deathCauses ? this.deathCauses[busP.id] : null;
           const _before = new Set(this.deadPlayerIds);
           this.deadPlayerIds.delete(busP.id);
@@ -327,6 +328,7 @@ Object.assign(FirstNightMDJ.prototype, {
           const tid = sel && sel.value;
           if (!tid) { alert('Choisis une cible pour le tir du Chasseur !'); return; }
           if (this.deadPlayerIds.has(tid)) { alert(this.getPlayerName(tid) + ' est déjà mort.'); return; }
+          if (typeof this.pushUndo === 'function') this.pushUndo('Tir du Chasseur sur ' + this.getPlayerName(tid));
           const _before = new Set(this.deadPlayerIds);
           this.deadPlayerIds.add(tid);
           this.deathCauses[tid] = 'chasseur';
@@ -387,6 +389,7 @@ Object.assign(FirstNightMDJ.prototype, {
         braisesBtn.addEventListener('click', () => {
           const bid = braisesBtn.dataset.bid;
           if (!bid || this.deadPlayerIds.has(bid)) return;
+          if (typeof this.pushUndo === 'function') this.pushUndo('Sacrifice du Chauffeur de Braises');
           const _before = new Set(this.deadPlayerIds);
           this.deadPlayerIds.add(bid);
           this.deathCauses[bid] = 'braises';
@@ -460,7 +463,7 @@ Object.assign(FirstNightMDJ.prototype, {
                 <div style="color:#bfe0ff; font-weight:700; font-size:12px; margin-bottom:6px;">🚌 Chauffeur de Bus : il balance quelqu'un a sa place (il survit cette fois, puis devient villageois)</div>
                 <select id="bus-lynch-target" style="width:100%; padding:6px; background:#333; color:#fff; border:1px solid #4aa3ff; border-radius:4px; font-size:12px;">
                   <option value="">-- Choisir le remplacant --</option>
-                  ${aliveRepl.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+                  ${aliveRepl.map(p => `<option value="${p.id}">${p.name} (${(this.rolesLoader.getRole(p.role)?.name) || p.role})</option>`).join('')}
                 </select>
                 <button id="bus-lynch-confirm" class="lg-fire-btn" style="width:100%; margin-top:8px; padding:10px; border-radius:6px; font-weight:800; cursor:pointer; font-size:12px;">🪓 Envoyer le remplacant au bucher 🔥</button>
               </div>`;
@@ -625,6 +628,7 @@ Object.assign(FirstNightMDJ.prototype, {
    * Now that mayor is elected, proceed with first night roles
    */
   completeMayorElection() {
+    if (typeof this.pushUndo === 'function') this.pushUndo('Élection du maire' + (this.mayorId ? ' : ' + this.getPlayerName(this.mayorId) : ' (aucun)'));
     console.log('[MDJ] Mayor election complete - proceeding to first night roles');
     console.log(`[MDJ] ✓ mayorId set to: ${this.mayorId}`);
     this.mayorElectionCompleted = true;
@@ -661,7 +665,7 @@ Object.assign(FirstNightMDJ.prototype, {
         const isMayor = this.mayorId && this.mayorId === p.id;
         const displayName = isMayor ? `🎖️ ${p.name}` : p.name;
         const isSelected = this.selectedLynchVictimId === p.id;
-        return `<option value="${p.id}" ${isSelected ? 'selected' : ''}>${displayName}</option>`;
+        return `<option value="${p.id}" ${isSelected ? 'selected' : ''}>${displayName} (${roleData?.name || p.role})</option>`;
       })
       .join('');
 
@@ -848,6 +852,7 @@ Object.assign(FirstNightMDJ.prototype, {
     deadPlayers.forEach(p => {
       const roleData = this.rolesLoader.getRole(p.role);
       const emoji = roleData?.emoji || '❓';
+      const roleName = roleData?.name || p.role || '?';
 
       let cause = 'Cause inconnue';
       const deathCause = this.deathCauses[p.id];
@@ -881,7 +886,7 @@ Object.assign(FirstNightMDJ.prototype, {
         cause = 'Dévoré par ' + _who;
       }
 
-      deaths.push({ name: p.name, role: p.role, emoji: emoji, cause: cause });
+      deaths.push({ name: p.name, role: p.role, roleName: roleName, emoji: emoji, cause: cause });
     });
 
     // Check for Montreur d'Ours growl
@@ -934,7 +939,7 @@ Object.assign(FirstNightMDJ.prototype, {
       : '<div style="padding:6px; text-align:center; color:#666; font-size:9px; font-style:italic;">Aucune action</div>';
 
     const deathsHtml = deaths.length > 0
-      ? deaths.map(d => `<div style="padding:4px 6px; margin-bottom:4px; font-size:10px; line-height:1.3; background:rgba(255,102,102,0.1); border-radius:2px; border-left:2px solid #ff4444;"><strong style="color:#ffaaaa; font-size:10px;">${d.emoji} ${d.name}</strong><br><span style="color:#ff8888; font-size:9px;">${d.cause}</span></div>`).join('')
+      ? deaths.map(d => `<div style="padding:4px 6px; margin-bottom:4px; font-size:10px; line-height:1.3; background:rgba(255,102,102,0.1); border-radius:2px; border-left:2px solid #ff4444;"><strong style="color:#ffaaaa; font-size:10px;">${d.emoji} ${d.name}</strong> <span style="color:#ffaaaa; opacity:.75; font-size:9px;">(${d.roleName || '?'})</span><br><span style="color:#ff8888; font-size:9px;">${d.cause}</span></div>`).join('')
       : '<div style="padding:6px; text-align:center; color:#666; font-size:9px; font-style:italic;">Aucune mort</div>';
 
     // Check for special role deaths that need handling
@@ -955,7 +960,7 @@ Object.assign(FirstNightMDJ.prototype, {
         !deadThisNight.includes(p.id) &&
         p.id !== this.mayorId
       );
-      const successorOptions = successors.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+      const successorOptions = successors.map(p => `<option value="${p.id}">${p.name} (${(this.rolesLoader.getRole(p.role)?.name) || p.role})</option>`).join('');
       specialSectionsHtml += `
         <div style="border: 1px solid rgba(255,215,0,0.4); border-radius: 3px; padding: 6px; background: rgba(255,215,0,0.06); margin-bottom: 6px;">
           <div style="color: #FFD700; font-size: 9px; font-weight: 700; margin-bottom: 3px;">\u{1F396}\uFE0F ${mayorPlayer?.name || 'Le Maire'} meurt — designer le nouveau Maire</div>
@@ -1025,7 +1030,7 @@ Object.assign(FirstNightMDJ.prototype, {
     const busDeadNight = players.find(p => p.role === 'Custom_Chauffeur_Bus' && deadThisNight.includes(p.id) && !this.busHasRedirected) || null;
     if (busDeadNight) {
       const busTargets = players.filter(p => !this.deadPlayerIds.has(p.id) && p.id !== busDeadNight.id);
-      const busOpts = busTargets.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+      const busOpts = busTargets.map(p => `<option value="${p.id}">${p.name} (${(this.rolesLoader.getRole(p.role)?.name) || p.role})</option>`).join('');
       specialSectionsHtml += `
         <div style="border: 1px solid rgba(74,163,255,0.5); border-radius: 3px; padding: 6px; background: rgba(74,163,255,0.08); margin-bottom: 6px;">
           <div style="color: #8fc4ff; font-size: 9px; font-weight: 700; margin-bottom: 3px;">🚌 ${busDeadNight.name} (Chauffeur de Bus) \u2014 balance quelqu'un a sa place</div>
@@ -1104,7 +1109,7 @@ Object.assign(FirstNightMDJ.prototype, {
 
           specialSectionsHtml += `
             <div style="border: 1px solid #FFD700; border-radius: 3px; padding: 6px; background: rgba(255,215,0,0.08); margin-bottom: 6px;">
-              <div style="color: #FFD700; font-size: 10px; font-weight: 700;">⚔️ <b>${wolfName}</b> — loup à gauche du Chevalier — est maudit</div>
+              <div style="color: #FFD700; font-size: 10px; font-weight: 700;">⚔️ <b>${wolfName}</b> (${(this.rolesLoader.getRole(leftNeighbor.role)?.name) || leftNeighbor.role}) — loup à gauche du Chevalier <b>${chevalierPlayer.name}</b> — est maudit</div>
               <div style="color: #ffe9a0; font-size: 9px; margin-top:2px;">Il jouera encore la nuit prochaine, puis mourra (annoncé au débrief d'après).</div>
             </div>
           `;
@@ -1282,6 +1287,7 @@ Object.assign(FirstNightMDJ.prototype, {
 ,
 
   executeLynch(victimId) {
+    if (typeof this.pushUndo === 'function') this.pushUndo('Bûcher : ' + this.getPlayerName(victimId));
     const result = this.processLynchVictim(victimId);
     const {victim, victimRole, cascadeDeaths, enfantSauvageTransformed} = result;
     const players = this.gm.state.players || [];
@@ -1437,7 +1443,7 @@ Object.assign(FirstNightMDJ.prototype, {
             <p style="margin:0 0 8px 0; color:#ddd; font-size:11px;">Choisir sa cible (n'importe quel joueur vivant) :</p>
             <select id="chasseur-revenge-target" style="width:100%; padding:6px; background:#333; color:#fff; border:1px solid #666; border-radius:3px; font-size:11px;">
               <option value="">-- Pas de tir --</option>
-              ${validTargets.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+              ${validTargets.map(p => `<option value="${p.id}">${p.name} (${(this.rolesLoader.getRole(p.role)?.name) || p.role})</option>`).join('')}
             </select>
           </div>
         `;
@@ -1483,7 +1489,7 @@ Object.assign(FirstNightMDJ.prototype, {
             <div style="color:#FFD700; font-size:12px; font-weight:700; margin-bottom:6px;">🎖️ ${victim.name} était Maire — désigner le nouveau Maire</div>
             <select id="lynch-mayor-reassign" style="width:100%; padding:6px; background:#333; color:#fff; border:1px solid #FFD700; border-radius:3px; font-size:11px;">
               <option value="">-- Nouveau Maire --</option>
-              ${successors.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+              ${successors.map(p => `<option value="${p.id}">${p.name} (${(this.rolesLoader.getRole(p.role)?.name) || p.role})</option>`).join('')}
             </select>
           </div>
         `;
@@ -1547,10 +1553,16 @@ Object.assign(FirstNightMDJ.prototype, {
           if (targetId) {
             const targetPlayer = players.find(p => p.id === targetId);
             console.log(`[MDJ] 🏹 ${victim.name} (Chasseur) shoots: ${targetPlayer.name}`);
+            if (typeof this.pushUndo === 'function') this.pushUndo('Tir du Chasseur sur ' + this.getPlayerName(targetId));
             this.deadPlayerIds.add(targetId);
             this.deathCauses[targetId] = 'chasseur';
             this.chasseurHasShot = true;
             this.checkCupidonCascadingDeath(targetId);
+            if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(targetId, '🏹 Abattu par le tir de vengeance du Chasseur');
+            // ☠️ Mise à jour IMMÉDIATE : icône grisée + panneau des morts, sans attendre
+            // « Continuer vers la nuit suivante »
+            if (typeof this.renderLiveMap === 'function') this.renderLiveMap();
+            if (typeof this.renderLiveDeaths === 'function') this.renderLiveDeaths();
             // Decompte en direct: si le tir du Chasseur decide la partie, l'afficher tout de suite
             this.checkVictoryNow();
           } else {

@@ -402,7 +402,10 @@ Object.assign(FirstNightMDJ.prototype, {
         <!-- CENTER: Blue Role List Zone -->
         <div class="mdj-center-panel">
           <div class="mdj-role-list-wrapper">
-            <div class="role-list-header">🌙 Nuit 1</div>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <div class="role-list-header" style="flex:1;">🌙 Nuit 1</div>
+              <button id="mdj-undo-btn" title="Annuler le dernier coup (Ctrl+Z)" style="border:none; border-radius:7px; padding:5px 9px; font-size:13px; font-weight:800; cursor:pointer; background:rgba(90,120,200,0.75); color:#fff; flex:0 0 auto;">↩️</button>
+            </div>
             <div class="role-list-blue" id="role-listbox"></div>
           </div>
         </div>
@@ -423,6 +426,19 @@ Object.assign(FirstNightMDJ.prototype, {
     `;
 
     this.ensureStyles();
+
+    // ↩️ Annulation : bouton + Ctrl+Z (le handler clavier est remplacé à chaque partie)
+    document.getElementById('mdj-undo-btn')?.addEventListener('click', () => this.undoLastMove());
+    if (window.__mdjUndoKeyHandler) document.removeEventListener('keydown', window.__mdjUndoKeyHandler);
+    window.__mdjUndoKeyHandler = (e) => {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
+        e.preventDefault();
+        this.undoLastMove();
+      }
+    };
+    document.addEventListener('keydown', window.__mdjUndoKeyHandler);
+    if (typeof this.renderUndoButton === 'function') this.renderUndoButton();
+
     this.renderLiveMap();
     this.renderRoleListbox();
     this.attachResizeHandlers();
@@ -572,9 +588,123 @@ Object.assign(FirstNightMDJ.prototype, {
         ${dead.map(p => {
           const c = this.deathCauses[p.id];
           const who = (c === 'wolf') ? this.getWolfKillerLabel(p.id) : (labels[c] || 'cause inconnue');
-          return `<div style="font-size:10px; color:#ffd6d6; padding:1px 0;">💀 <b>${p.name}</b> — ${who}</div>`;
+          return `<div style="font-size:10px; color:#ffd6d6; padding:1px 0;">💀 <b>${p.name}</b> <span style="opacity:.75;">(${(this.rolesLoader.getRole(p.role)?.name) || p.role})</span> — ${who}</div>`;
         }).join('')}
       </div>`;
+  }
+,
+
+  /**
+   * ↩️ CTRL+Z DU MDJ — snapshot COMPLET de l'état avant chaque coup.
+   * pushUndo(label) est appelé au début de chaque mutation (validation de rôle,
+   * potion, bûcher, tir, bus, braises, secours MDJ, passage de nuit...).
+   */
+  _undoSnapshot() {
+    const gmS = this.gm.state || {};
+    return JSON.parse(JSON.stringify({
+      dead: Array.from(this.deadPlayerIds),
+      causes: this.deathCauses || {},
+      roleStates: this.roleStates || {},
+      transformations: this.transformations || {},
+      currentNight: this.currentNight || 1,
+      selectedRoleId: this.selectedRoleId || null,
+      chasseurHasShot: !!this.chasseurHasShot,
+      busHasRedirected: !!this.busHasRedirected,
+      chevalierCursedWolfId: this.chevalierCursedWolfId || null,
+      chevalierCurseSetNight: this.chevalierCurseSetNight || null,
+      skipNextWolfKill: !!this.skipNextWolfKill,
+      ancienResisted: !!this.ancienResisted,
+      infectUsed: !!this.infectUsed,
+      renardDetectedWolves: (this.renardDetectedWolves === null || this.renardDetectedWolves === undefined) ? null : !!this.renardDetectedWolves,
+      lastSalvateurProtected: this.lastSalvateurProtected || null,
+      sorcierePotionsUsed: this.sorcierePotionsUsed || 0,
+      sorciereLifeUsed: !!this.sorciereLifeUsed,
+      sorcierePoisonUsed: !!this.sorcierePoisonUsed,
+      mayorId: this.mayorId || null,
+      mayorElectionCompleted: !!this.mayorElectionCompleted,
+      seq: this._seqCounter || 0,
+      players: (gmS.players || []).map(pp => ({ id: pp.id, name: pp.name, role: pp.role, camp: pp.camp })),
+      gm: {
+        sorciereInv: gmS.sorciereInv, sorciereUsage: gmS.sorciereUsage,
+        apprentiInv: gmS.apprentiInv, apprentiUsage: gmS.apprentiUsage,
+        busUndo: gmS.busUndo, braisesUndo: gmS.braisesUndo, chasseurUndo: gmS.chasseurUndo,
+        deadAtNightStart: gmS.deadAtNightStart, revealDeaths: gmS.revealDeaths
+      }
+    }));
+  }
+,
+  pushUndo(label) {
+    try {
+      if (!this._undoStack) this._undoStack = [];
+      this._undoStack.push({ label: label || 'action', snap: this._undoSnapshot() });
+      if (this._undoStack.length > 25) this._undoStack.shift();
+      if (typeof this.renderUndoButton === 'function') this.renderUndoButton();
+    } catch (e) { console.warn('[MDJ] pushUndo KO', e); }
+  }
+,
+  undoLastMove() {
+    const item = this._undoStack && this._undoStack.pop();
+    if (!item) { alert('Rien à annuler.'); return; }
+    const sn = item.snap;
+    try {
+      this.deadPlayerIds = new Set(sn.dead || []);
+      this.deathCauses = sn.causes || {};
+      this.roleStates = sn.roleStates || {};
+      this.transformations = sn.transformations || {};
+      this.currentNight = sn.currentNight || 1;
+      this.selectedRoleId = sn.selectedRoleId || null;
+      this.chasseurHasShot = sn.chasseurHasShot;
+      this.busHasRedirected = sn.busHasRedirected;
+      this.chevalierCursedWolfId = sn.chevalierCursedWolfId;
+      this.chevalierCurseSetNight = sn.chevalierCurseSetNight;
+      this.skipNextWolfKill = sn.skipNextWolfKill;
+      this.ancienResisted = sn.ancienResisted;
+      this.infectUsed = sn.infectUsed;
+      this.renardDetectedWolves = sn.renardDetectedWolves;
+      this.lastSalvateurProtected = sn.lastSalvateurProtected;
+      this.sorcierePotionsUsed = sn.sorcierePotionsUsed;
+      this.sorciereLifeUsed = sn.sorciereLifeUsed;
+      this.sorcierePoisonUsed = sn.sorcierePoisonUsed;
+      this.mayorId = sn.mayorId;
+      this.mayorElectionCompleted = sn.mayorElectionCompleted;
+      this._seqCounter = sn.seq || 0;
+      this.victoryShown = false;
+      // joueurs : rétablit nom / rôle / camp (annule Chien-Loup, Enfant Sauvage, Voleur...)
+      const ps = this.gm.state.players || [];
+      (sn.players || []).forEach(sp => {
+        const pp = ps.find(x => x.id === sp.id);
+        if (pp) { pp.name = sp.name; pp.role = sp.role; pp.camp = sp.camp; }
+      });
+      Object.assign(this.gm.state, sn.gm || {});
+      // le registry doit pointer le NOUVEAU Set
+      if (this.playerRegistry) this.playerRegistry.deadPlayerIds = this.deadPlayerIds;
+      this.selectedPlayers = [];
+      this.actionState = {};
+      if (typeof this.journalLog === 'function') this.journalLog('↩️ ANNULATION : ' + item.label);
+      this.quickSave && this.quickSave();
+      // re-rendu complet
+      const header = document.querySelector('.role-list-header');
+      if (header) header.textContent = '🌙 Nuit ' + this.currentNight;
+      this.renderRoleListbox();
+      this.renderLiveMap();
+      if (typeof this.restoreCompletedRoleEffects === 'function') this.restoreCompletedRoleEffects();
+      if (typeof this.renderLiveDeaths === 'function') this.renderLiveDeaths();
+      if (typeof this.renderLegend === 'function') this.renderLegend();
+      if (typeof this.checkVictoryNow === 'function') this.checkVictoryNow();
+      if (typeof this.renderUndoButton === 'function') this.renderUndoButton();
+      console.log('[MDJ] ↩️ Annulé : ' + item.label);
+    } catch (e) { console.error('[MDJ] undo KO', e); }
+  }
+,
+  renderUndoButton() {
+    const b = document.getElementById('mdj-undo-btn');
+    if (!b) return;
+    const n = (this._undoStack || []).length;
+    const last = n ? this._undoStack[n - 1].label : null;
+    b.disabled = !n;
+    b.style.opacity = n ? '1' : '0.35';
+    b.title = n ? ('Annuler : ' + last + '  (Ctrl+Z — ' + n + ' coup(s) dans l\'historique)') : 'Rien à annuler';
+    b.innerHTML = '↩️' + (n ? '<span style="font-size:9px; margin-left:3px; opacity:.85;">' + n + '</span>' : '');
   }
 ,
 

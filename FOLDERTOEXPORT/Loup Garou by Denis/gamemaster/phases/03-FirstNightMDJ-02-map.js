@@ -455,6 +455,7 @@ Object.assign(FirstNightMDJ.prototype, {
     if (closeBtn) closeBtn.addEventListener('click', () => ov.remove());
     const toggleBtn = document.getElementById('mdj-popup-toggle');
     if (toggleBtn) toggleBtn.addEventListener('click', () => {
+      if (typeof this.pushUndo === 'function') this.pushUndo('Secours MDJ : ' + this.getPlayerName(playerId));
       if (this.deadPlayerIds.has(playerId)) {
         this.deadPlayerIds.delete(playerId);
         if (this.deathCauses) delete this.deathCauses[playerId];

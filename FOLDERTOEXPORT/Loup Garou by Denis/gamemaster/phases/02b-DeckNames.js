@@ -67,7 +67,7 @@ function renderDeckNames(gameUI) {
       </div>
 
       <div style="padding:8px 10px; background:linear-gradient(135deg, rgba(20,25,45,0.9), rgba(30,35,55,0.9)); border-bottom:1px solid rgba(199,125,255,0.2);">
-        <div style="font-size:11px; color:#81dff7; font-weight:700; margin-bottom:5px;">Clique un prénom pour l'ajouter dans l'ordre <span style="opacity:0.6; font-weight:400;">(clic droit = retirer du cache)</span> :</div>
+        <div style="font-size:11px; color:#81dff7; font-weight:700; margin-bottom:5px;">Clique un prénom pour l'ajouter dans l'ordre <span style="opacity:0.6; font-weight:400;">(clic droit ou appui long = retirer du cache)</span> :</div>
         <div id="dnChips" style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:8px;">
           ${chips || '<span style="font-size:11px; opacity:0.6;">aucun profil enregistré — ajoute un prénom ci-dessous</span>'}
         </div>
@@ -108,13 +108,11 @@ function attachDeckNamesEvents(gameUI) {
   };
 
   document.querySelectorAll('.dn-chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      const profiles = (typeof lgGetProfiles === 'function') ? lgGetProfiles() : [];
-      const i = parseInt(chip.dataset.idx, 10);
-      if (profiles[i]) fillNext(profiles[i]);
-    });
-    chip.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
+    // Retrait du cache : CLIC DROIT (souris) ou APPUI LONG ~0,6s (tablette).
+    // lpFired évite le double déclenchement (Android envoie AUSSI un contextmenu
+    // sur appui long ; iOS n'en envoie pas, d'où le timer tactile).
+    let lpTimer = null, lpFired = false;
+    const doRemove = () => {
       const profiles = (typeof lgGetProfiles === 'function') ? lgGetProfiles() : [];
       const i = parseInt(chip.dataset.idx, 10);
       const name = profiles[i];
@@ -123,7 +121,31 @@ function attachDeckNamesEvents(gameUI) {
         if (typeof lgSaveProfiles === 'function') lgSaveProfiles(next);
         gameUI.render();
       }
+    };
+    chip.addEventListener('click', (e) => {
+      if (lpFired) { e.preventDefault(); e.stopPropagation(); lpFired = false; return; }
+      const profiles = (typeof lgGetProfiles === 'function') ? lgGetProfiles() : [];
+      const i = parseInt(chip.dataset.idx, 10);
+      if (profiles[i]) fillNext(profiles[i]);
     });
+    chip.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      if (lpFired) return;         // déjà géré par l'appui long
+      lpFired = true;              // bloque le timer tactile encore en cours
+      clearTimeout(lpTimer);
+      doRemove();
+      setTimeout(() => { lpFired = false; }, 400);
+    });
+    chip.addEventListener('touchstart', () => {
+      lpFired = false;
+      clearTimeout(lpTimer);
+      lpTimer = setTimeout(() => { lpFired = true; doRemove(); }, 600);
+    }, { passive: true });
+    ['touchend', 'touchmove', 'touchcancel'].forEach(ev =>
+      chip.addEventListener(ev, () => clearTimeout(lpTimer), { passive: true }));
+    chip.style.webkitUserSelect = 'none';
+    chip.style.userSelect = 'none';
+    chip.style.webkitTouchCallout = 'none';
   });
 
   document.querySelectorAll('.dn-slot-clear').forEach(b => {

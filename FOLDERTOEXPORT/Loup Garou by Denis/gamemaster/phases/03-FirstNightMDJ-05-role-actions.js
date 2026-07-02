@@ -873,7 +873,7 @@ Object.assign(FirstNightMDJ.prototype, {
     const poisonOptions = players.filter(p => p.role !== 'Sorciere' && !this.deadPlayerIds.has(p.id)).map(p => {
       const iso = isolatedPlayers.has(p.id) ? ' (isolé 🕳️)' : '';
       const prot = (!iso && protectedPlayers.has(p.id)) ? ' (immunisé)' : '';
-      return `<option value="${p.id}">${p.name}${iso}${prot}</option>`;
+      return `<option value="${p.id}">${p.name} (${(this.rolesLoader.getRole(p.role)?.name) || p.role})${iso}${prot}</option>`;
     }).join('');
 
     const usageHtml = usage.length
@@ -965,6 +965,7 @@ Object.assign(FirstNightMDJ.prototype, {
         const vid = saveBtn.dataset.vid || victimId;
         if (inv.life <= 0 || !vid || lifeUsedThisNight || deathUsedThisNight) return;
         if (!this.deadPlayerIds.has(vid)) return; // déjà en vie (immunisé / autre sauvetage)
+        if (typeof this.pushUndo === 'function') this.pushUndo('Potion de vie sur ' + this.getPlayerName(vid));
         this.deadPlayerIds.delete(vid);
         if (this.deathCauses) delete this.deathCauses[vid];
         inv.life -= 1;
@@ -994,6 +995,7 @@ Object.assign(FirstNightMDJ.prototype, {
       if (!tgt) { if (interactive) alert('Choisissez un joueur à empoisonner.'); return false; }
       if (isolatedPlayers.has(tgt)) { if (interactive) alert(this.getPlayerName(tgt) + ' est isolé(e) cette nuit (Creuseur de Tunnel) : la potion ne l\'atteint pas — choix accepté, stock conservé.'); return false; }
       const tgtName = this.getPlayerName(tgt);
+      if (typeof this.pushUndo === 'function') this.pushUndo('Potion de mort (Sorcière) sur ' + tgtName);
       this.deadPlayerIds.add(tgt);
       if (this.deathCauses) this.deathCauses[tgt] = 'poison';
       if (typeof this.checkCupidonCascadingDeath === 'function') this.checkCupidonCascadingDeath(tgt);
@@ -1059,7 +1061,7 @@ Object.assign(FirstNightMDJ.prototype, {
     const poisonOptions = players.filter(p => p.id !== (self && self.id) && !this.deadPlayerIds.has(p.id)).map(p => {
       const iso = isolatedPlayers.has(p.id) ? ' (isolé 🕳️)' : '';
       const prot = (!iso && protectedPlayers.has(p.id)) ? ' (immunise)' : '';
-      return `<option value="${p.id}">${p.name}${iso}${prot}</option>`;
+      return `<option value="${p.id}">${p.name} (${(this.rolesLoader.getRole(p.role)?.name) || p.role})${iso}${prot}</option>`;
     }).join('');
 
     const deathUsedThisNight = usage.find(u => u.type === 'death' && u.night === night);
@@ -1119,6 +1121,7 @@ Object.assign(FirstNightMDJ.prototype, {
       if (!tgt) { if (interactive) alert('Choisissez un joueur a empoisonner.'); return false; }
       if (isolatedPlayers.has(tgt)) { if (interactive) alert(this.getPlayerName(tgt) + ' est isole(e) cette nuit (Creuseur de Tunnel) : la potion ne l\'atteint pas — choix accepte, stock conserve.'); return false; }
       const tgtName = this.getPlayerName(tgt);
+      if (typeof this.pushUndo === 'function') this.pushUndo("Potion de mort (Apprenti) sur " + tgtName);
       this.deadPlayerIds.add(tgt);
       // Cause DISTINCTE de la Sorcière (badge + résumé différents)
       if (this.deathCauses) this.deathCauses[tgt] = 'poisonApprenti';
@@ -1362,6 +1365,7 @@ Object.assign(FirstNightMDJ.prototype, {
 
     const players = this.gm.state.players || [];
     const _roleName = (this.rolesLoader.getRole(_rid) || {}).name || 'Cupidon';
+    if (typeof this.pushUndo === 'function') this.pushUndo('Amoureux (' + _roleName + ')');
     const loverIds = this.selectedPlayers.slice();
     const loverNames = loverIds.map(id => (players.find(p => p.id === id) || {}).name || '?');
 

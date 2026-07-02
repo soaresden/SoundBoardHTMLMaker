@@ -10,6 +10,8 @@ Object.assign(FirstNightMDJ.prototype, {
     // Si une mort (ex: tir du Chasseur) a déjà décidé la partie, ne pas démarrer de nuit
     this.checkVictoryNow();
     if (this.victoryShown) return;
+    // ↩️ snapshot : permet d'annuler le passage de nuit
+    if (typeof this.pushUndo === 'function') this.pushUndo('Passage à la nuit ' + ((this.currentNight || 1) + 1));
     // Avance vers la nuit suivante : incrémente (avant: bloqué en dur à 2)
     this.currentNight = (this.currentNight || 1) + 1;
     console.log('[MDJ] ===== NIGHT ' + this.currentNight + ' START =====');
@@ -72,11 +74,13 @@ Object.assign(FirstNightMDJ.prototype, {
       const roleData = this.rolesLoader.getRole(roleId);
       if (!roleData) return;
 
-      // Check if the player with this role is alive
-      const playerWithRole = players.find(p => p.role === roleId);
-      if (!playerWithRole) return; // Role not assigned to anyone
-      if (this.deadPlayerIds.has(playerWithRole.id)) {
-        console.log(`[MDJ] Night 2 role SKIPPED: ${roleId} (${roleData.name}) - player ${playerWithRole.name} is dead`);
+      // Porteurs du rôle : avec des rôles EN DOUBLE (2 Simples Loups, Sœurs...),
+      // on ne saute le rôle que si TOUS ses porteurs sont morts (avant : find() ne
+      // regardait que le PREMIER → le tour des loups sautait dès que le 1er mourait).
+      const _holders = players.filter(p => p.role === roleId);
+      if (!_holders.length) return; // Role not assigned to anyone
+      if (_holders.every(p => this.deadPlayerIds.has(p.id))) {
+        console.log(`[MDJ] Night 2 role SKIPPED: ${roleId} (${roleData.name}) - tous les porteurs sont morts`);
         return;
       }
 
@@ -640,7 +644,9 @@ Object.assign(FirstNightMDJ.prototype, {
 
     // (Re-cliquer un rôle déjà joué ne change RIEN tant qu'on ne re-valide pas.)
     const _deadAtStart = this.getDeadAtNightStartSet();
-    if (!force && playerWithRole && _deadAtStart.has(playerWithRole.id)) {
+    // rôles en double : on ne saute que si AUCUN porteur n'était vivant au début de la nuit
+    const _anyHolderAlive = players.some(p => p.role === roleId && !_deadAtStart.has(p.id));
+    if (!force && playerWithRole && !_anyHolderAlive) {
       console.log(`[MDJ] ⚠️ SKIP: ${roleId} (${playerWithRole.name}) is DEAD - finding next role`);
       // Mark this role as completed so we don't try to select it again
       if (this.roleStates[roleId]) {
@@ -714,6 +720,12 @@ Object.assign(FirstNightMDJ.prototype, {
 
     console.log(`[MDJ] Completing role action: ${roleId} -> ${action}`);
 
+    // ↩️ snapshot AVANT toute mutation (Ctrl+Z)
+    if (typeof this.pushUndo === 'function' && roleId) {
+      const _rdU = this.rolesLoader.getRole(roleId) || {};
+      this.pushUndo('Validation ' + (_rdU.name || roleName || roleId));
+    }
+
     // Ré-édition : si ce rôle avait déjà été joué, on annule d'abord son effet précédent,
     // puis on ré-applique la nouvelle saisie ci-dessous (évite le double-comptage).
     if (roleId && this.roleStates[roleId] && this.roleStates[roleId].completed) {
@@ -760,9 +772,13 @@ Object.assign(FirstNightMDJ.prototype, {
         if (_chien) {
           if (action === 'join_wolves') {
             _chien.camp = 'Loup';
-            this.transformations[_chien.id] = { from: 'Chien_Loup', to: 'Chien_Loup (camp Loups)', reason: 'a choisi de rejoindre les Loups' };
-            if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(_chien.id, '🐺 A choisi de rejoindre le camp des Loups');
-            console.log(`[MDJ] 🐕➡️🐺 ${_chien.name} (Chien-Loup) rejoint les LOUPS — barre de victoire mise à jour`);
+            // Il DEVIENT réellement Simple Loup Garou (comme l'Enfant Sauvage) :
+            // sinon son rôle Chien_Loup (nuit 1 uniquement) ne chassait JAMAIS avec la
+            // meute — et si tous les Simples Loups mouraient, plus d'attaque du tout.
+            _chien.role = 'Simple_Loup_Garou';
+            this.transformations[_chien.id] = { from: 'Chien_Loup', to: 'Simple_Loup_Garou', reason: 'a choisi de rejoindre les Loups' };
+            if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(_chien.id, '🐺 A choisi de rejoindre les Loups : il devient Loup-Garou (chasse avec la meute)');
+            console.log(`[MDJ] 🐕➡️🐺 ${_chien.name} (Chien-Loup) devient LOUP-GAROU — il chasse avec la meute`);
           } else {
             _chien.camp = 'Village';
             if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(_chien.id, '🏘️ A choisi de rester Villageois');
@@ -1223,8 +1239,8 @@ Object.assign(FirstNightMDJ.prototype, {
     // sa mort au matin). On ne dispense que les joueurs morts AVANT la nuit.
     const _deadStartNC = this.getDeadAtNightStartSet();
     const allCompleted = Object.entries(this.roleStates).every(([roleId, state]) => {
-      const playerWithRole = players.find(p => p.role === roleId);
-      const isAlive = playerWithRole && !_deadStartNC.has(playerWithRole.id);
+      // rôles en double : vivant = AU MOINS UN porteur vivant au début de la nuit
+      const isAlive = players.some(p => p.role === roleId && !_deadStartNC.has(p.id));
       // Role qui n'agit pas cette nuit (ex: Loup Blanc nuit impaire) => ne pas attendre
       const acts = this.roleActsThisNight(roleId);
       return !isAlive || !acts || state.completed;
@@ -1234,8 +1250,7 @@ Object.assign(FirstNightMDJ.prototype, {
     console.log(`[MDJ]   - Completed roles:`, Object.entries(this.roleStates).filter(([_, s]) => s.completed).map(([id]) => id));
     const pendingRoles = Object.entries(this.roleStates)
       .filter(([roleId, s]) => {
-        const playerWithRole = players.find(p => p.role === roleId);
-        const isAlive = playerWithRole && !_deadStartNC.has(playerWithRole.id);
+        const isAlive = players.some(p => p.role === roleId && !_deadStartNC.has(p.id));
         return isAlive && this.roleActsThisNight(roleId) && !s.completed;
       })
       .map(([id]) => id);
