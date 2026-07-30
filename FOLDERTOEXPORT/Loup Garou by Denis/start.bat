@@ -25,7 +25,7 @@ if "%PROCESSOR_ARCHITECTURE%"=="AMD64" (
 set INSTALLER=%TEMP%\node-installer.msi
 
 echo Telechargement de Node.js...
-powershell -Command "& {(New-Object Net.WebClient).DownloadFile('%NODE_URL%', '%INSTALLER%')}"
+powershell -Command "& {[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; (New-Object Net.WebClient).DownloadFile('%NODE_URL%', '%INSTALLER%')}"
 
 if not exist "%INSTALLER%" (
     echo ERREUR: Impossible de telecharger Node.js
@@ -35,12 +35,17 @@ if not exist "%INSTALLER%" (
 )
 
 echo Lancement de l'installation...
-start /wait "%INSTALLER%"
+start /wait "" msiexec /i "%INSTALLER%" /passive
+
+REM Rafraichir le PATH de cette session (l'installeur modifie le PATH systeme,
+REM mais la fenetre cmd en cours ne le voit pas)
+set "PATH=%ProgramFiles%\nodejs;%PATH%"
 
 REM Verifier l'installation
 node --version >nul 2>&1
 if errorlevel 1 (
     echo ERREUR: L'installation a echoue
+    echo Telecharge manuellement depuis: https://nodejs.org/
     pause
     exit /b 1
 )
