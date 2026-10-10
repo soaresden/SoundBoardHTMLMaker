@@ -111,13 +111,16 @@
       deck: isSneak(m) ? parseDeck(m, n) : null, cam: 'vert', boss: { dmg: 0, threat: 0, cards: 0 },
       ko2: 0, ko1: 0, dead: 0, pieces, ev: {}, over: null, why: '', log: [], alerts: 0,
     };
-    if (isGrid(m)) { obj.pieces = gridPieces(m, n); obj.grid = true; obj.elev = GRID(m).elevStart || false; obj.doors = {}; obj.card = { red: 6, blue: 4, arrow: 'right' }; }
+    if (isGrid(m)) { obj.pieces = gridPieces(m, n); obj.gridV = gridVer(m); obj.grid = true; obj.elev = GRID(m).elevStart || false; obj.doors = {}; obj.card = { red: 6, blue: 4, arrow: 'right' }; }
     return obj;
   }
+  const gridVer = m => { const s = JSON.stringify(GRID(m)); let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return h; };
   const game = () => {
     const m = mission(); if (!m) return null;
     if (!st.games[m.id] || st.games[m.id].n !== st.n) st.games[m.id] = newGame(m, st.n);
     const gg = st.games[m.id]; if (!gg.started) gg.players.forEach(p => { if (!p.inv) p.inv = startInv(m, p.name); });
+    // plan recalé depuis la création de la partie (pas encore commencée) : on replace les pions selon le livret
+    if (isGrid(m) && !gg.started && gg.gridV !== gridVer(m)) { gg.pieces = gridPieces(m, gg.n); gg.gridV = gridVer(m); }
     return gg;
   };
   function log(txt, kind = '', who = '') {
@@ -238,7 +241,9 @@
         const cfg = { q: ['#1f8bff', '?'], a: ['#e01f35', '!'], ko2: ['#2a2a12', '★★'], ko1: ['#2a2a12', '★'], dead: ['#2b2b33', '☠'] }[p.k];
         inner = `<rect x="${-R}" y="${-R}" width="${2 * R}" height="${2 * R}" rx="${R * 0.25}" fill="${cfg[0]}" stroke="#fff" stroke-width="2"/><text class="gtx" font-size="${R * (p.k === 'ko2' ? 0.8 : 1.1)}" fill="${p.k.startsWith('ko') ? '#ffd166' : '#fff'}">${cfg[1]}</text>`;
       }
-      return `<g class="gp ${p.k} ${sel} ${cur ? 'cur' : ''}" data-pc="${p.id}" style="transform:translate(${px.cx + ox}px,${px.cy + oy}px)">${inner}</g>`;
+      const act = mode === 'play' && ui.seq && ui.seq.ids[ui.seq.i] === p.id && g.phase === 2;
+      if (act) inner = `<circle class="gring" r="${R * 1.75}"/>` + inner;
+      return `<g class="gp ${p.k} ${sel} ${cur ? 'cur' : ''} ${act ? 'act' : ''}" data-pc="${p.id}" style="transform:translate(${px.cx + ox}px,${px.cy + oy}px)">${inner}</g>`;
     }).join('');
     if (ui.edit) {
       W.walls.forEach(k => { const [a, b] = k.split('|').map(s => s.split(',').map(Number)); const pa = GG().pix(W, a[0], a[1]); if (!pa) return;
@@ -252,7 +257,7 @@
         <button class="ma-b sm ${ui.edit ? 'on' : ''}" data-a="edit" title="Corriger les murs et obstacles du plan">✏️ Corriger</button>
         ${ui.edit ? `<button class="ma-b sm ${ui.edit === 'wall' ? 'on' : ''}" data-a="editMode" data-v="wall">🧱 Mur</button><button class="ma-b sm ${ui.edit === 'cell' ? 'on' : ''}" data-a="editMode" data-v="cell">🟥 Obstacle</button><button class="ma-b sm" data-a="editExport">📤 Exporter</button><button class="ma-b sm red" data-a="editReset">↺</button>` : ''}
         <span style="flex:1;opacity:.85;font-size:.9rem">${info}</span></div>
-      <div class="ma-bds"><svg class="ma-svg" id="maSvg" viewBox="0 0 ${d.w} ${d.h}" preserveAspectRatio="xMidYMid meet" style="${(st.zoom || 1) > 1 ? `width:${Math.round(100 * st.zoom)}%;height:auto` : 'width:100%;height:100%'}"><image href="${d.img}" width="${d.w}" height="${d.h}"/>
+      <div class="ma-bds grid"><svg class="ma-svg" id="maSvg" viewBox="0 0 ${d.w} ${d.h}" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%"><image href="${d.img}" width="${d.w}" height="${d.h}"/>
         <g>${cells.join('')}</g><g>${hl.join('')}</g><g>${pcs}</g></svg></div></div>`;
   }
   function svgPoint(svg, e) { const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY; return pt.matrixTransform(svg.getScreenCTM().inverse()); }
@@ -263,18 +268,100 @@
     }
     return null;
   }
+  // le plan entier tient dans le cadre à zoom 1 ; au-delà on défile (doigt) ou on pince
+  function fitSvg() {
+    const m = mission(), svg = root && $('#maSvg', root); if (!svg || !m || !isGrid(m)) return;
+    const d = GRID(m), bds = svg.parentElement, z = st.zoom || 1;
+    const fw = Math.min(bds.clientWidth, bds.clientHeight * d.w / d.h) || bds.clientWidth;
+    svg.style.width = Math.round(fw * z) + 'px'; svg.style.height = Math.round(fw * z * d.h / d.w) + 'px';
+  }
+  let fitBound = false;
+  function focusOn(x, y, smooth = true) {
+    const m = mission(), svg = root && $('#maSvg', root); if (!svg || !m || !isGrid(m)) return;
+    const W = world(m), px = GG().pix(W, x, y); if (!px) return;
+    if ((st.zoom || 1) < 2.2) { if (ui.zoomBack == null) ui.zoomBack = st.zoom || 1; st.zoom = 2.2; fitSvg(); }
+    const bds = svg.parentElement, sr = svg.getBoundingClientRect(), br = bds.getBoundingClientRect(), k = sr.width / GRID(m).w;
+    const ox = sr.left - br.left + bds.scrollLeft, oy = sr.top - br.top + bds.scrollTop;   // (pas d'offsetLeft sur un <svg>)
+    bds.scrollTo({ left: ox + px.cx * k - bds.clientWidth / 2, top: oy + px.cy * k - bds.clientHeight / 2, behavior: smooth && !document.hidden ? 'smooth' : 'auto' });
+  }
+  function zoomBack() { if (ui.zoomBack != null) { st.zoom = ui.zoomBack; ui.zoomBack = null; } ui.focusId = null; }
+  function onGridTap(svg, e) {
+    const m = mission(), g = game();
+    const pc = e.target.closest && e.target.closest('[data-pc]');
+    const u = svgPoint(svg, e); const c = cellAt(m, u.x, u.y);
+    if (ui.edit && c) return editAt(m, c, u);
+    const pcp = pc && piece(pc.dataset.pc), mine = pcp && pcp.k === 'player' && g.players[g.cur] && g.players[g.cur].name === pcp.owner;
+    if (pc && (!(ui.pend && ui.pend.type === 'move') || mine) && !ui.place) return gridTapPiece(pcp, c);
+    if (c) gridTapCell(c);
+  }
+  // pion lâché après un glisser
+  function dropPiece(p, u) {
+    const m = mission(), g = game(), W = world(m), c = cellAt(m, u.x, u.y);
+    if (!c || !p) return render();
+    const k = cellKey(c.x, c.y), cur = g.players[g.cur];
+    const mine = p.k === 'player' && st.screen === 'play' && g.started && g.phase === 1 && cur && cur.name === p.owner;
+    if (mine) {
+      if (!ui.pend || ui.pend.type !== 'move') armMove(m, g, cur, 'sneak');
+      if (ui.pend && ui.pend.cells && ui.pend.cells[k]) return gridMove(c, ui.pend.cells[k]);
+      if (ui.pend && ui.pend.type === 'move') { const dash = p.x != null && cur.left >= 1 && GG().reach(W, toS(g), toS(g).figs.find(f => f.id === p.id), 2)[k]; if (dash && ui.pend.act !== 'dash') { armMove(m, g, cur, 'dash'); if (ui.pend.cells[k]) return gridMove(c, ui.pend.cells[k]); } }
+      toast('Case hors de portée (cases vertes).'); return render();
+    }
+    const tok = ['q', 'a', 'ko1', 'ko2', 'dead'].includes(p.k);
+    if (!tok && !GG().walkable(W, toS(g), c.x, c.y)) { toast('Pas de case ici.'); return render(); }
+    if (p.x === c.x && p.y === c.y) return render();
+    snap(); p.x = c.x; p.y = c.y;
+    if (g.started) log(`✋ Pion corrigé : ${p.k === 'player' ? p.owner : p.k} → ${k}`, 'sys');
+    ui.sel = null; ui.place = null; save(); render();
+  }
   function bindGrid() {
     const svg = $('#maSvg', root); if (!svg) return;
-    svg.addEventListener('click', e => {
-      const m = mission(), g = game();
-      const pc = e.target.closest('[data-pc]');
-      const u = svgPoint(svg, e); const c = cellAt(m, u.x, u.y);
-      if (ui.edit && c) return editAt(m, c, u);
-      const pcp = pc && piece(pc.dataset.pc), mine = pcp && pcp.k === 'player' && g.players[g.cur] && g.players[g.cur].name === pcp.owner;
-      if (pc && (!(ui.pend && ui.pend.type === 'move') || mine) && !ui.place) return gridTapPiece(pcp, c);
-      if (c) gridTapCell(c);
+    const bds = svg.parentElement; fitSvg();
+    if (!fitBound) { fitBound = true; window.addEventListener('resize', () => fitSvg()); }
+    const pts = new Map(); let gest = null, swallowUntil = 0;
+    svg.addEventListener('click', e => { if (Date.now() < swallowUntil) return; onGridTap(svg, e); });
+    bds.addEventListener('pointerdown', e => {
+      if (ui.busy) return;
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pts.size === 2) {
+        const [a, b] = [...pts.values()], r = bds.getBoundingClientRect();
+        gest = { t: 'pinch', d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, z0: st.zoom || 1, z: st.zoom || 1, mx: (a.x + b.x) / 2 - r.left, my: (a.y + b.y) / 2 - r.top };
+        if (gest.el) gest.el.style.transform = '';
+        return;
+      }
+      if (pts.size > 2) return;
+      const el = e.target.closest && e.target.closest('[data-pc]');
+      gest = { t: 'tap', x: e.clientX, y: e.clientY, sl: bds.scrollLeft, st: bds.scrollTop, el, p: el && piece(el.dataset.pc) };
     });
+    bds.addEventListener('pointermove', e => {
+      if (!pts.has(e.pointerId) || !gest) return;
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (gest.t === 'pinch') {
+        if (pts.size < 2) return;
+        const [a, b] = [...pts.values()];
+        const z = Math.max(1, Math.min(4, gest.z0 * Math.hypot(a.x - b.x, a.y - b.y) / gest.d0)), ratio = z / gest.z;
+        const cx = bds.scrollLeft + gest.mx, cy = bds.scrollTop + gest.my;
+        st.zoom = z; gest.z = z; fitSvg();
+        bds.scrollLeft = cx * ratio - gest.mx; bds.scrollTop = cy * ratio - gest.my;
+        e.preventDefault(); return;
+      }
+      const dx = e.clientX - gest.x, dy = e.clientY - gest.y;
+      if (gest.t === 'tap' && Math.hypot(dx, dy) > 10) gest.t = gest.p && !ui.edit && gest.p.x != null ? 'piece' : 'pan';
+      if (gest.t === 'pan') { bds.scrollLeft = gest.sl - dx; bds.scrollTop = gest.st - dy; }
+      if (gest.t === 'piece') { const u = svgPoint(svg, e); gest.el.style.transition = 'none'; gest.el.style.transform = `translate(${u.x}px,${u.y}px) scale(1.3)`; gest.el.style.opacity = '.85'; }
+    });
+    const end = e => {
+      if (!pts.has(e.pointerId)) return;
+      pts.delete(e.pointerId);
+      if (!gest) return;
+      if (gest.t === 'pinch' || gest.t === 'none') { swallowUntil = Date.now() + 450; if (!pts.size) { gest = null; save(); } else gest = { t: 'none' }; return; }
+      const g0 = gest; gest = null;
+      if (g0.t === 'pan') swallowUntil = Date.now() + 450;
+      if (g0.t === 'piece') { swallowUntil = Date.now() + 450; dropPiece(g0.p, svgPoint(svg, e)); }
+    };
+    bds.addEventListener('pointerup', end);
+    bds.addEventListener('pointercancel', e => { pts.delete(e.pointerId); if (gest && gest.t === 'piece') render(); gest = null; });
   }
+
   function editAt(m, c, u) {
     const W = world(m), px = GG().pix(W, c.x, c.y);
     if (ui.edit === 'cell') { const cur = W.cells[cellKey(c.x, c.y)] || ' '; toggleFix(m, 'cell', cellKey(c.x, c.y), cur === '#' ? '.' : '#'); render(); return; }
@@ -444,7 +531,7 @@
     toast(`💂 Garde ${sq.i + 1} : <b>${MODE[r.mode]}</b>${tgt}`, 2500);
     let seen = null, react = null;
     for (const s of r.steps) {
-      if (s.t === 'move') { await animTo(m, id, s.x, s.y, s.f, 380); gp.x = s.x; gp.y = s.y; gp.f = s.f; }
+      if (s.t === 'move') { focusOn(s.x, s.y); await animTo(m, id, s.x, s.y, s.f, 380); gp.x = s.x; gp.y = s.y; gp.f = s.f; }
       else if (s.t === 'turn') { await animTo(m, id, gp.x, gp.y, s.f, 260); gp.f = s.f; }
       else if (s.t === 'see') seen = s; else if (s.t === 'reaction') react = s;
     }
@@ -622,6 +709,7 @@
   .mcw{width:170px;height:104px;display:block;margin:6px 0}
   .mcw-c{fill:#151c40;stroke:#26306a}.mcw-c.lit{fill:rgba(255,209,102,.28);stroke:#ffd166}
   .mcw-cam{transition:transform .9s cubic-bezier(.4,.1,.3,1);transform-origin:0 0}
+  .ma-bds.grid{touch-action:none;overscroll-behavior:contain;cursor:grab}.ma-bds.grid .ma-svg{touch-action:none}
   .ma-svg{display:block;margin:0 auto;max-width:none;touch-action:manipulation;user-select:none;-webkit-user-select:none}
   .ma-svg .gc{fill:transparent;stroke:rgba(10,20,60,.28);stroke-width:1.2}
   .ma-svg .greach{fill:rgba(61,255,160,.28);stroke:#2fbf7a;stroke-width:3;cursor:pointer;animation:gpul 1.2s infinite alternate}
@@ -637,6 +725,8 @@
   .ma-svg .gtx{font-weight:900;text-anchor:middle;dominant-baseline:central;fill:#fff;pointer-events:none}
   .ma-svg .gp.sel circle,.ma-svg .gp.sel rect{stroke:#fff!important;stroke-width:5}
   .ma-svg .gp.cur circle{animation:gcur 1.2s infinite}
+  .ma-svg .gring{fill:rgba(255,209,102,.18);stroke:#ffd166;stroke-width:6;animation:gring 1s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+  @keyframes gring{0%,100%{transform:scale(.85);opacity:1}50%{transform:scale(1.15);opacity:.55}}
   @keyframes gpul{to{opacity:.55}} @keyframes gcur{50%{stroke:#ffd166;stroke-width:7}}
   .ma-c.fit{overflow:hidden;padding:6px 8px}
   .ma-c.fit .ma-play{height:100%;grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);gap:8px}
@@ -645,7 +735,8 @@
   .ma-c.fit .ma-bd{height:100%;display:flex;flex-direction:column;position:static;padding:6px}
   .ma-c.fit .ma-bdt{margin-bottom:4px}
   .ma-c.fit .ma-bds{flex:1;min-height:0;max-height:none}
-  .ma-c.fit .ma-play>div:first-child>p{display:none}
+  .ma-c.fit .ma-play>div:first-child>p{margin:4px 2px;font-size:.82rem}
+  .ma-c.fit .ma-play>div:first-child{display:flex;flex-direction:column}.ma-c.fit .ma-play>div:first-child>.ma-bd{flex:1;min-height:0;height:auto}
   .ma-c.fit .ma-card{margin:6px 0;padding:8px 10px}
   .ma-c.fit .ma-hud{margin-bottom:4px}.ma-c.fit .ma-hud .pill{padding:4px 8px}
   .ma-c.fit .ma-ph{margin:4px 0}.ma-c.fit .ma-ph .ma-b{min-height:34px}
@@ -857,7 +948,7 @@
     const errs = (m.errata || []).filter(e => /setup|mise en place|carte|barracks|tuile|plan|icône|placer/i.test(e));
     if (!ui.place && !g.started && !ui.sel) nextUnplaced(g);
     body.innerHTML = `${errs.length ? `<div class="ma-card err"><h4>⚠️ Errata pour la mise en place</h4>${list(errs)}</div>` : ''}
-      <div class="ma-play"><div>${boardHtml(m, g, 'setup')}<p style="opacity:.7;font-size:.9rem;margin:6px 2px">${g.grid ? 'Les pions sont placés comme sur le livret. Vérifie avec ton vrai plateau ; pour corriger, touche un pion puis une case (⟲⟳ pour le regard).' : 'Pose les pions comme sur le vrai plateau (zone de départ, gardes et leur regard avec ⟲⟳). Facultatif : tu peux jouer sans poser les gardes.'}</p></div>
+      <div class="ma-play"><div>${boardHtml(m, g, 'setup')}<p style="opacity:.7;font-size:.9rem;margin:6px 2px">${g.grid ? 'Les pions sont placés comme sur le livret. Pour corriger : fais glisser un pion du doigt (ou touche-le puis une case ; ⟲⟳ pour le regard). <button class="ma-b sm" data-a="resetPos">↺ Replacer selon le livret</button>' : 'Pose les pions comme sur le vrai plateau (zone de départ, gardes et leur regard avec ⟲⟳). Facultatif : tu peux jouer sans poser les gardes.'}</p></div>
       <div><div class="ma-card" style="margin-top:0"><h4>🧰 Matériel</h4><p>${chars.map(c => `<span class="chip">${CE[c] || ''} ${c}</span>`).join('')}</p>${m.tiles && m.tiles.length ? `<p><b>Tuiles :</b> ${m.tiles.join(', ')}</p>` : ''}${deck ? `<p><b>Guard Order :</b> ${deck}</p>` : ''}</div>
         ${selPanel(m, g)}
         <div class="ma-card"><h4>🎒 Équipement de départ</h4><p style="opacity:.8;margin:2px 0 6px">Ajoute les cartes que chacun prend (limite ${EQUIP_LIMIT} cartes de la Memory Box, les cartes de départ du personnage en plus). Sans ration, pas d'action Ration ; sans arme, pas de tir, etc.</p>${invEditor(m, g)}</div>
@@ -931,6 +1022,10 @@
     if (!g.started) { body.innerHTML = `<div class="ma-card"><h4>La partie n'a pas commencé</h4><p>Termine la mise en place puis appuie sur Continuer.</p><button class="ma-b pri big" data-go="setup">🗺️ Plateau & setup</button></div>`; return; }
     body.innerHTML = `<div class="ma-play"><div>${boardHtml(m, g, 'play')}</div><div>${panelHtml(m, g)}</div></div>`;
     bindBoard(); tick();
+    // phase ennemie : on montre le garde qui va jouer (une seule fois par garde, pour laisser l'utilisateur déplacer la vue)
+    // phase ennemie : le panneau suit l'étape en cours de la carte Guard Order
+    if (g.phase === 2 && ui.stepFocus !== g.step) { ui.stepFocus = g.step; const cs = body.querySelector('.ma-step.cur'), col = cs && cs.closest('.ma-play>div'); if (cs && col) setTimeout(() => col.scrollTo({ top: Math.max(0, col.scrollTop + cs.getBoundingClientRect().top - col.getBoundingClientRect().top - 60), behavior: document.hidden ? 'auto' : 'smooth' }), 40); }
+    if (g.phase === 2 && ui.seq && ui.seq.i < ui.seq.ids.length) { const gp = piece(ui.seq.ids[ui.seq.i]); if (gp && gp.x != null && ui.focusId !== gp.id) { ui.focusId = gp.id; setTimeout(() => focusOn(gp.x, gp.y), 30); } }
   }
   function hudHtml(m, g) {
     const total = g.deck ? g.deck.red + g.deck.blue : 0, left = g.deck ? Math.max(0, total - g.deck.drawn) : 0;
@@ -959,7 +1054,7 @@
     const evs = m.events || [], cq = stageSnd(m).cues || [];
     let h = `${g.players.length > 1 ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">${g.players.map((x, i) => `<button class="ma-b sm ${i === cur ? 'on' : ''}" data-a="who" data-v="${i}">${x.done ? '✔ ' : ''}${CE[x.name] || ''} ${x.name}</button>`).join('')}</div>` : ''}
       <div class="ma-p" style="--c:${CC[p.name] || '#2a3474'}"><h5>${CE[p.name] || ''} Au tour de ${p.name}<span style="flex:1"></span><span class="ma-hp">${hp ? Array.from({ length: hp }, (_, k) => `<i class="${k < p.dmg ? 'd' : ''}"></i>`).join('') : '💔' + p.dmg}</span></h5>
-      <div class="ma-tok">${[0, 1, 2, 3].map(k => `<i class="${k < p.left ? '' : 'u'}"></i>`).join('')}<span style="flex:1;opacity:.8">${p.left} point${p.left > 1 ? 's' : ''} d'action${p.noisy ? ` · 🔊×${p.noisy}` : ''}</span><button class="ma-b sm ${p.water ? 'on' : ''}" data-a="water" title="Dans l'eau">💧</button>${!ui.pad && !p.ask && !(ui.pend && !(ui.pend.type === 'move' && isGrid(m))) ? `<button class="ma-b sm pri" data-a="end">🏁 Fin du tour</button>` : ''}</div>
+      <div class="ma-tok">${[0, 1, 2, 3].map(k => `<i class="${k < p.left ? '' : 'u'}"></i>`).join('')}<span style="opacity:.8">${p.left} point${p.left > 1 ? 's' : ''} d'action${p.noisy ? ` · 🔊×${p.noisy}` : ''}</span><button class="ma-b sm" data-a="undo" ${undo.length ? '' : 'disabled'} title="Annuler la dernière action">↶ Annuler</button><span style="flex:1"></span><button class="ma-b sm ${p.water ? 'on' : ''}" data-a="water" title="Dans l'eau">💧</button>${!ui.pad && !p.ask && !(ui.pend && !(ui.pend.type === 'move' && isGrid(m))) ? `<button class="ma-b sm pri" data-a="end">🏁 Fin du tour</button>` : ''}</div>
       <div class="ma-invl">🎒 ${invChips(p)}<button class="ma-mini ${ui.inv ? 'on' : ''}" data-a="invToggle">✏️</button></div>
       ${ui.inv ? `<div class="ma-card" style="margin:4px 0">${invEditor(m, g, cur)}</div>` : ''}
       <div class="ma-att"><span style="opacity:.75">Attention</span><button class="ma-b sm ${p.att === 0 ? 'on' : ''}" data-a="att" data-v="0">—</button><button class="ma-b sm q ${p.att === 1 ? 'on' : ''}" data-a="att" data-v="1">?</button><button class="ma-b sm a ${p.att === 2 ? 'on' : ''}" data-a="att" data-v="2">!</button><span style="flex:1"></span><button class="ma-b sm" data-a="dmg" data-v="-1">−</button><button class="ma-b sm red" data-a="dmg" data-v="1">💥 Dégât</button></div>`;
@@ -969,7 +1064,7 @@
     else if (p.ask) h += askHtml(p);
     else {
       const ma = moving && ACTS.find(x => x.id === ui.pend.act);
-      h += moving ? `<div class="ma-mv">${ma.i} <b>${ma.n}</b> : 👆 touche une case verte <span style="flex:1"></span><button class="ma-b sm" data-a="undo" ${undo.length ? '' : 'disabled'}>↶ Annuler</button><button class="ma-b sm red" data-a="cancel">✕</button></div>`
+      h += moving ? `<div class="ma-mv">${ma.i} <b>${ma.n}</b> : 👆 touche une case verte (ou fais glisser ton pion) <span style="flex:1"></span><button class="ma-b sm red" data-a="cancel">✕</button></div>`
         : `<p style="opacity:.8;margin:6px 0">Choisis une action (ou touche ton pion pour marcher).</p>`;
       const grid = isGrid(m);
       h += `<div class="ma-acts">${actsFor(p).filter(a => !(grid && (a.id === 'leap' || a.id === 'wall'))).map(a => { const why = whyNot(m, g, p, a), on = moving && ui.pend.act === a.id;
@@ -1217,7 +1312,7 @@
       case 'pick': { st.mid = isNaN(+v) ? v : +v; const mm = mission(); if (!pcounts(mm).includes(String(st.n))) st.n = +pcounts(mm)[0]; undo = []; const gg = game(); go(gg.started && !gg.over ? 'play' : 'brief'); return; }
       case 'n': st.n = +v; undo = []; save(); render(); return;
       case 'read': typeBriefing(m); return;
-      case 'zoom': st.zoom = Math.max(1, Math.min(3, (st.zoom || 1) + (+v) * 0.4)); save(); render(); return;
+      case 'zoom': st.zoom = Math.max(1, Math.min(4, (st.zoom || 1) + (+v) * 0.5)); save(); render(); return;
       case 'place': ui.place = ui.place === v ? null : v; render(); return;
       case 'unsel': ui.sel = null; render(); return;
       case 'cancel': ui.pend = null; render(); return;
@@ -1258,6 +1353,7 @@
         setTimeout(() => turnBanner(`${CE[g.players[0].name] || ''} Au tour de ${g.players[0].name}`), 300);
         break;
       }
+      case 'resetPos': { if (g.started && !confirm('Replacer tous les pions selon le livret ?')) { undo.pop(); return; } const keep = g.pieces.filter(x => x.k === 'q' || x.k === 'a'); g.pieces = gridPieces(m, g.n).concat(g.started ? keep : []); g.gridV = gridVer(m); ui.sel = null; toast('↺ Pions replacés selon le livret.'); break; }
       case 'add': { const id = (v === 'guard' ? 'g' : 'c') + (Date.now() % 1000000); g.pieces.push({ id, k: v, x: null, y: null, f: 'down' }); ui.place = id; break; }
       case 'rot': { const pc = piece(ui.sel); const o = ['up', 'right', 'down', 'left']; pc.f = o[(o.indexOf(pc.f || 'down') + (+v) + 4) % 4]; if (pc.k === 'cam') A.sfx(AU().camRotate); break; }
       case 'pko': { const pc = piece(ui.sel); pc.k = 'ko2'; pc.hurt = false; g.ko2++; A.sfx('punch-guard-kox1.mp3'); log('⭐ Garde KO (★★)', ''); ui.sel = null; break; }
@@ -1268,7 +1364,7 @@
       case 'pflip': { const pc = piece(ui.sel); const pl = g.players.find(x => x.name === pc.owner); setAtt(g, pl, pl.att === 2 ? 1 : 2, 'retourné', true); break; }
       case 'prmatt': { const pc = piece(ui.sel); const pl = g.players.find(x => x.name === pc.owner); setAtt(g, pl, 0, null, true); log(`🃏 Jeton Attention de ${pl.name} retiré`, ''); ui.sel = null; break; }
       case 'phase': g.phase = +v; if (g.phase === 2) g.step = 0; ui.pend = null; ui.pad = null; break;
-      case 'toPlayers': g.players.forEach(x => { x.left = 4; x.noisy = 0; x.done = false; x.ask = null; x.hurt = false; x.sneakUsed = false; }); g.phase = 1; g.cur = 0; log(`🔄 Round ${g.round} : phase des joueurs`, 'sys'); setTimeout(() => { A.sfx(AU().codec); turnBanner(`${CE[g.players[0].name] || ''} Au tour de ${g.players[0].name}`); }, 200); if (st.auto && !A.cur) A.music(missionTrack(m), 'mission'); break;
+      case 'toPlayers': zoomBack(); g.players.forEach(x => { x.left = 4; x.noisy = 0; x.done = false; x.ask = null; x.hurt = false; x.sneakUsed = false; }); g.phase = 1; g.cur = 0; log(`🔄 Round ${g.round} : phase des joueurs`, 'sys'); setTimeout(() => { A.sfx(AU().codec); turnBanner(`${CE[g.players[0].name] || ''} Au tour de ${g.players[0].name}`); }, 200); if (st.auto && !A.cur) A.music(missionTrack(m), 'mission'); break;
       case 'who': g.cur = +v; ui.pend = null; ui.pad = null; break;
       case 'water': p.water = !p.water; if (p.water) A.sfx(AU().water); break;
       case 'att': setAtt(g, p, +v, null, true); break;
@@ -1330,7 +1426,7 @@
           if (v === 'wake') { tk.k = 'guard'; tk.f = tk.f || 'down'; log('🃏 Guard Reaction : garde réveillé', 'sys'); } }
         ui.react.tokens = ui.react.tokens.filter(x => x.id !== tid); if (!ui.react.tokens.length) ui.react = null; break; }
       case 'reactDone': ui.react = null; break;
-      case 'nextRound': ui.seq = null; ui.react = null; g.round++; g.phase = 0; g.step = 0; log(`— Round ${g.round} —`, 'sys'); break;
+      case 'nextRound': zoomBack(); ui.seq = null; ui.react = null; g.round++; g.phase = 0; g.step = 0; log(`— Round ${g.round} —`, 'sys'); break;
       case 'event': { const ev = (m.events || []).find(x => x.k === v); g.ev[v] = !g.ev[v]; if (g.ev[v]) { A.sfx(AU()[(stageSnd(m).events || {})[v] || 'pop'] || AU().pop); log(`🅰️ Event ${v} atteint`, 'sys'); toast(`<span class="ma-ev">${v}</span> ${ev ? ev.d : ''}`, 6500); } break; }
       case 'cue': A.music(v, 'mission'); break;
       case 'win': win(m, g, 'Objectif rempli'); break;
