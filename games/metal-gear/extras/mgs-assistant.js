@@ -249,7 +249,11 @@
   const fixOf = m => Object.assign({ walls: [], cells: {}, turns: {}, spirals: [] }, LS.get('mgsg.fix.' + m.id, {}));
   const world = m => {
     if (worlds[m.id]) return worlds[m.id];
-    const W = window.MGSGrid.build(GRID(m)), fx = fixOf(m);
+    let fx = fixOf(m);
+    // corrections faites sur une ancienne version du plan : elles ont été intégrées (ou ne correspondent plus) → on repart du plan à jour
+    const has = fx.walls.length || Object.keys(fx.cells).length || Object.keys(fx.turns).length || fx.spirals.length;
+    if (has && fx.v !== gridVer(m)) { LS.set('mgsg.fix.' + m.id, { walls: [], cells: {}, turns: {}, spirals: [], v: gridVer(m) }); fx = fixOf(m); setTimeout(() => toast(tx('🗺️ Le plan a été mis à jour (tes corrections y sont intégrées) : tes anciennes corrections locales sont remises à zéro.', '🗺️ The map was updated (your corrections are built in): your old local corrections were reset.'), 5000), 400); }
+    const W = window.MGSGrid.build(GRID(m));
     Object.entries(fx.cells || {}).forEach(([k, v]) => { if (v === ' ') delete W.cells[k]; else W.cells[k] = v; });
     (fx.walls || []).forEach(k => { if (W.walls.has(k)) W.walls.delete(k); else W.walls.add(k); });
     Object.entries(fx.turns || {}).forEach(([k, v]) => { if (v) W.turns[k] = v; else delete W.turns[k]; });
@@ -262,7 +266,7 @@
     else if (kind === 'spiral') { const i = fx.spirals.indexOf(key); if (i >= 0) fx.spirals.splice(i, 1); else fx.spirals.push(key); }
     else if (kind === 'turn') { const base = window.MGSGrid.build(GRID(m)).turns[key] || ''; if (val === base) delete fx.turns[key]; else fx.turns[key] = val; }
     else { const base = window.MGSGrid.build(GRID(m)).cells[key] || ' '; if (val === base) delete fx.cells[key]; else fx.cells[key] = val; }
-    LS.set('mgsg.fix.' + m.id, fx); delete worlds[m.id];
+    fx.v = gridVer(m); LS.set('mgsg.fix.' + m.id, fx); delete worlds[m.id];
   }
   const GG = () => window.MGSGrid;
   function gridPieces(m, n) {
@@ -1625,7 +1629,7 @@
       case 'edit': undo.pop(); ui.edit = ui.edit ? null : 'wall'; render(); return;
       case 'editMode': undo.pop(); ui.edit = v; render(); return;
       case 'editReset': undo.pop(); if (confirm(tx('Effacer toutes tes corrections de ce plan ?', 'Erase all your corrections to this map?'))) { LS.set('mgsg.fix.' + m.id, { walls: [], cells: {}, turns: {}, spirals: [] }); delete worlds[m.id]; render(); } return;
-      case 'editExport': { undo.pop(); const t = JSON.stringify({ mission: m.id, fix: fixOf(m) }); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast(tx('📤 Corrections copiées : colle-les-moi pour que je les intègre au plan.', '📤 Corrections copied: share them so they can be added to the map.'), 4000), () => prompt(tx('Copie ces corrections :', 'Copy these corrections:'), t)); return; }
+      case 'editExport': { undo.pop(); const fx0 = fixOf(m); delete fx0.v; const t = JSON.stringify({ mission: m.id, fix: fx0 }); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast(tx('📤 Corrections copiées : colle-les-moi pour que je les intègre au plan.', '📤 Corrections copied: share them so they can be added to the map.'), 4000), () => prompt(tx('Copie ces corrections :', 'Copy these corrections:'), t)); return; }
       case 'los': undo.pop(); st.showLOS = !st.showLOS; save(); render(); return;
       case 'card': g.card[b.dataset.k] = b.dataset.k === 'arrow' ? v : +v; break;
       case 'seqStart': { const ids = GG().activationOrder(world(m), toS(g)); if (!ids.length) { toast(tx('Aucun garde dans une zone active : rien ne bouge.', 'No Guard in an active zone: nothing moves.')); g.step = 4; ui.seq = { ids: [], i: 0 }; } else { ui.seq = { ids, i: 0 }; log(tx(`💂 Activation des gardes (rouge ${g.card.red}, bleu ${g.card.blue}, flèche ${g.card.arrow === 'left' ? '⟲' : '⟳'})`, `💂 Guard activation (red ${g.card.red}, blue ${g.card.blue}, arrow ${g.card.arrow === 'left' ? '⟲' : '⟳'})`), 'sys'); } break; }
