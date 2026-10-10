@@ -59,7 +59,7 @@
     'Gray Fox': [['Stealth Camouflage', 'other'], ['High-Frequency Blade', 'other'], ['Arm Cannon', 'gun']],
     'Otacon': [['ADV. Stealth Camouflage', 'other'], ['Rations', 'ration']],
   };
-  const EQUIP_LIMIT = 3, BOX_MAX = 23;
+  const EQUIP_LIMIT = 3, BOX_MAX = 32;
   const mkItem = (name, type, num) => ({ id: 'i' + Math.random().toString(36).slice(2, 8), name, type, num: num || null, uses: ITYPES[type][2] });
   function startInv(m, name) {
     const inv = (START_GEAR[name] || []).map(([n, t]) => mkItem(n, t));
@@ -78,20 +78,25 @@
     return p.inv.length ? p.inv.map(i => `<span class="chip ${i.uses === 0 ? 'off' : ''}">${ITYPES[i.type][0]} ${esc(i.name)}${i.uses != null ? ' ×' + i.uses : ''}</span>`).join('') : '<span style="opacity:.6">aucun objet</span>';
   }
   function invEditor(m, g, only) {
-    const box = LS.get('mgsg.cards', {});
-    const pend = ui.cardAsk;
-    return g.players.map((p, pi) => { if (only != null && pi !== only) return '';
+    const box = LS.get('mgsg.cards', {}), pend = ui.cardAsk, solo = only != null;
+    const to = solo ? only : Math.min(ui.boxTo || 0, g.players.length - 1);
+    const num3 = n => '#' + String(n).padStart(3, '0');
+    const holder = n => g.players.findIndex(q => (q.inv || []).some(i => i.num === n));
+    const players = g.players.map((p, pi) => { if (solo && pi !== only) return '';
       p.inv = p.inv || [];
       const cards = p.inv.filter(i => i.num).length;
-      return `<div class="ma-inv"><div class="ma-inv-h">${CE[p.name] || ''} <b>${p.name}</b><span style="flex:1"></span><span class="${cards > EQUIP_LIMIT ? 'warn' : ''}" style="opacity:.8;font-size:.85rem">cartes Memory Box : ${cards}/${EQUIP_LIMIT}</span></div>
-        <div>${p.inv.map(i => `<span class="chip">${ITYPES[i.type][0]} ${esc(i.name)}${i.num ? ` <small>#${String(i.num).padStart(3, '0')}</small>` : ''}${i.uses != null ? ` <button class="ma-mini" data-a="invUse" data-p="${pi}" data-i="${i.id}" data-v="-1">−</button><b>${i.uses}</b><button class="ma-mini" data-a="invUse" data-p="${pi}" data-i="${i.id}" data-v="1">＋</button>` : ''} <button class="ma-mini red" data-a="invRm" data-p="${pi}" data-i="${i.id}">✕</button></span>`).join('') || '<span style="opacity:.6">rien pour l\'instant</span>'}</div>
+      return `<div class="ma-inv"><div class="ma-inv-h">${CE[p.name] || ''} <b>${p.name}</b><span style="flex:1"></span><span class="${cards > EQUIP_LIMIT ? 'warn' : ''}" style="opacity:.8;font-size:.85rem">cartes Memory Box : ${cards} (limite : voir son dashboard)</span></div>
+        <div>${p.inv.map(i => `<span class="chip">${ITYPES[i.type][0]} ${esc(i.name)}${i.num ? ` <small>${num3(i.num)}</small>` : ''}${i.uses != null ? ` <button class="ma-mini" data-a="invUse" data-p="${pi}" data-i="${i.id}" data-v="-1">−</button><b>${i.uses}</b><button class="ma-mini" data-a="invUse" data-p="${pi}" data-i="${i.id}" data-v="1">＋</button>` : ''} <button class="ma-mini red" data-a="invRm" data-p="${pi}" data-i="${i.id}">✕</button></span>`).join('') || `<span style="opacity:.6">${p.name === 'Snake' ? 'aucun équipement de départ (On-Site Procurement)' : 'rien pour l\'instant'}</span>`}</div>
         <div class="ma-inv-add"><span style="opacity:.75">＋ objet :</span>${Object.entries(ITYPES).map(([k, t]) => `<button class="ma-b sm" data-a="invAdd" data-p="${pi}" data-v="${k}">${t[0]} ${t[1]}</button>`).join('')}</div>
-        <div class="ma-inv-add"><span style="opacity:.75">📦 Memory Box :</span>${Array.from({ length: BOX_MAX }, (_, k) => { const n = k + 1, got = p.inv.some(i => i.num === n), kn = box[n];
-          return `<button class="ma-b sm num ${got ? 'on' : ''}" data-a="invCard" data-p="${pi}" data-v="${n}" title="${kn ? esc(kn.name) : 'type inconnu'}">${kn ? ITYPES[kn.type][0] : ''}#${String(n).padStart(3, '0')}</button>`; }).join('')}</div>
-        ${pend && pend.p === pi ? `<div class="ma-ask"><p>Carte <b>#${String(pend.n).padStart(3, '0')}</b> : qu'est-ce que c'est ? (je m'en souviendrai pour les prochaines missions)</p>${Object.entries(ITYPES).map(([k, t]) => `<button class="ma-b sm" data-a="invCardType" data-v="${k}">${t[0]} ${t[1]}</button>`).join(' ')} <button class="ma-b sm red" data-a="invCardNo">Annuler</button></div>` : ''}
       </div>`;
     }).join('');
+    const who = !solo && g.players.length > 1 ? `<div class="ma-inv-add"><span style="opacity:.75">Donner à :</span>${g.players.map((q, i) => `<button class="ma-b sm ${i === to ? 'on' : ''}" data-a="boxTo" data-v="${i}">${CE[q.name] || ''} ${q.name}</button>`).join('')}</div>` : '';
+    const nums = Array.from({ length: BOX_MAX }, (_, k) => { const n = k + 1, h = holder(n), kn = box[n], other = h >= 0 && h !== to;
+      return `<button class="ma-b sm num ${h === to ? 'on' : ''} ${other ? 'other' : ''}" data-a="invCard" data-p="${to}" data-v="${n}" ${solo && other ? 'disabled' : ''} title="${kn ? esc(kn.name) : 'type inconnu'}${h >= 0 ? ' — chez ' + g.players[h].name : ''}">${h >= 0 ? (CE[g.players[h].name] || '') : kn ? ITYPES[kn.type][0] : ''}${num3(n)}</button>`; }).join('');
+    const ask = pend ? `<div class="ma-ask"><p>Carte <b>${num3(pend.n)}</b> : qu'est-ce que c'est ? (je m'en souviendrai pour les prochaines missions)</p>${Object.entries(ITYPES).map(([k, t]) => `<button class="ma-b sm" data-a="invCardType" data-v="${k}">${t[0]} ${t[1]}</button>`).join(' ')} <button class="ma-b sm red" data-a="invCardNo">Annuler</button></div>` : '';
+    return players + `<div class="ma-inv box"><div class="ma-inv-h">📦 <b>Memory Box</b> <span style="opacity:.75;font-size:.85rem">commune : le groupe se partage les cartes débloquées, chacune va à un seul personnage</span></div>${who}<div class="ma-inv-add">${nums}</div>${ask}</div>`;
   }
+
   function newGame(m, n) {
     const L = m.legend || {};
     const pieces = [];
@@ -564,6 +569,7 @@
   .ma-act:disabled small{color:#ff9aa5}
   .ma-inv{padding:6px 0;border-bottom:1px dashed #26306a}.ma-inv:last-child{border-bottom:0}
   .ma-inv-h{display:flex;align-items:center;gap:6px;margin-bottom:3px}.ma-inv-h .warn{color:#ff8a96!important;opacity:1!important}
+  .ma-inv.box{margin-top:4px;padding-top:8px;border-top:1px solid #39407a}.ma-inv-add .num.other{opacity:.55}
   .ma-inv-add{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:4px}.ma-inv-add .num{min-width:0;padding:3px 6px;font-size:.8rem}
   .ma-invl{display:flex;flex-wrap:wrap;gap:2px;align-items:center;margin:4px 0;font-size:.9rem}.ma-invl .chip{padding:1px 8px;font-size:.8rem}
   .ma-mini{border:1px solid #39407a;background:#1a2150;color:#fff;border-radius:7px;min-width:24px;height:24px;padding:0 5px;margin:0 2px;font:700 13px system-ui;cursor:pointer}
@@ -1227,8 +1233,12 @@
       case 'invAdd': { const q = g.players[+b.dataset.p]; q.inv = q.inv || []; q.inv.push(mkItem(ITYPES[v][1], v)); save(); render(); return; }
       case 'invRm': { const q = g.players[+b.dataset.p]; q.inv = q.inv.filter(i => i.id !== b.dataset.i); save(); render(); return; }
       case 'invUse': { const q = g.players[+b.dataset.p], it = q.inv.find(i => i.id === b.dataset.i); if (it) it.uses = Math.max(0, it.uses + +v); save(); render(); return; }
+      case 'boxTo': ui.boxTo = +v; ui.cardAsk = null; render(); return;
       case 'invCard': { const q = g.players[+b.dataset.p], n = +v; q.inv = q.inv || [];
         if (q.inv.some(i => i.num === n)) { q.inv = q.inv.filter(i => i.num !== n); save(); render(); return; }
+        // la carte est chez un autre personnage : elle passe à celui-ci (une carte = un seul personnage)
+        const from = g.players.find(o => o !== q && (o.inv || []).some(i => i.num === n));
+        if (from) { const it = from.inv.find(i => i.num === n); from.inv = from.inv.filter(i => i !== it); q.inv.push(it); save(); render(); return; }
         const kn = LS.get('mgsg.cards', {})[n];
         if (kn) { q.inv.push(mkItem(kn.name, kn.type, n)); save(); } else ui.cardAsk = { p: +b.dataset.p, n };
         render(); return; }
