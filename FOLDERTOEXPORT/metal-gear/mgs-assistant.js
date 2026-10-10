@@ -119,26 +119,65 @@
     if (!p.inv) return `<span style="opacity:.6">${tx('équipement non renseigné', 'equipment not set')}</span>`;
     return p.inv.length ? p.inv.map(i => `<span class="chip ${i.uses === 0 ? 'off' : ''}">${icOf(i)} ${esc(nameOf(i))}${i.uses != null ? ' ×' + i.uses : ''}</span>`).join('') : `<span style="opacity:.6">${tx('aucun objet', 'no items')}</span>`;
   }
-  function invEditor(m, g, only) {
-    const box = Object.assign({}, LS.get('mgsg.cards', {}), CARDS), pend = ui.cardAsk, solo = only != null;
-    const to = solo ? only : Math.min(ui.boxTo || 0, g.players.length - 1);
+  // 📦 Memory Box (numéros possédés, mémorisés) + 🎒 répartition des cartes entre personnages (glisser-déposer)
+  const ownedSet = () => new Set(LS.get('mgsg.box', []));
+  const limitOf = name => (charInfo(name).stats || {}).equip || EQUIP_LIMIT;
+  function invEditor(m, g) {
+    const own = ownedSet();
+    g.players.forEach(p => (p.inv || []).forEach(i => { if (i.num) own.add(i.num); }));   // une carte attribuée est forcément possédée
     const num3 = n => '#' + String(n).padStart(3, '0');
-    const holder = n => g.players.findIndex(q => (q.inv || []).some(i => i.num === n));
-    const players = g.players.map((p, pi) => { if (solo && pi !== only) return '';
-      p.inv = p.inv || [];
-      const cards = p.inv.filter(i => i.num).length;
-      return `<div class="ma-inv"><div class="ma-inv-h">${CE[p.name] || ''} <b>${p.name}</b><span style="flex:1"></span><span class="${cards > EQUIP_LIMIT ? 'warn' : ''}" style="opacity:.8;font-size:.85rem">${tx('cartes Memory Box', 'Memory Box cards')} : ${cards} (${tx('limite : voir son dashboard', 'limit: see their dashboard')})</span></div>
-        <div>${p.inv.map(i => `<span class="chip" title="${esc((i.num && CARDS[i.num] ? CARDS[i.num].tip + (CARDS[i.num].codec ? ' — Codec ' + CARDS[i.num].codec : '') : ''))}">${icOf(i)} ${esc(nameOf(i))}${i.num ? ` <small>${num3(i.num)}</small>` : ''}${i.uses != null ? ` <button class="ma-mini" data-a="invUse" data-p="${pi}" data-i="${i.id}" data-v="-1">−</button><b>${i.uses}</b><button class="ma-mini" data-a="invUse" data-p="${pi}" data-i="${i.id}" data-v="1">＋</button>` : ''} <button class="ma-mini red" data-a="invRm" data-p="${pi}" data-i="${i.id}">✕</button></span>`).join('') || `<span style="opacity:.6">${p.name === 'Snake' ? tx('aucun équipement de départ (On-Site Procurement)', 'no starting equipment (On-Site Procurement)') : tx('rien pour l\'instant', 'nothing yet')}</span>`}</div>
-        <div class="ma-inv-add"><span style="opacity:.75">${tx('＋ objet :', '＋ item:')}</span>${Object.entries(ITYPES).map(([k, t]) => `<button class="ma-b sm" data-a="invAdd" data-p="${pi}" data-v="${k}">${t[0]} ${t[1]}</button>`).join('')}</div>
-      </div>`;
+    const assigned = new Set(g.players.flatMap(p => (p.inv || []).filter(i => i.num).map(i => i.num)));
+    const sel = ui.cardSel || '';
+    const grid = Array.from({ length: BOX_MAX }, (_, k) => { const n = k + 1; return `<button class="ma-b sm num ${own.has(n) ? 'on' : ''}" data-a="boxOwn" data-v="${n}">${String(n).padStart(3, '0')}</button>`; }).join('');
+    const chip = (key, from, ic, label, nm, extra, tip) => `<div class="ma-cc ${sel === key + '|' + from ? 'sel' : ''}" data-card="${key}" data-from="${from}" title="${esc(tip || '')}"><span class="ic">${ic}</span><b>${label}</b><span class="nm">${esc(nm)}</span>${extra || ''}</div>`;
+    const boxItems = [...own].filter(n => CARDS[n] && !assigned.has(n)).sort((a, b) => a - b)
+      .map(n => chip('n' + n, 'box', CARDS[n].ic, num3(n), CARDS[n].name, '', CARDS[n].tip)).join('');
+    const cols = g.players.map((p, pi) => {
+      const items = p.inv || [], lim = limitOf(p.name), sure = !!(charInfo(p.name).stats || {}).equip;
+      const startMissing = (START_GEAR[p.name] || []).some(([nm]) => !items.some(i => !i.num && i.name === nm));
+      return `<div class="ma-col" data-col="${pi}"><div class="ma-colh">${CE[p.name] || ''} <b>${p.name}</b><span style="flex:1"></span><span class="${items.length > lim ? 'warn' : ''}">${items.length}/${lim}${sure ? '' : '?'}</span></div>
+        ${items.map(it => chip(it.id, pi, icOf(it), it.num ? num3(it.num) : '★', nameOf(it), it.uses != null ? `<small>×${it.uses}</small>` : '', it.num && CARDS[it.num] ? CARDS[it.num].tip + (CARDS[it.num].codec ? ' — Codec ' + CARDS[it.num].codec : '') : tx('Équipement de départ du personnage', 'Character starting equipment'))).join('') || `<p class="ma-mut">${p.name === 'Snake' ? tx('rien au départ (On-Site Procurement)', 'nothing at start (On-Site Procurement)') : tx('vide', 'empty')}</p>`}
+        ${startMissing ? `<button class="ma-b sm" data-a="invStart" data-p="${pi}">↺ ${tx('équipement de départ', 'starting equipment')}</button>` : ''}</div>`;
     }).join('');
-    const who = !solo && g.players.length > 1 ? `<div class="ma-inv-add"><span style="opacity:.75">${tx('Donner à :', 'Give to:')}</span>${g.players.map((q, i) => `<button class="ma-b sm ${i === to ? 'on' : ''}" data-a="boxTo" data-v="${i}">${CE[q.name] || ''} ${q.name}</button>`).join('')}</div>` : '';
-    const nums = Array.from({ length: BOX_MAX }, (_, k) => { const n = k + 1, h = holder(n), kn = box[n], other = h >= 0 && h !== to;
-      const banned = kn && kn.only && !kn.only.includes(g.players[to].name);
-      return `<button class="ma-b sm num ${h === to ? 'on' : ''} ${other ? 'other' : ''} ${kn ? 'known' : ''}" data-a="invCard" data-p="${to}" data-v="${n}" ${(solo && other) || banned ? 'disabled' : ''} title="${kn ? esc(kn.name + (kn.tip ? ' — ' + kn.tip : '')) : tx('carte inconnue', 'unknown card')}${h >= 0 ? tx(' — chez ', ' — held by ') + g.players[h].name : ''}">${h >= 0 ? (CE[g.players[h].name] || '') : kn ? (kn.ic || ITYPES[kn.type][0]) : ''}${num3(n)}${kn ? `<small>${esc(kn.name)}</small>` : ''}</button>`; }).join('');
-    const ask = pend ? `<div class="ma-ask"><p>${tx('Carte', 'Card')} <b>${num3(pend.n)}</b> : ${tx('qu\'est-ce que c\'est ? (je m\'en souviendrai pour les prochaines missions)', 'what is it? (I\'ll remember it for the next missions)')}</p>${Object.entries(ITYPES).map(([k, t]) => `<button class="ma-b sm" data-a="invCardType" data-v="${k}">${t[0]} ${t[1]}</button>`).join(' ')} <button class="ma-b sm red" data-a="invCardNo">${tx('Annuler', 'Cancel')}</button></div>` : '';
-    return players + `<div class="ma-inv box"><div class="ma-inv-h">📦 <b>Memory Box</b> <span style="opacity:.75;font-size:.85rem">${tx('commune : le groupe se partage les cartes débloquées, chacune va à un seul personnage', 'shared: the group splits the unlocked cards, each one goes to a single character')}</span></div>${who}<div class="ma-inv-add">${nums}</div>${ask}</div>`;
+    return `<div class="ma-boxown"><div class="ma-colh">📦 <b>Memory Box</b><span class="ma-mut" style="margin-left:6px">${tx('touche les numéros des cartes que tu as débloquées (mémorisé pour les prochaines missions)', 'tap the numbers of the cards you have unlocked (remembered for future missions)')}</span></div><div class="ma-inv-add">${grid}</div></div>
+      <p class="ma-mut" style="margin:8px 0 4px">🎒 ${tx('Répartis les cartes : fais-les glisser vers un personnage (ou touche une carte, puis une colonne). Tout se décide en début de stage : pas d\'échange pendant la mission.', 'Split the cards: drag them to a character (or tap a card, then a column). Everything is decided at the start of the Stage: no trading during the mission.')}</p>
+      <div class="ma-dnd"><div class="ma-col box" data-col="box"><div class="ma-colh">📦 <b>Memory Box</b><span style="flex:1"></span><span>${[...own].filter(n => !assigned.has(n)).length}</span></div>${boxItems || `<p class="ma-mut">${own.size ? tx('tout est attribué', 'everything is assigned') : tx('coche d\'abord tes numéros ci-dessus', 'tick your card numbers above first')}</p>`}</div>${cols}</div>`;
   }
+  // déplace une carte : de la Memory Box vers un personnage, d'un personnage à l'autre, ou retour à la Memory Box
+  function moveCard(key, from, to) {
+    const g = game(); if (!g || String(from) === String(to)) { ui.cardSel = null; return render(); }
+    let it = null, num = null;
+    if (key[0] === 'n' && from === 'box') num = +key.slice(1);
+    else { const src = g.players[+from]; it = src && (src.inv || []).find(i => i.id === key); if (!it) { ui.cardSel = null; return render(); } num = it.num; }
+    if (to !== 'box') {
+      const q = g.players[+to];
+      if (it && !it.num) { toast(tx('★ Équipement de départ : il reste à son personnage (retire-le pour le remplacer).', '★ Starting equipment stays with its character (remove it to swap it out).')); ui.cardSel = null; return render(); }
+      const cd = CARDS[num]; if (cd && cd.only && !cd.only.includes(q.name)) { toast(`⛔ ${esc(cd.name)} : ${tx('réservé à', 'only for')} ${cd.only.join(' / ')}.`); ui.cardSel = null; return render(); }
+      if (it) g.players[+from].inv = g.players[+from].inv.filter(i => i !== it);
+      q.inv = q.inv || []; q.inv.push(it || mkCard(num, CARDS[num]));
+      if (q.inv.length > limitOf(q.name)) toast(tx(`⚠️ ${q.name} dépasse sa limite d'équipement (${limitOf(q.name)}).`, `⚠️ ${q.name} is over their equipment limit (${limitOf(q.name)}).`));
+    } else if (it) g.players[+from].inv = g.players[+from].inv.filter(i => i !== it);
+    ui.cardSel = null; save(); render();
+  }
+  let dndBound = false;
+  function bindDnD() {
+    if (dndBound) return; dndBound = true;
+    let d = null;
+    root.addEventListener('pointerdown', e => { const ch = e.target.closest('.ma-cc'); if (!ch) return; d = { el: ch, x: e.clientX, y: e.clientY, ghost: null, key: ch.dataset.card, from: ch.dataset.from }; });
+    root.addEventListener('pointermove', e => {
+      if (!d) return;
+      if (!d.ghost && Math.hypot(e.clientX - d.x, e.clientY - d.y) > 8) { d.ghost = d.el.cloneNode(true); d.ghost.classList.add('ghost'); document.body.appendChild(d.ghost); d.el.style.opacity = '.35'; }
+      if (d.ghost) { d.ghost.style.left = e.clientX + 'px'; d.ghost.style.top = e.clientY + 'px'; const t = document.elementFromPoint(e.clientX, e.clientY), col = t && t.closest('[data-col]'); root.querySelectorAll('.ma-col.over').forEach(x => x.classList.remove('over')); if (col) col.classList.add('over'); e.preventDefault(); }
+    });
+    root.addEventListener('pointerup', e => {
+      if (!d) return; const dd = d; d = null;
+      if (!dd.ghost) { const k = dd.key + '|' + dd.from; ui.cardSel = ui.cardSel === k ? null : k; return render(); }
+      dd.ghost.remove(); const t = document.elementFromPoint(e.clientX, e.clientY), col = t && t.closest('[data-col]');
+      if (col) moveCard(dd.key, dd.from, col.dataset.col); else render();
+    });
+    root.addEventListener('pointercancel', () => { if (d && d.ghost) d.ghost.remove(); d = null; render(); });
+  }
+
 
   function newGame(m, n) {
     const L = m.legend || {};
@@ -206,17 +245,21 @@
   const GRID = m => (window.MGS_GRIDS || {})[m.id] || null;
   const isGrid = m => !!(m && GRID(m) && window.MGSGrid);
   const worlds = {};
-  const fixOf = m => LS.get('mgsg.fix.' + m.id, { walls: [], cells: {} });
+  const fixOf = m => Object.assign({ walls: [], cells: {}, turns: {}, spirals: [] }, LS.get('mgsg.fix.' + m.id, {}));
   const world = m => {
     if (worlds[m.id]) return worlds[m.id];
     const W = window.MGSGrid.build(GRID(m)), fx = fixOf(m);
     Object.entries(fx.cells || {}).forEach(([k, v]) => { if (v === ' ') delete W.cells[k]; else W.cells[k] = v; });
     (fx.walls || []).forEach(k => { if (W.walls.has(k)) W.walls.delete(k); else W.walls.add(k); });
+    Object.entries(fx.turns || {}).forEach(([k, v]) => { if (v) W.turns[k] = v; else delete W.turns[k]; });
+    (fx.spirals || []).forEach(k => { if (W.spirals.has(k)) W.spirals.delete(k); else W.spirals.add(k); });
     return (worlds[m.id] = W);
   };
   function toggleFix(m, kind, key, val) {
     const fx = fixOf(m);
     if (kind === 'wall') { const i = fx.walls.indexOf(key); if (i >= 0) fx.walls.splice(i, 1); else fx.walls.push(key); }
+    else if (kind === 'spiral') { const i = fx.spirals.indexOf(key); if (i >= 0) fx.spirals.splice(i, 1); else fx.spirals.push(key); }
+    else if (kind === 'turn') { const base = window.MGSGrid.build(GRID(m)).turns[key] || ''; if (val === base) delete fx.turns[key]; else fx.turns[key] = val; }
     else { const base = window.MGSGrid.build(GRID(m)).cells[key] || ' '; if (val === base) delete fx.cells[key]; else fx.cells[key] = val; }
     LS.set('mgsg.fix.' + m.id, fx); delete worlds[m.id];
   }
@@ -265,6 +308,12 @@
     if (ui.losRect) { const [x0, y0, x1, y1] = ui.losRect.r; const a = GG().pix(W, x0, y0), b = GG().pix(W, x1, y1); if (a && b) hl.push(`<rect class="glos ${ui.losRect.ok ? 'ok' : ''}" x="${a.x}" y="${a.y}" width="${b.x + b.cw - a.x}" height="${b.y + b.ch - a.y}" rx="8"/>`); }
     // icônes de mise en place : events non atteints
     Object.entries(d.events || {}).forEach(([k, e]) => { if (g.ev[k]) return; const px = GG().pix(W, e.x, e.y); hl.push(`<g class="gev" transform="translate(${px.cx},${px.cy})"><rect x="-14" y="-14" width="28" height="28" rx="5"/><text text-anchor="middle" dominant-baseline="central">${k}</text></g>`); });
+    // ce que l'assistant a compris du plateau : sortie, objectif, Barracks, ascenseurs, No Fire Zone
+    (d.exits || []).forEach(([x, y]) => { const px = GG().pix(W, x, y); if (px) hl.push(`<g class="gexit" transform="translate(${px.cx},${px.cy})"><rect x="${-px.cw * 0.44}" y="${-px.ch * 0.2}" width="${px.cw * 0.88}" height="${px.ch * 0.4}" rx="3"/><text font-size="${px.ch * 0.26}">EXIT</text></g>`); });
+    (d.barracks || []).forEach(b => { const px = GG().pix(W, b.x, b.y); if (px) hl.push(`<g class="gbadge" transform="translate(${px.x + px.cw * 0.2},${px.y + px.ch * 0.22})"><circle r="${px.ch * 0.2}"/><text font-size="${px.ch * 0.24}">📻</text></g>`); });
+    Object.entries(W.shafts).forEach(([sid, ks]) => { const [x, y] = ks[0].split(',').map(Number), px = GG().pix(W, x, y); if (!px) return; const here = g.elev === true || g.elev === sid; hl.push(`<g class="gbadge ${here ? '' : 'dim'}" transform="translate(${px.x + px.cw * 0.22},${px.y + px.ch * 0.22})"><circle r="${px.ch * 0.2}"/><text font-size="${px.ch * 0.24}">🛗</text></g>`); });
+    if (d.goal && d.goal.interact === 'L') Object.values(W.shafts).flat().forEach(k => { const [x, y] = k.split(',').map(Number), px = GG().pix(W, x, y); if (px) hl.push(`<text class="ggoal" x="${px.cx}" y="${px.cy}" font-size="${px.ch * 0.42}">🎯</text>`); });
+    if (ui.edit || st.showLOS) W.noFire.forEach(k => { const [x, y] = k.split(',').map(Number), px = GG().pix(W, x, y); if (px) hl.push(`<rect class="gnofire" x="${px.x + 4}" y="${px.y + 4}" width="${px.cw - 8}" height="${px.ch - 8}" rx="3"/>`); });
     const r0 = Math.min(d.parts[0].cw, d.parts[0].ch);
     const pcs = g.pieces.filter(p => p.x != null).map(p => {
       const px = GG().pix(W, p.x, p.y); if (!px) return '';
@@ -289,17 +338,31 @@
       return `<g class="gp ${p.k} ${sel} ${cur ? 'cur' : ''} ${act ? 'act' : ''}" data-pc="${p.id}" style="transform:translate(${px.cx + ox}px,${px.cy + oy}px)">${inner}</g>`;
     }).join('');
     if (ui.edit) {
+      const code = (x, y) => W.cells[cellKey(x, y)] || ' ';
+      Object.keys(W.cells).forEach(k => {
+        const [x, y] = k.split(',').map(Number), px = GG().pix(W, x, y); if (!px) return; const cc = W.cells[k];
+        // sol praticable en blanc, eau en bleu, ascenseur en cyan (les obstacles sont dessinés plus bas)
+        if (cc !== '#') hl.push(`<rect class="${cc === '~' ? 'gwater' : cc === 'L' ? 'gelev' : 'gfloor'}" x="${px.x + 1}" y="${px.y + 1}" width="${px.cw - 2}" height="${px.ch - 2}"/>`);
+        if (cc === 'L') hl.push(`<text class="gmark" x="${px.cx}" y="${px.cy}" font-size="${px.ch * 0.5}">🛗</text>`);
+        // murs extérieurs (bord du plateau) en noir
+        [[0, -1, px.x, px.y, px.x + px.cw, px.y], [0, 1, px.x, px.y + px.ch, px.x + px.cw, px.y + px.ch], [-1, 0, px.x, px.y, px.x, px.y + px.ch], [1, 0, px.x + px.cw, px.y, px.x + px.cw, px.y + px.ch]]
+          .forEach(([dx, dy, x1, y1, x2, y2]) => { if (code(x + dx, y + dy) === ' ') hl.push(`<line class="gext" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`); });
+      });
+      // flèches au sol (virages de patrouille) et spirales (nouveau chemin)
+      Object.entries(W.turns).forEach(([k, f]) => { const [x, y] = k.split(',').map(Number), px = GG().pix(W, x, y); if (px) hl.push(`<g transform="translate(${px.cx},${px.cy}) rotate(${ROTD[f] || 0})"><path class="gturn" d="M 0 ${-px.ch * 0.36} L ${px.cw * 0.26} ${-px.ch * 0.02} L ${px.cw * 0.09} ${-px.ch * 0.02} L ${px.cw * 0.09} ${px.ch * 0.32} L ${-px.cw * 0.09} ${px.ch * 0.32} L ${-px.cw * 0.09} ${-px.ch * 0.02} L ${-px.cw * 0.26} ${-px.ch * 0.02} Z"/></g>`); });
+      W.spirals.forEach(k => { const [x, y] = k.split(',').map(Number), px = GG().pix(W, x, y); if (px) hl.push(`<text class="gspiral" x="${px.cx}" y="${px.cy}" font-size="${px.ch * 0.6}">⟲</text>`); });
       W.walls.forEach(k => { const [a, b] = k.split('|').map(s => s.split(',').map(Number)); const pa = GG().pix(W, a[0], a[1]); if (!pa) return;
         const ln = a[1] === b[1] ? [pa.x + pa.cw, pa.y, pa.x + pa.cw, pa.y + pa.ch] : [pa.x, pa.y + pa.ch, pa.x + pa.cw, pa.y + pa.ch];
         hl.push(`<line class="gwall" x1="${ln[0]}" y1="${ln[1]}" x2="${ln[2]}" y2="${ln[3]}"/>`); });
       Object.keys(W.cells).forEach(k => { if (W.cells[k] !== '#') return; const [x, y] = k.split(',').map(Number); const px = GG().pix(W, x, y); hl.push(`<rect class="gobst" x="${px.x + 3}" y="${px.y + 3}" width="${px.cw - 6}" height="${px.ch - 6}"/>`); });
     }
-    const info = ui.edit ? (ui.edit === 'wall' ? tx('✏️ Touche près du BORD d\'une case pour ajouter / retirer un mur', '✏️ Tap near the EDGE of a space to add / remove a wall') : tx('✏️ Touche une case pour la passer obstacle ↔ sol', '✏️ Tap a space to toggle obstacle ↔ floor')) : ui.place ? tx('👆 Touche une case pour poser le pion', '👆 Tap a space to place the piece') : pend.type === 'move' ? tx('👆 Touche une case verte', '👆 Tap a green space') : pend.type === 'target' ? tx('👆 Touche la cible encadrée en rouge', '👆 Tap the target framed in red') : ui.sel ? tx('👆 Touche une case pour déplacer ce pion, ou ✕', '👆 Tap a space to move this piece, or ✕') : tx('Touche un pion pour ses options', 'Tap a piece for its options');
-    return `<div class="ma-bd"><div class="ma-bdt"><button class="ma-b sm" data-a="zoom" data-v="-1">🔍−</button><button class="ma-b sm" data-a="zoom" data-v="1">🔍+</button>
+    const info = ui.edit ? ({ wall: tx('✏️ Touche près du BORD d\'une case pour ajouter / retirer un mur', '✏️ Tap near the EDGE of a space to add / remove a wall'), cell: tx('✏️ Touche une case : sol → obstacle → eau → hors plateau → sol', '✏️ Tap a space: floor → obstacle → water → off-board → floor'), turn: tx('✏️ Touche une case : flèche ↑ → ↓ ← → aucune', '✏️ Tap a space: arrow ↑ → ↓ ← → none'), spiral: tx('✏️ Touche une case pour ajouter / retirer une spirale ⟲', '✏️ Tap a space to add / remove a ⟲ spiral') }[ui.edit]) : ui.place ? tx('👆 Touche une case pour poser le pion', '👆 Tap a space to place the piece') : pend.type === 'move' ? tx('👆 Touche une case verte', '👆 Tap a green space') : pend.type === 'target' ? tx('👆 Touche la cible encadrée en rouge', '👆 Tap the target framed in red') : ui.sel ? tx('👆 Touche une case pour déplacer ce pion, ou ✕', '👆 Tap a space to move this piece, or ✕') : tx('Touche un pion pour ses options', 'Tap a piece for its options');
+    return `<div class="ma-bd"><div class="ma-bdt"><button class="ma-b sm" data-a="zoom" data-v="-1">🔍−</button><button class="ma-b sm" data-a="zoom" data-v="1">🔍+</button><button class="ma-b sm" data-a="zoomFit" title="${tx('Vue d\'ensemble : tout le plan à l\'écran', 'Overview: the whole map on screen')}">⤢</button>
         <button class="ma-b sm ${st.showLOS ? 'on' : ''}" data-a="los" title="${tx('Montrer les cases vues par les gardes et caméras', 'Show spaces seen by Guards and Cameras')}">👁️ ${tx('Zones vues', 'Line of sight')}</button>
         <button class="ma-b sm ${ui.edit ? 'on' : ''}" data-a="edit" title="${tx('Corriger les murs et obstacles du plan', 'Fix the map\'s walls and obstacles')}">✏️ ${tx('Corriger', 'Fix map')}</button>
-        ${ui.edit ? `<button class="ma-b sm ${ui.edit === 'wall' ? 'on' : ''}" data-a="editMode" data-v="wall">🧱 ${tx('Mur', 'Wall')}</button><button class="ma-b sm ${ui.edit === 'cell' ? 'on' : ''}" data-a="editMode" data-v="cell">🟥 Obstacle</button><button class="ma-b sm" data-a="editExport">📤 ${tx('Exporter', 'Export')}</button><button class="ma-b sm red" data-a="editReset">↺</button>` : ''}
+        ${ui.edit ? `<button class="ma-b sm ${ui.edit === 'wall' ? 'on' : ''}" data-a="editMode" data-v="wall">🧱 ${tx('Mur', 'Wall')}</button><button class="ma-b sm ${ui.edit === 'cell' ? 'on' : ''}" data-a="editMode" data-v="cell">⬜ ${tx('Case', 'Space')}</button><button class="ma-b sm ${ui.edit === 'turn' ? 'on' : ''}" data-a="editMode" data-v="turn">➜ ${tx('Flèche', 'Arrow')}</button><button class="ma-b sm ${ui.edit === 'spiral' ? 'on' : ''}" data-a="editMode" data-v="spiral">⟲ ${tx('Spirale', 'Spiral')}</button><button class="ma-b sm" data-a="editExport">📤 ${tx('Exporter', 'Export')}</button><button class="ma-b sm red" data-a="editReset">↺</button>` : ''}
         <span style="flex:1;opacity:.85;font-size:.9rem">${info}</span></div>
+      ${ui.edit ? `<div class="ma-legend">${tx('⬜ sol · 🟥 obstacle · 🟦 eau · 🛗 ascenseur · ▬ mur extérieur · <span style="color:#ff2bd6">▬</span> mur intérieur · <span style="color:#ffb020">➜</span> flèche au sol · <span style="color:#8a2be2">⟲</span> spirale · <span style="color:#ff4d5e">⬚</span> No Fire Zone', '⬜ floor · 🟥 obstacle · 🟦 water · 🛗 elevator · ▬ outer wall · <span style="color:#ff2bd6">▬</span> inner wall · <span style="color:#ffb020">➜</span> floor arrow · <span style="color:#8a2be2">⟲</span> spiral · <span style="color:#ff4d5e">⬚</span> No Fire Zone')}</div>` : ''}
       <div class="ma-bds grid"><svg class="ma-svg" id="maSvg" viewBox="0 0 ${d.w} ${d.h}" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%"><image href="${d.img}" width="${d.w}" height="${d.h}"/>
         <g>${cells.join('')}</g><g>${hl.join('')}</g><g>${pcs}</g></svg></div></div>`;
   }
@@ -407,7 +470,10 @@
 
   function editAt(m, c, u) {
     const W = world(m), px = GG().pix(W, c.x, c.y);
-    if (ui.edit === 'cell') { const cur = W.cells[cellKey(c.x, c.y)] || ' '; toggleFix(m, 'cell', cellKey(c.x, c.y), cur === '#' ? '.' : '#'); render(); return; }
+    const ck = cellKey(c.x, c.y);
+    if (ui.edit === 'cell') { const cur = W.cells[ck] || ' '; if (cur === 'L') { toast(tx('🛗 Les cages d\'ascenseur ne se modifient pas ici.', '🛗 Elevator shafts can\'t be edited here.')); return; } const nx = { '.': '#', '#': '~', '~': ' ', ' ': '.' }[cur] || '.'; toggleFix(m, 'cell', ck, nx); render(); return; }
+    if (ui.edit === 'turn') { const o = ['', 'up', 'right', 'down', 'left']; const cur = W.turns[ck] || ''; toggleFix(m, 'turn', ck, o[(o.indexOf(cur) + 1) % o.length]); render(); return; }
+    if (ui.edit === 'spiral') { toggleFix(m, 'spiral', ck); render(); return; }
     const fx = (u.x - px.x) / px.cw, fy = (u.y - px.y) / px.ch;
     const d = [['left', fx], ['right', 1 - fx], ['up', fy], ['down', 1 - fy]].sort((a, b) => a[1] - b[1])[0][0];
     const [dx, dy] = GG().DIRS[d], n = { x: c.x + dx, y: c.y + dy };
@@ -702,6 +768,15 @@
   .ma-act .i{font-size:21px} .ma-act small{color:#9aa6d6;font-weight:600}
   .ma-act.loud{border-color:#a3304a}.ma-act.noisy{border-color:#9a6a2a}.ma-act:disabled{opacity:.32;filter:grayscale(1)}
   .ma-act:disabled small{color:#ff9aa5}
+  .ma-dnd{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+  .ma-col{background:#0e1236;border:1px solid #2a3474;border-radius:12px;padding:6px;min-height:90px;display:flex;flex-direction:column;gap:4px}
+  .ma-col.box{border-style:dashed}.ma-col.over{border-color:#3dffa0;box-shadow:0 0 0 2px #3dffa0 inset}
+  .ma-colh{display:flex;align-items:center;gap:4px;font-size:.88rem;margin-bottom:2px}.ma-colh .warn{color:#ff8a96;font-weight:800}
+  .ma-cc{display:flex;align-items:center;gap:5px;background:#1a2150;border:1px solid #39407a;border-radius:9px;padding:4px 6px;font-size:.82rem;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+  .ma-cc b{font:700 .75rem ui-monospace,monospace;color:#9ec0ff}.ma-cc .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ma-cc small{opacity:.75}
+  .ma-cc.sel{border-color:#3dffa0;background:#163a2c}.ma-cc.ghost{position:fixed;z-index:999999;pointer-events:none;transform:translate(-50%,-50%) scale(1.08);box-shadow:0 8px 24px rgba(0,0,0,.6);max-width:220px}
+  .ma-mut{opacity:.65;font-size:.82rem;margin:2px 0}
+  .ma-boxown .num{min-width:44px;font:700 .8rem ui-monospace,monospace}
   .ma-inv{padding:6px 0;border-bottom:1px dashed #26306a}.ma-inv:last-child{border-bottom:0}
   .ma-inv-h{display:flex;align-items:center;gap:6px;margin-bottom:3px}.ma-inv-h .warn{color:#ff8a96!important;opacity:1!important}
   .ma-inv-add .num.known{display:inline-flex;flex-direction:column;align-items:center;line-height:1.05;padding:3px 6px}.ma-inv-add .num small{font-size:.66rem;font-weight:600;opacity:.85;max-width:92px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -766,6 +841,12 @@
   .ma-svg .gplace{fill:rgba(91,140,255,.18);stroke:#5b8cff;stroke-width:2;stroke-dasharray:6 5;cursor:pointer}
   .ma-svg .gtarget{fill:rgba(224,31,53,.22);stroke:#ff4d5e;stroke-width:4;animation:gpul 1s infinite alternate}
   .ma-svg .gseen{fill:rgba(255,209,102,.30)}
+  .ma-svg .gexit rect{fill:#ffd400;stroke:#111;stroke-width:3}.ma-svg .gexit text,.ma-svg .gbadge text,.ma-svg .ggoal{text-anchor:middle;dominant-baseline:central;font-weight:900;pointer-events:none}.ma-svg .gexit text{fill:#111}
+  .ma-svg .gbadge circle{fill:#0a0d22;stroke:#3dffa0;stroke-width:2}.ma-svg .gbadge.dim{opacity:.45}.ma-svg .gnofire{fill:none;stroke:#ff4d5e;stroke-width:3;stroke-dasharray:6 4}
+  .ma-legend{font-size:.78rem;opacity:.9;padding:2px 4px 4px;line-height:1.5}
+  .ma-svg .gfloor{fill:rgba(255,255,255,.6)}.ma-svg .gwater{fill:rgba(60,140,255,.45)}.ma-svg .gelev{fill:rgba(61,220,255,.45)}
+  .ma-svg .gext{stroke:#000;stroke-width:6;stroke-linecap:square}
+  .ma-svg .gturn{fill:#ffb020;stroke:#5a3400;stroke-width:2}.ma-svg .gspiral,.ma-svg .gmark{text-anchor:middle;dominant-baseline:central;fill:#8a2be2;font-weight:900;pointer-events:none}
   .ma-svg .gwall{stroke:#ff2bd6;stroke-width:7;stroke-linecap:round}
   .ma-svg .gobst{fill:rgba(255,40,60,.35);stroke:#ff2b3c;stroke-width:2}
   .ma-svg .glos{fill:none;stroke:#ff4d5e;stroke-width:4;stroke-dasharray:12 7}
@@ -829,6 +910,7 @@
     $('#maAuto', root).onclick = () => { st.auto = !st.auto; save(); bar(); toast(st.auto ? tx('🎬 Sons et musique automatiques', '🎬 Automatic sounds and music') : tx('Sons automatiques coupés', 'Automatic sounds off')); };
     $('#maSteps', root).addEventListener('click', e => { const b = e.target.closest('[data-go]'); if (b) go(b.dataset.go); });
     root.addEventListener('click', onClick);
+    bindDnD();
     root.addEventListener('change', onChange);
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && root.classList.contains('show')) close(); });
   }
@@ -1002,7 +1084,7 @@
       <div class="ma-play"><div>${boardHtml(m, g, 'setup')}<p style="opacity:.7;font-size:.9rem;margin:6px 2px">${g.grid ? tx('Les pions sont placés comme sur le livret. Pour corriger : fais glisser un pion du doigt (ou touche-le puis une case ; ⟲⟳ pour le regard).', 'Pieces are placed as in the book. To correct: drag a piece with your finger (or tap it, then a space; ⟲⟳ to turn it).') + ` <button class="ma-b sm" data-a="resetPos">${tx('↺ Replacer selon le livret', '↺ Reset to the book layout')}</button>` : tx('Pose les pions comme sur le vrai plateau (zone de départ, gardes et leur regard avec ⟲⟳). Facultatif : tu peux jouer sans poser les gardes.', 'Place the pieces as on the real board (starting area, Guards and their facing with ⟲⟳). Optional: you can play without placing the Guards.')}</p></div>
       <div><div class="ma-card" style="margin-top:0"><h4>🧰 ${tx('Matériel', 'Components')}</h4><p>${chars.map(c => `<span class="chip">${CE[c] || ''} ${c}</span>`).join('')}</p>${m.tiles && m.tiles.length ? `<p><b>${tx('Tuiles', 'Tiles')} :</b> ${m.tiles.join(', ')}</p>` : ''}${deck ? `<p><b>Guard Order :</b> ${deck}</p>` : ''}</div>
         ${selPanel(m, g)}
-        <div class="ma-card"><h4>🎒 ${tx('Équipement de départ', 'Starting equipment')}</h4><p style="opacity:.8;margin:2px 0 6px">${tx('Ajoute les cartes que chacun prend (dans la limite d\'équipement de son dashboard). Sans ration, pas d\'action Ration ; sans arme, pas de tir, etc.', 'Add the cards each character takes (within their dashboard\'s equipment limit). No Rations, no Ration action; no weapon, no shooting, etc.')}</p>${invEditor(m, g)}</div>
+        <div class="ma-card"><h4>🎒 ${tx('Équipement', 'Equipment')}</h4>${invEditor(m, g)}</div>
         <div class="ma-card"><h4>✅ Checklist</h4><ul class="ma-chk">${stepsL.map((s, i) => `<li class="${chk[i] ? 'ok' : ''}" data-chk="${i}"><span class="bx">${chk[i] ? '✓' : ''}</span><span class="tx">${s}</span></li>`).join('')}</ul></div>
         <div class="ma-next">${g.started ? `<button class="ma-b pri big" data-go="play">▶ ${tx('Retour à la partie', 'Back to the game')}</button>` : `<button class="ma-b pri big" data-a="start">🎬 ${tx('Continuer : commencer la partie', 'Continue: start the game')}</button>`}</div></div></div>`;
     bindBoard();
@@ -1144,7 +1226,7 @@
       <div class="ma-p" style="--c:${CC[p.name] || '#2a3474'}"><h5>${CE[p.name] || ''} ${tx('Au tour de', 'Your turn,')} ${p.name}<span style="flex:1"></span><span class="ma-hp">${hp ? Array.from({ length: hp }, (_, k) => `<i class="${k < p.dmg ? 'd' : ''}"></i>`).join('') : '💔' + p.dmg}</span></h5>
       <div class="ma-tok">${[0, 1, 2, 3].map(k => `<i class="${k < p.left ? '' : 'u'}"></i>`).join('')}<span style="opacity:.8">${p.left} ${tx(`point${p.left > 1 ? 's' : ''} d'action`, `action${p.left > 1 ? 's' : ''} left`)}${p.noisy ? ` · 🔊×${p.noisy}` : ''}</span><button class="ma-b sm" data-a="undo" ${undo.length ? '' : 'disabled'} title="${tx('Annuler la dernière action', 'Undo the last action')}">↶ ${tx('Annuler', 'Undo')}</button><span style="flex:1"></span><button class="ma-b sm ${p.water ? 'on' : ''}" data-a="water" title="${tx('Dans l\'eau', 'In water')}">💧</button>${!ui.pad && !p.ask && !(ui.pend && !(ui.pend.type === 'move' && isGrid(m))) ? `<button class="ma-b sm pri" data-a="end">🏁 ${tx('Fin du tour', 'End turn')}</button>` : ''}</div>
       <div class="ma-invl">🎒 ${invChips(p)}<button class="ma-mini ${ui.inv ? 'on' : ''}" data-a="invToggle">✏️</button></div>
-      ${ui.inv ? `<div class="ma-card" style="margin:4px 0">${invEditor(m, g, cur)}</div>` : ''}
+      ${ui.inv ? `<div class="ma-card" style="margin:4px 0">${invEditor(m, g)}</div>` : ''}
       <div class="ma-att"><span style="opacity:.75">Attention</span><button class="ma-b sm ${p.att === 0 ? 'on' : ''}" data-a="att" data-v="0">—</button><button class="ma-b sm q ${p.att === 1 ? 'on' : ''}" data-a="att" data-v="1">?</button><button class="ma-b sm a ${p.att === 2 ? 'on' : ''}" data-a="att" data-v="2">!</button><span style="flex:1"></span><button class="ma-b sm" data-a="dmg" data-v="-1">−</button><button class="ma-b sm red" data-a="dmg" data-v="1">💥 ${tx('Dégât', 'Damage')}</button></div>`;
     const moving = ui.pend && ui.pend.type === 'move' && isGrid(m);
     if (ui.pad) h += padHtml(m, g);
@@ -1408,6 +1490,8 @@
     const sd = e.target.closest('[data-mu],[data-sx]');
     if (sd) { if (sd.dataset.mu) A.music(sd.dataset.mu, (SND().alert || []).some(x => x[0] === sd.dataset.mu) ? 'alert' : 'mission'); else A.sfx(sd.dataset.sx); return; }
     const gb = e.target.closest('[data-go]'); if (gb && root.contains(gb) && !gb.closest('#maSteps')) { go(gb.dataset.go); return; }
+    const colEl = e.target.closest('[data-col]');
+    if (colEl && ui.cardSel && !e.target.closest('.ma-cc') && !e.target.closest('[data-a]')) { const [k, f] = ui.cardSel.split('|'); return moveCard(k, f, colEl.dataset.col); }
     const b = e.target.closest('[data-a]'); if (!b || b.disabled || !root.contains(b) || b.dataset.a === 'pback') return;
     const a = b.dataset.a, v = b.dataset.v, m = mission(), g = m && game();
     const p = g && g.players[g.cur];
@@ -1415,6 +1499,7 @@
       case 'pick': { st.mid = isNaN(+v) ? v : +v; const mm = mission(); if (!pcounts(mm).includes(String(st.n))) st.n = +pcounts(mm)[0]; undo = []; const gg = game(); go(gg.started && !gg.over ? 'play' : 'brief'); return; }
       case 'n': st.n = +v; undo = []; save(); render(); return;
       case 'read': typeBriefing(m); return;
+      case 'zoomFit': st.zoom = 1; ui.zoomBack = null; save(); render(); { const bd = root.querySelector('.ma-bds'); if (bd) { bd.scrollLeft = 0; bd.scrollTop = 0; } } return;
       case 'zoom': st.zoom = Math.max(1, Math.min(4, (st.zoom || 1) + (+v) * 0.5)); save(); render(); return;
       case 'place': ui.place = ui.place === v ? null : v; render(); return;
       case 'unsel': ui.sel = null; render(); return;
@@ -1430,7 +1515,9 @@
       case 'cdd': if (ui.pend && ui.pend.type === 'codec') ui.pend.q = (ui.pend.q || '').slice(0, -1); render(); return;
       case 'pdef': ui.pad.def = Math.max(1, Math.min(8, ui.pad.def + +v)); render(); return;
       case 'pcol': ui.pad.color = ui.pad.color === 'w' ? 'b' : 'w'; render(); return;
-      case 'invToggle': ui.inv = !ui.inv; ui.cardAsk = null; render(); return;
+      case 'invToggle': ui.inv = !ui.inv; ui.cardSel = null; render(); return;
+      case 'boxOwn': { const n = +v, own = ownedSet(); if (own.has(n)) { own.delete(n); g.players.forEach(q => { q.inv = (q.inv || []).filter(i => i.num !== n); }); save(); } else own.add(n); LS.set('mgsg.box', [...own].sort((a, b) => a - b)); render(); return; }
+      case 'invStart': { const q = g.players[+b.dataset.p]; startInv(m, q.name).forEach(it => { if (!q.inv.some(i => !i.num && i.name === it.name)) q.inv.push(it); }); save(); render(); return; }
       case 'invAdd': { const q = g.players[+b.dataset.p]; q.inv = q.inv || []; q.inv.push(mkItem(ITYPES[v][1], v)); save(); render(); return; }
       case 'invRm': { const q = g.players[+b.dataset.p]; q.inv = q.inv.filter(i => i.id !== b.dataset.i); save(); render(); return; }
       case 'invUse': { const q = g.players[+b.dataset.p], it = q.inv.find(i => i.id === b.dataset.i); if (it) it.uses = Math.max(0, it.uses + +v); save(); render(); return; }
@@ -1521,7 +1608,7 @@
       }
       case 'edit': undo.pop(); ui.edit = ui.edit ? null : 'wall'; render(); return;
       case 'editMode': undo.pop(); ui.edit = v; render(); return;
-      case 'editReset': undo.pop(); if (confirm(tx('Effacer toutes tes corrections de ce plan ?', 'Erase all your corrections to this map?'))) { LS.set('mgsg.fix.' + m.id, { walls: [], cells: {} }); delete worlds[m.id]; render(); } return;
+      case 'editReset': undo.pop(); if (confirm(tx('Effacer toutes tes corrections de ce plan ?', 'Erase all your corrections to this map?'))) { LS.set('mgsg.fix.' + m.id, { walls: [], cells: {}, turns: {}, spirals: [] }); delete worlds[m.id]; render(); } return;
       case 'editExport': { undo.pop(); const t = JSON.stringify({ mission: m.id, fix: fixOf(m) }); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast(tx('📤 Corrections copiées : colle-les-moi pour que je les intègre au plan.', '📤 Corrections copied: share them so they can be added to the map.'), 4000), () => prompt(tx('Copie ces corrections :', 'Copy these corrections:'), t)); return; }
       case 'los': undo.pop(); st.showLOS = !st.showLOS; save(); render(); return;
       case 'card': g.card[b.dataset.k] = b.dataset.k === 'arrow' ? v : +v; break;
