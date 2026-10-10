@@ -6,7 +6,7 @@
    - Message "PRECACHE" -> télécharge et met en cache une liste d'URLs (progression).
    Chaque branche renvoie TOUJOURS une Response (sinon: TypeError "Failed to convert
    value to 'Response'"). */
-const CACHE = 'soundboard-offline-v3';
+const CACHE = 'soundboard-offline-v3';   // (sw v4 : code revalidé à chaque chargement)
 const MEDIA_RE = /\.(?:mp3|ogg|wav|m4a|aac|flac|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|otf|eot)(?:\?.*)?$/i;
 
 self.addEventListener('install', () => self.skipWaiting());
@@ -51,7 +51,9 @@ async function cacheFirst(req) {
 
 async function networkFirst(req) {
   try {
-    const resp = await fetch(req);
+    // « no-cache » : on revalide toujours auprès du serveur (sinon le navigateur peut resservir
+    // une vieille page pendant 10 min sur GitHub Pages et les mises à jour n'arrivent pas).
+    const resp = await (req.mode === 'navigate' ? fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' }) : fetch(req, { cache: 'no-cache' }));
     if (resp && resp.ok) putSafe(req, resp);
     // ignoreSearch: les fetch avec cache-buster (?t=123) retombent sur la version en cache
     return resp || (await caches.match(req, { ignoreSearch: true })) || OFFLINE_RESP();

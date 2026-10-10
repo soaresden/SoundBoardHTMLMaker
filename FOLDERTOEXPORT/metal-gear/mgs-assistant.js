@@ -8,6 +8,7 @@
    API : MGSAssistant.open({ mid, tab }) */
 (function () {
   if (window.MGSAssistant) return;
+  const VER = ((document.currentScript && document.currentScript.src || '').match(/[?&]v=(\d+)/) || [])[1] || '?';
   const tx = window.tx || ((fr) => fr);   // i18n.js : tx('FR', 'EN')
   const EN = window.MGS_LANG === 'en';
   const $ = (s, r = document) => r.querySelector(s);
@@ -469,7 +470,8 @@
     bds.addEventListener('wheel', e => {
       e.preventDefault();
       const r = bds.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, z0 = st.zoom || 1;
-      const z = Math.max(1, Math.min(4, z0 * (e.deltaY < 0 ? 1.15 : 1 / 1.15))); if (z === z0) return;
+      const dy = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY;   // lignes / pages → pixels
+      const z = Math.max(1, Math.min(4, z0 * Math.exp(-dy * 0.0015))); if (Math.abs(z - z0) < 0.001) return;
       const cx = bds.scrollLeft + mx, cy = bds.scrollTop + my, ratio = z / z0;
       st.zoom = z; fitSvg(); bds.scrollLeft = cx * ratio - mx; bds.scrollTop = cy * ratio - my;
       clearTimeout(wheelSave); wheelSave = setTimeout(save, 300);
@@ -905,7 +907,7 @@
     if (built) return; built = true;
     const s = document.createElement('style'); s.textContent = css; document.head.appendChild(s);
     root = document.createElement('div'); root.id = 'mgsA';
-    root.innerHTML = `<div class="ma-h"><span class="lg">◤ MGS</span><button class="ma-b sm" id="maHome" title="Missions">🗂️</button><span class="ttl" id="maTtl"></span>
+    root.innerHTML = `<div class="ma-h"><span class="lg" title="Assistant v${VER}">◤ MGS <small style="opacity:.55;font-size:.7rem">v${VER}</small></span><button class="ma-b sm" id="maHome" title="Missions">🗂️</button><span class="ttl" id="maTtl"></span>
         <button class="ma-b sm" id="maLang" title="Français / English">${EN ? '🇫🇷 FR' : '🇬🇧 EN'}</button><button class="ma-b sm" id="maLog" title="${tx('Journal de la partie', 'Game log')}">📜</button><button class="ma-b sm" id="maSnd" title="${tx('Sons (manuel)', 'Sounds (manual)')}">🔊</button><button class="ma-b sm" id="maHelp" title="${tx('Aide animée', 'Animated help')}">❓</button><button class="ma-b sm red" id="maX" title="${tx('Fermer', 'Close')}">✕</button></div>
       <div class="ma-steps" id="maSteps"></div><div class="ma-c" id="maBody"></div>
       <div class="ma-rot"><div>📱↻<br><b>${tx('Tourne la tablette en paysage', 'Turn your tablet to landscape')}</b><br><span>${tx('le plateau tient alors en entier à l\'écran', 'the whole board then fits on screen')}</span></div></div>
@@ -1035,6 +1037,7 @@
     const setPs = () => map.style.setProperty('--ps', Math.max(20, Math.min(46, map.clientWidth * 0.042)) + 'px');
     setPs(); const img = $('img', map); if (img && !img.complete) img.onload = setPs;
     let drag = null;
+    map.parentElement.addEventListener('wheel', e => { e.preventDefault(); st.zoom = Math.max(1, Math.min(4, (st.zoom || 1) * Math.exp(-(e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY) * 0.0015))); map.style.width = Math.round(100 * st.zoom) + '%'; setPs(); save(); }, { passive: false });
     map.addEventListener('pointerdown', e => {
       const pc = e.target.closest('.ma-pc');
       if (pc) { drag = { id: pc.dataset.pc, el: pc, x: e.clientX, y: e.clientY, moved: false }; try { pc.setPointerCapture(e.pointerId); } catch (_) {} e.preventDefault(); }
