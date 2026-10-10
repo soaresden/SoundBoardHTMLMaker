@@ -360,10 +360,10 @@
     return `<div class="ma-bd"><div class="ma-bdt"><button class="ma-b sm" data-a="zoom" data-v="-1">🔍−</button><button class="ma-b sm" data-a="zoom" data-v="1">🔍+</button><button class="ma-b sm" data-a="zoomFit" title="${tx('Vue d\'ensemble : tout le plan à l\'écran', 'Overview: the whole map on screen')}">⤢</button>
         <button class="ma-b sm ${st.showLOS ? 'on' : ''}" data-a="los" title="${tx('Montrer les cases vues par les gardes et caméras', 'Show spaces seen by Guards and Cameras')}">👁️ ${tx('Zones vues', 'Line of sight')}</button>
         <button class="ma-b sm ${ui.edit ? 'on' : ''}" data-a="edit" title="${tx('Corriger les murs et obstacles du plan', 'Fix the map\'s walls and obstacles')}">✏️ ${tx('Corriger', 'Fix map')}</button>
-        ${ui.edit ? `<button class="ma-b sm ${ui.edit === 'wall' ? 'on' : ''}" data-a="editMode" data-v="wall">🧱 ${tx('Mur', 'Wall')}</button><button class="ma-b sm ${ui.edit === 'cell' ? 'on' : ''}" data-a="editMode" data-v="cell">⬜ ${tx('Case', 'Space')}</button><button class="ma-b sm ${ui.edit === 'turn' ? 'on' : ''}" data-a="editMode" data-v="turn">➜ ${tx('Flèche', 'Arrow')}</button><button class="ma-b sm ${ui.edit === 'spiral' ? 'on' : ''}" data-a="editMode" data-v="spiral">⟲ ${tx('Spirale', 'Spiral')}</button><button class="ma-b sm" data-a="editExport">📤 ${tx('Exporter', 'Export')}</button><button class="ma-b sm red" data-a="editReset">↺</button>` : ''}
+        ${ui.edit ? `<button class="ma-b sm ${ui.edit === 'wall' ? 'on' : ''}" data-a="editMode" data-v="wall">🧱 ${tx('Mur', 'Wall')}</button><button class="ma-b sm ${ui.edit === 'cell' ? 'on' : ''}" data-a="editMode" data-v="cell">⬜ ${tx('Case', 'Space')}</button><button class="ma-b sm ${ui.edit === 'turn' ? 'on' : ''}" data-a="editMode" data-v="turn">➜ ${tx('Flèche', 'Arrow')}</button><button class="ma-b sm ${ui.edit === 'spiral' ? 'on' : ''}" data-a="editMode" data-v="spiral">⟲ ${tx('Spirale', 'Spiral')}</button><label class="ma-eo" title="${tx('Transparence des repères', 'Overlay opacity')}">◐<input type="range" min="5" max="100" value="${Math.round((st.editOp != null ? st.editOp : 0.3) * 100)}" data-a="eop"></label><button class="ma-b sm" data-a="editExport">📤 ${tx('Exporter', 'Export')}</button><button class="ma-b sm red" data-a="editReset">↺</button>` : ''}
         <span style="flex:1;opacity:.85;font-size:.9rem">${info}</span></div>
       ${ui.edit ? `<div class="ma-legend">${tx('⬜ sol · 🟥 obstacle · 🟦 eau · 🛗 ascenseur · ▬ mur extérieur · <span style="color:#ff2bd6">▬</span> mur intérieur · <span style="color:#ffb020">➜</span> flèche au sol · <span style="color:#8a2be2">⟲</span> spirale · <span style="color:#ff4d5e">⬚</span> No Fire Zone', '⬜ floor · 🟥 obstacle · 🟦 water · 🛗 elevator · ▬ outer wall · <span style="color:#ff2bd6">▬</span> inner wall · <span style="color:#ffb020">➜</span> floor arrow · <span style="color:#8a2be2">⟲</span> spiral · <span style="color:#ff4d5e">⬚</span> No Fire Zone')}</div>` : ''}
-      <div class="ma-bds grid"><svg class="ma-svg" id="maSvg" viewBox="0 0 ${d.w} ${d.h}" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%"><image href="${d.img}" width="${d.w}" height="${d.h}"/>
+      <div class="ma-bds grid"><svg class="ma-svg" id="maSvg" viewBox="0 0 ${d.w} ${d.h}" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;--eo:${st.editOp != null ? st.editOp : 0.3}"><image href="${d.img}" width="${d.w}" height="${d.h}"/>
         <g>${cells.join('')}</g><g>${hl.join('')}</g><g>${pcs}</g></svg></div></div>`;
   }
   function svgPoint(svg, e) { const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY; return pt.matrixTransform(svg.getScreenCTM().inverse()); }
@@ -464,6 +464,16 @@
       if (g0.t === 'pan') swallowUntil = Date.now() + 450;
       if (g0.t === 'piece') { swallowUntil = Date.now() + 450; dropPiece(g0.p, svgPoint(svg, e)); }
     };
+    // molette de souris : zoom centré sur le curseur
+    let wheelSave = null;
+    bds.addEventListener('wheel', e => {
+      e.preventDefault();
+      const r = bds.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, z0 = st.zoom || 1;
+      const z = Math.max(1, Math.min(4, z0 * (e.deltaY < 0 ? 1.15 : 1 / 1.15))); if (z === z0) return;
+      const cx = bds.scrollLeft + mx, cy = bds.scrollTop + my, ratio = z / z0;
+      st.zoom = z; fitSvg(); bds.scrollLeft = cx * ratio - mx; bds.scrollTop = cy * ratio - my;
+      clearTimeout(wheelSave); wheelSave = setTimeout(save, 300);
+    }, { passive: false });
     bds.addEventListener('pointerup', end);
     bds.addEventListener('pointercancel', e => { pts.delete(e.pointerId); if (gest && gest.t === 'piece') render(); gest = null; });
   }
@@ -844,11 +854,13 @@
   .ma-svg .gexit rect{fill:#ffd400;stroke:#111;stroke-width:3}.ma-svg .gexit text,.ma-svg .gbadge text,.ma-svg .ggoal{text-anchor:middle;dominant-baseline:central;font-weight:900;pointer-events:none}.ma-svg .gexit text{fill:#111}
   .ma-svg .gbadge circle{fill:#0a0d22;stroke:#3dffa0;stroke-width:2}.ma-svg .gbadge.dim{opacity:.45}.ma-svg .gnofire{fill:none;stroke:#ff4d5e;stroke-width:3;stroke-dasharray:6 4}
   .ma-legend{font-size:.78rem;opacity:.9;padding:2px 4px 4px;line-height:1.5}
-  .ma-svg .gfloor{fill:rgba(255,255,255,.6)}.ma-svg .gwater{fill:rgba(60,140,255,.45)}.ma-svg .gelev{fill:rgba(61,220,255,.45)}
-  .ma-svg .gext{stroke:#000;stroke-width:6;stroke-linecap:square}
-  .ma-svg .gturn{fill:#ffb020;stroke:#5a3400;stroke-width:2}.ma-svg .gspiral,.ma-svg .gmark{text-anchor:middle;dominant-baseline:central;fill:#8a2be2;font-weight:900;pointer-events:none}
-  .ma-svg .gwall{stroke:#ff2bd6;stroke-width:7;stroke-linecap:round}
-  .ma-svg .gobst{fill:rgba(255,40,60,.35);stroke:#ff2b3c;stroke-width:2}
+  .ma-svg{--eo:.3}
+  .ma-svg .gfloor{fill:#fff;fill-opacity:calc(var(--eo) * .7)}.ma-svg .gwater{fill:#3c8cff;fill-opacity:calc(var(--eo) * .8)}.ma-svg .gelev{fill:#3ddcff;fill-opacity:calc(var(--eo) * .8)}
+  .ma-svg .gext{stroke:#000;stroke-width:4;stroke-linecap:square;stroke-opacity:min(1, calc(var(--eo) * 2.2))}
+  .ma-svg .gturn{fill:#ffb020;stroke:#5a3400;stroke-width:1.5;fill-opacity:min(1, calc(var(--eo) * 2));stroke-opacity:min(1, calc(var(--eo) * 2))}.ma-svg .gspiral,.ma-svg .gmark{text-anchor:middle;dominant-baseline:central;fill:#8a2be2;font-weight:900;pointer-events:none;opacity:min(1, calc(var(--eo) * 2.2))}
+  .ma-svg .gwall{stroke:#ff2bd6;stroke-width:5;stroke-linecap:round;stroke-opacity:min(1, calc(var(--eo) * 2.6))}
+  .ma-svg .gobst{fill:#ff283c;fill-opacity:calc(var(--eo) * .8);stroke:#ff2b3c;stroke-width:2;stroke-opacity:min(1, calc(var(--eo) * 2))}
+  .ma-eo{display:inline-flex;align-items:center;gap:4px;font-size:.85rem}.ma-eo input{width:110px;accent-color:#3dffa0}
   .ma-svg .glos{fill:none;stroke:#ff4d5e;stroke-width:4;stroke-dasharray:12 7}
   .ma-svg .gev rect{fill:#c4202f;stroke:#fff;stroke-width:2}.ma-svg .gev text{fill:#fff;font:900 18px system-ui}
   .ma-svg .gp{cursor:pointer;transition:transform .33s cubic-bezier(.4,.1,.3,1)}
@@ -912,6 +924,7 @@
     root.addEventListener('click', onClick);
     bindDnD();
     root.addEventListener('change', onChange);
+    root.addEventListener('input', e => { if (e.target.dataset && e.target.dataset.a === 'eop') { st.editOp = +e.target.value / 100; const sv = $('#maSvg', root); if (sv) sv.style.setProperty('--eo', st.editOp); save(); } });
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && root.classList.contains('show')) close(); });
   }
   function go(screen) {
