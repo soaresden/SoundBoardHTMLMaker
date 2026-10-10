@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0612">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Soundboard</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+{{HEAD_START}}
+
+  <style>
+    {{STYLE}}
+  </style>
+{{HEAD_END}}</head>
+
+<body>
+  <!-- ===== INITIAL LOADER (visible immédiatement, retiré au DOMContentLoaded) ===== -->
+  <div id="initialLoader" style="
+       position:fixed; inset:0; z-index:99999;
+       background:#0a0612; color:#fff;
+       display:flex; flex-direction:column; align-items:center; justify-content:center;
+       font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;
+       transition:opacity 0.35s ease;">
+    <div style="font-size:22px; font-weight:800; letter-spacing:0.5px;">🎵 Soundboard</div>
+    <div style="font-size:11px; opacity:0.55; margin-top:4px;" id="initialLoaderSub">Préparation de l'audio…</div>
+    <div style="width:240px; height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; margin-top:18px;">
+      <div id="initialLoaderBar" style="height:100%; width:0%;
+           background:linear-gradient(90deg, #5174db, #c77dff);
+           transition:width 0.25s ease; border-radius:3px;"></div>
+    </div>
+    <div style="font-size:9px; opacity:0.35; margin-top:14px; font-family:monospace;" id="initialLoaderPct">0%</div>
+  </div>
+  <script>
+    // Loader fake-progress qui monte vite jusqu'à ~90% puis attend DOMContentLoaded.
+    // Visible quelques ms en mode light, plusieurs secondes en portable (HTML lourd).
+    (function(){
+      var bar = document.getElementById("initialLoaderBar");
+      var pct = document.getElementById("initialLoaderPct");
+      var p = 0;
+      var t = setInterval(function(){
+        p = Math.min(92, p + (100 - p) * 0.06);
+        bar.style.width = p + "%";
+        pct.textContent = Math.floor(p) + "%";
+      }, 80);
+      window.__finishLoader = function(){
+        clearInterval(t);
+        bar.style.width = "100%";
+        pct.textContent = "100%";
+        var loader = document.getElementById("initialLoader");
+        if (loader) {
+          loader.style.opacity = "0";
+          setTimeout(function(){ loader.remove(); }, 350);
+        }
+      };
+    })();
+  </script>
+
+  <div class="app">
+    <div class="header">
+      <div class="header-title" id="headerTitle">Soundboard</div>
+      <div class="header-actions">
+{{HEADER_BUTTONS}}
+        <button class="btn btn-green" id="btnStopAll" title="Stop music + sfx">⏹ Stop all</button>
+      </div>
+    </div>
+
+    <div class="content" id="resizableContent">
+
+      <!-- NOW PLAYING -->
+      <div class="panel panel-now" data-panel="now">
+        <div class="panel-header">🎧 Now Playing</div>
+        <div class="panel-content">
+          <div class="now-card">
+            <div class="cover" id="cover">🎲</div>
+            <div class="now-title" id="nowTitle">Aucune musique</div>
+            <div class="now-sub" id="nowSub">Choisis une track à droite</div>
+
+            <div class="progress-wrap">
+              <div class="progress">
+                <div class="progress-bar" id="progressBar"></div>
+              </div>
+              <div class="time">
+                <span id="tCur">0:00</span> / <span id="tDur">0:00</span>
+              </div>
+            </div>
+
+            <div class="controls">
+              <button class="btn" id="btnPrev">⏮</button>
+              <button class="btn btn-green" id="btnPlayPause">▶</button>
+              <button class="btn btn-red" id="btnStop">⏹</button>
+              <button class="btn" id="btnNext">⏭</button>
+            </div>
+
+            <div class="sliders">
+              <div class="slider-row">
+                <div class="slider-label">🎵 Music</div>
+                <input type="range" id="musicVol" min="0" max="100" value="70">
+                <div class="slider-val" id="musicVolTxt">70%</div>
+              </div>
+              <div class="slider-row">
+                <div class="slider-label">🔊 SFX</div>
+                <input type="range" id="sfxVol" min="0" max="100" value="100">
+                <div class="slider-val" id="sfxVolTxt">100%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="splitter" data-splitter="1"></div>
+
+      <!-- MUSIC LIST -->
+      <div class="panel panel-music" data-panel="music">
+        <div class="panel-header">🎵 Music</div>
+        <div class="panel-content">
+          <div class="toolbar">
+            <input class="search" id="musicSearch" placeholder="🔎 Music…">
+            <button class="btn-view" id="btnViewMode" title="Basculer liste / vignettes">⊞</button>
+          </div>
+          <div id="musicList" class="list"></div>
+        </div>
+      </div>
+
+      <div class="splitter" data-splitter="2"></div>
+
+      <!-- SFX -->
+      <div class="panel panel-sfx" data-panel="sfx">
+        <div class="panel-header">🔊 SFX</div>
+        <div class="panel-content">
+          <div class="toolbar">
+            <input class="search" id="sfxSearch" placeholder="🔎 SFX…">
+            <button class="btn-stop-sfx" id="btnStopSfx" title="Stop tous les SFX en cours (laisse la musique)">⏹</button>
+          </div>
+          <div id="sfxList" class="sfx-container"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const CONFIG = {{CONFIG}};
+  </script>
+
+  <script>
+    // ---- SPLITTERS : drag pour redimensionner les 3 panneaux ----
+    (function() {
+      const container = document.getElementById("resizableContent");
+      if (!container) return;
+      const panels = container.querySelectorAll(".panel");
+      const splitters = container.querySelectorAll(".splitter");
+      splitters.forEach((sp) => {
+        const begin = (clientX) => {
+          const left = sp.previousElementSibling;
+          const right = sp.nextElementSibling;
+          if (!left || !right) return null;
+          const startX = clientX;
+          const leftStart = left.getBoundingClientRect().width;
+          const rightStart = right.getBoundingClientRect().width;
+          panels.forEach(p => {
+            const w = p.getBoundingClientRect().width;
+            p.style.flex = "0 0 " + w + "px";
+          });
+          return { left, right, startX, leftStart, rightStart };
+        };
+        const move = (state, clientX) => {
+          if (!state) return;
+          const dx = clientX - state.startX;
+          const newLeft = Math.max(160, state.leftStart + dx);
+          const newRight = Math.max(160, state.rightStart - dx);
+          state.left.style.flex = "0 0 " + newLeft + "px";
+          state.right.style.flex = "0 0 " + newRight + "px";
+        };
+        sp.addEventListener("mousedown", (ev) => {
+          ev.preventDefault();
+          const state = begin(ev.clientX);
+          if (!state) return;
+          const onMove = (e) => move(state, e.clientX);
+          const onUp = () => {
+            document.removeEventListener("mousemove", onMove);
+            document.removeEventListener("mouseup", onUp);
+            document.body.style.cursor = "";
+          };
+          document.body.style.cursor = "col-resize";
+          document.addEventListener("mousemove", onMove);
+          document.addEventListener("mouseup", onUp);
+        });
+        sp.addEventListener("touchstart", (ev) => {
+          const state = begin(ev.touches[0].clientX);
+          if (!state) return;
+          const onMove = (e) => move(state, e.touches[0].clientX);
+          const onEnd = () => {
+            document.removeEventListener("touchmove", onMove);
+            document.removeEventListener("touchend", onEnd);
+          };
+          document.addEventListener("touchmove", onMove, { passive: true });
+          document.addEventListener("touchend", onEnd);
+        }, { passive: true });
+      });
+    })();
+  </script>
+
+  <script>
+    {{PLAY_JS}}
+  </script>
+
+  <script>
+    {{EDITOR_JS}}
+  </script>
+{{BODY_END}}
+</body>
+</html>

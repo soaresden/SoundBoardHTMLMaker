@@ -1,0 +1,62 @@
+# =========================================
+#  SOURCES : games/<jeu>/  (versionnées)
+#  EXPORTS : FOLDERTOEXPORT/<Nom du jeu>/  (versionnés pour GitHub Pages)
+#  Si tu fork pour toi : garde ou supprime les jeux d'exemple
+#  (games/loup-garou, games/metal-gear + leurs dossiers d'export).
+# =========================================
+
+# Jeu sélectionné dans runme.bat / build.py use (propre à chaque PC)
+.current_game
+
+# Les versions AiO (all-in-one) ne sont JAMAIS versionnées :
+# souvent > 100 Mo (limite GitHub) et re-générables (runme.bat, option 4/5).
+**/index_aio.html
+**/output_portable.html
+
+# Anciennes sorties à la racine (avant le passage à games/)
+/output.html
+/output_portable.html
+/index_aio.html
+
+# Logs serveur
+server.log
+
+# Fichiers WAV bruts (on ne garde que les .mp3 utilisés)
+**/*.wav
+**/sfx/briefs/
+
+# Documents sous copyright (règles/livrets PDF) : gardés en local, jamais publiés
+**/*.pdf
+
+# Android : clés de signature (JAMAIS publiques), APK et artefacts de build
+*.keystore
+*.jks
+keystore.properties
+*.apk
+*.apk.idsig
+FOLDERTOEXPORT/*/android/build/
+
+# =========================================
+#  PYTHON
+# =========================================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+.python-version
+
+# =========================================
+#  OS / IDE / outils
+# =========================================
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+.claude/
+*.swp
+*.swo
+*~
