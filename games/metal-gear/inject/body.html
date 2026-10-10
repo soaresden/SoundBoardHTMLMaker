@@ -1,2 +1,11 @@
-  <script src="mgs-stages.js?v=1"></script>
-  <script src="mgs-assistant.js?v=10"></script>
+  <script src="guide/missions.js?v=3"></script>
+  <script src="guide/data.js?v=3"></script>
+  <script src="guide/sounds.js?v=2"></script>
+  <script src="help-overlay.js?v=2"></script>
+  <script src="mgs-assistant.js?v=21"></script>
+  <script>
+    // Hors-ligne : le guide, l'aide et les plans de mission aussi
+    window.SB_OFFLINE_EXTRA_URLS = () => ["guide.html", "guide/lessons.js?v=3",
+      ...(window.MGS_MISSIONS || []).flatMap(m => m.images || []),
+      "guide/img/guard-order-card.jpg", "guide/img/snake-dashboard.jpg"];
+  </script>

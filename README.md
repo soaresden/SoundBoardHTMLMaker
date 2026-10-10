@@ -18,6 +18,7 @@ Tu poses tes mp3 dans un dossier, tu ranges tout dans l'éditeur, tu exportes. C
 
 - **Musiques d'ambiance** en boucle, rangées par catégories, avec pochettes (lues dans les tags des mp3).
 - **Bruitages** en un clic, avec volume par son et volume général.
+- **MP3 ou WAV** : un `.wav` déposé dans `music/` ou `sfx/` est converti automatiquement en `.mp3` au Scan et au Build. L'original reste sur ton PC et n'est jamais publié.
 - **Un thème à tes couleurs** : 2 couleurs, ou extraites automatiquement d'une pochette.
 - **Éditeur web** : glisser-déposer, catégories, titres, volumes, sans toucher au code.
 - **Hors-ligne** : un bouton (ou le mode auto) met tous les sons en cache sur la tablette.
@@ -107,6 +108,14 @@ Tout ce qui est dans `extras/` (scripts, images, pages HTML…) est copié tel q
 <script> window.SB_OFFLINE_EXTRA_URLS = () => ["regles.html", "img/plateau.jpg"]; </script>
 ```
 
+Tes scripts peuvent aussi **piloter le soundboard** :
+
+```js
+SB.playMusic("ambiance-nuit.mp3");   // lance une musique (dans music/)
+SB.playSfx("porte.mp3");             // joue un bruitage (dans sfx/)
+SB.stopMusic();  SB.stopAll();  SB.current();
+```
+
 ---
 
 ## 🧩 Les exemples inclus
@@ -120,10 +129,14 @@ Ambiances jour/nuit, bruitages par rôle, et un **Maître du Jeu** branché par 
 ![Loup-Garou](docs/img/player-loup-garou.png)
 
 ### 🐍 Metal Gear Solid : le jeu de plateau
-Musiques et voix du jeu, un assistant de partie, et un **guide interactif** pour (ré)apprendre les règles :
-- des leçons animées, dont un bac à sable de ligne de vue et la démo de l'IA des gardes ;
-- les 14 missions de la campagne et la mission VR 60, avec le plan de mise en place et une checklist ;
-- la FAQ et l'errata v1.2, et un suivi de partie (rounds, paquet de gardes, dégâts).
+Musiques et voix du jeu, plus tout ce qu'il faut pour jouer sans se tromper :
+- **🎮 Assistant de partie**, en 4 onglets :
+  - **Mise en place** : plan et checklist ;
+  - **Le jeu** : règles et errata intégrés ;
+  - **Partie** : déroulé guidé tour par tour, « c'est à toi de jouer », points d'action, phase ennemie pas à pas, bruits de pas, alerte et sons automatiques ;
+  - **Sons** : les musiques et les voix de la mission.
+- **❓ Aide animée** : 14 petites scènes où l'on voit les pions bouger (ligne de vue, bruit, alerte, caméras…), quasiment sans texte.
+- **📖 Guide** : leçons interactives, les 14 missions de la campagne et la mission VR 60, la FAQ et l'errata v1.2.
 
 [▶ Ouvrir](https://soaresden.github.io/SoundBoardHTMLMaker/FOLDERTOEXPORT/metal-gear/) · [📖 Guide](https://soaresden.github.io/SoundBoardHTMLMaker/FOLDERTOEXPORT/metal-gear/guide.html)
 

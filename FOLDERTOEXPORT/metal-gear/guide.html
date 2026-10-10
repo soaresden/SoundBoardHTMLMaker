@@ -295,12 +295,12 @@ details.q p{margin:0 0 12px}
 <header>
   <div class="hrow">
     <div class="logo">◤ CODEC 140.85 <small>Metal Gear Solid · Le jeu de plateau</small></div>
-    <div class="freq"><button class="btn sm" id="offBtn" title="Tout télécharger pour jouer sans réseau">📥 Hors-ligne</button><button class="btn sm" id="sndBtn" title="Son codec">🔇</button><a href="index.html">🎵 Soundboard</a></div>
+    <div class="freq"><button class="btn sm" data-mgs-help title="Aide animée (touche ?)">❓ Aide</button><button class="btn sm" id="offBtn" title="Tout télécharger pour jouer sans réseau">📥 Hors-ligne</button><button class="btn sm" id="sndBtn" title="Son codec">🔇</button><a href="index.html">🎵 Soundboard</a></div>
   </div>
   <nav id="nav">
     <a href="#learn" data-r="learn">📘 Apprendre</a>
     <a href="#missions" data-r="missions">🗺️ Missions</a>
-    <a href="#game" data-r="game">🎮 En partie</a>
+    <a href="#game" data-r="game">🎲 Assistant de partie</a>
     <a href="#chars" data-r="chars">👥 Persos</a>
     <a href="#ref" data-r="ref">📋 Aide-mémoire</a>
     <a href="#faq" data-r="faq">⚠️ FAQ & Errata</a>
@@ -310,9 +310,12 @@ details.q p{margin:0 0 12px}
 
 <div id="viewer"><div class="vbar"><span class="t" id="vTitle"></span><button class="btn sm" id="vOut">－</button><button class="btn sm" id="vFit">⤢</button><button class="btn sm" id="vIn">＋</button><button class="btn sm red" id="vClose">✕</button></div><div class="vscroll" id="vScroll"><img id="vImg" alt=""></div></div>
 
-<script src="guide/data.js?v=1"></script>
-<script src="guide/missions.js?v=1"></script>
-<script src="guide/lessons.js?v=1"></script>
+<script src="guide/data.js?v=3"></script>
+<script src="guide/missions.js?v=3"></script>
+<script src="guide/lessons.js?v=3"></script>
+<script src="guide/sounds.js?v=2"></script>
+<script src="help-overlay.js?v=2"></script>
+<script src="mgs-assistant.js?v=21"></script>
 <script>
 (function(){
   const $ = (s, r=document) => r.querySelector(s);
@@ -345,7 +348,7 @@ details.q p{margin:0 0 12px}
   if (!httpOK) offBtn.style.display = 'none'; // en file:// tout est déjà local
   else navigator.serviceWorker.register('sw.js').catch(() => {});
   offBtn.onclick = async () => {
-    const urls = ['guide.html', 'guide/data.js?v=1', 'guide/missions.js?v=1', 'guide/lessons.js?v=1', 'sfx/codec.mp3',
+    const urls = ['guide.html', 'guide/data.js?v=3', 'guide/missions.js?v=3', 'guide/lessons.js?v=3', 'guide/sounds.js?v=2', 'help-overlay.js?v=2', 'mgs-assistant.js?v=21', 'sfx/codec.mp3',
       ...['guard-order-card','snake-dashboard','los-facing','los-box','obstacles','los-move','camera-trap-laser','waken','camera-tokens'].map(n => `guide/img/${n}.jpg`),
       ...M.flatMap(m => [...(m.images||[]), ...(m.pageImages||[])])];
     try {
@@ -384,7 +387,7 @@ details.q p{margin:0 0 12px}
     const [r, a] = h.split('/');
     document.querySelectorAll('#nav a').forEach(x => x.classList.toggle('on', x.dataset.r === r || (r === 'lesson' && x.dataset.r === 'learn') || (r === 'm' && x.dataset.r === 'missions')));
     window.scrollTo(0, 0);
-    ({ learn: viewLearn, lesson: () => viewLesson(a), missions: viewMissions, m: () => viewMission(a), game: viewGame, chars: viewChars, ref: viewRef, faq: viewFaq }[r] || viewLearn)();
+    ({ learn: viewLearn, lesson: () => viewLesson(a), missions: viewMissions, m: () => viewMission(a), game: () => { window.MGSAssistant.open(); history.replaceState(null, '', '#missions'); viewMissions(); }, chars: viewChars, ref: viewRef, faq: viewFaq }[r] || viewLearn)();
   }
   window.addEventListener('hashchange', route);
 
@@ -496,7 +499,7 @@ details.q p{margin:0 0 12px}
     };
     $('#mtabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; store.set('mtab', b.dataset.t); $('#msec').innerHTML = sec[b.dataset.t]; document.querySelectorAll('#mtabs .btn').forEach(x => x.classList.toggle('on', x === b)); bindSec(); });
     bindSec();
-    $('#playBtn').onclick = () => { const g = newGame(m.id); store.set('game', g); location.hash = 'game'; };
+    $('#playBtn').onclick = () => window.MGSAssistant.open({ mid: m.id, tab: 'setup' });
   }
 
   /* ---------- En partie ---------- */

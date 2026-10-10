@@ -86,24 +86,28 @@
   ],
   "sfxCategories": [
     {
-      "name": "Interaction",
+      "name": "👣 Déplacements & objets",
       "pos": 1
     },
     {
-      "name": "Combat",
+      "name": "Interaction",
       "pos": 2
     },
     {
-      "name": "Guardes",
+      "name": "Combat",
       "pos": 3
     },
     {
-      "name": "Degats",
+      "name": "Guardes",
       "pos": 4
     },
     {
-      "name": "Jingles",
+      "name": "Degats",
       "pos": 5
+    },
+    {
+      "name": "Jingles",
+      "pos": 6
     }
   ],
   "music": [
@@ -642,6 +646,111 @@
       "category": "Jingles",
       "pos": 2,
       "volume": 1
+    },
+    {
+      "file": "mgs-crawl-1.mp3",
+      "label": "🐾 Pas (rampé) 1",
+      "category": "👣 Déplacements & objets",
+      "pos": 1,
+      "volume": 1.0
+    },
+    {
+      "file": "mgs-crawl-2.mp3",
+      "label": "🐾 Pas (rampé) 2",
+      "category": "👣 Déplacements & objets",
+      "pos": 2,
+      "volume": 1.0
+    },
+    {
+      "file": "mgs-run-1.mp3",
+      "label": "🏃 Course 1",
+      "category": "👣 Déplacements & objets",
+      "pos": 3,
+      "volume": 1.0
+    },
+    {
+      "file": "mgs-run-2.mp3",
+      "label": "🏃 Course 2",
+      "category": "👣 Déplacements & objets",
+      "pos": 4,
+      "volume": 1.0
+    },
+    {
+      "file": "mgs-run-water.mp3",
+      "label": "💧 Dans l'eau",
+      "category": "👣 Déplacements & objets",
+      "pos": 5,
+      "volume": 1.0
+    },
+    {
+      "file": "mgs-on-the-wall.mp3",
+      "label": "🧱 Dos au mur",
+      "category": "👣 Déplacements & objets",
+      "pos": 6,
+      "volume": 1.0
+    },
+    {
+      "file": "mgs-door.mp3",
+      "label": "🚪 Porte",
+      "category": "👣 Déplacements & objets",
+      "pos": 7,
+      "volume": 1.0
+    },
+    {
+      "file": "mgs-elevator-call.mp3",
+      "label": "🛗 Appel ascenseur",
+      "category": "👣 Déplacements & objets",
+      "pos": 8,
+      "volume": 1.0
+    },
+    {
+      "file": "mgs-pop-item.mp3",
+      "label": "✨ Objet apparaît",
+      "category": "👣 Déplacements & objets",
+      "pos": 9,
+      "volume": 1.0
+    },
+    {
+      "file": "mgs-use-ration.mp3",
+      "label": "🍴 Ration",
+      "category": "👣 Déplacements & objets",
+      "pos": 10,
+      "volume": 1.0
+    },
+    {
+      "file": "mgs-chaff-jamming.mp3",
+      "label": "📡 Brouillage chaff",
+      "category": "👣 Déplacements & objets",
+      "pos": 11,
+      "volume": 1.0
+    },
+    {
+      "file": "mgs-camera-rotate.mp3",
+      "label": "📹 Caméra pivote",
+      "category": "👣 Déplacements & objets",
+      "pos": 12,
+      "volume": 1.0
+    },
+    {
+      "file": "mgs-camera-spot.mp3",
+      "label": "📹 Caméra te repère",
+      "category": "👣 Déplacements & objets",
+      "pos": 13,
+      "volume": 1.0
+    },
+    {
+      "file": "mgs-clear-alarm.mp3",
+      "label": "✅ Fin d'alerte",
+      "category": "👣 Déplacements & objets",
+      "pos": 14,
+      "volume": 1.0
+    },
+    {
+      "file": "mgs-briefing-read.mp3",
+      "label": "📡 Briefing",
+      "category": "👣 Déplacements & objets",
+      "pos": 15,
+      "volume": 1.0
     }
   ]
 }

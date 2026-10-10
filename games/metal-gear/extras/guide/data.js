@@ -9,6 +9,7 @@ window.MGS_FAQ = [
     { q: "Otacon — coût d'Interact", a: "Sur le dashboard d'Otacon, Interact affiche <b>X</b> : c'est une coquille, ça coûte <b>1 action</b> comme pour les autres.", tag: "errata" },
   ]},
   { cat: "Général", items: [
+    { q: "Le Codec Book, quand l'utiliser ?", a: "Quand tu veux, gratuitement : dès qu'un composant (carte Équipement, dashboard de boss, tuile, page du livre…) porte un <b>numéro Codec</b>, cherche-le dans le Codec Book pour avoir des détails, des astuces… et parfois un secret. C'est facultatif." },
     { q: "Deux figurines sur la même case ?", a: "Non, jamais. On saute par-dessus (saute-mouton)." },
     { q: "Peut-on modifier un dé au-delà de 1–6 ?", a: "Oui. −2 sur un 2 donne 0, +2 sur un 6 donne 8. Seul le <b>!</b> du dé blanc ne se modifie pas (ce n'est pas un nombre) — mais il peut être relancé." },
     { q: "Rafraîchir un Focus et l'utiliser le même tour ?", a: "Oui, rien ne l'empêche." },

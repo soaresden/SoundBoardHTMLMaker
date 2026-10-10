@@ -18,9 +18,9 @@ if errorlevel 1 (
 )
 
 REM ============================================================
-REM   CHECK REQUIREMENTS (mutagen)
+REM   CHECK REQUIREMENTS (mutagen, lameenc)
 REM ============================================================
-python -c "import mutagen" >nul 2>&1
+python -c "import mutagen, lameenc" >nul 2>&1
 if errorlevel 1 (
     echo.
     echo [SETUP] Installation des dependances Python...

@@ -162,6 +162,9 @@ def merge_project(old: Dict[str, Any], new: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def scan_and_save(wipe_covers: bool = False) -> Dict[str, Any]:
+    from .convert import convert_folder
+    convert_folder("music")
+    convert_folder("sfx")
     if wipe_covers and os.path.isdir("covers"):
         for f in os.listdir("covers"):
             fp = os.path.join("covers", f)

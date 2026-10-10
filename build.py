@@ -33,6 +33,7 @@ import sys
 from src import games as G
 from src.build_html import build_output_html, tpl
 from src.scan import scan_and_save
+from src.convert import convert_folder
 
 CONFIG_FILE = "config.json"
 OUTPUT_FILE = "index.html"           # version light (servie par GitHub Pages)
@@ -225,6 +226,8 @@ def cmd_scan(game: str):
 def cmd_build(game: str, keep_portable: bool = False, portal: bool = True):
     gdir, cfg = _load_game(game)
     with G.inside(gdir):
+        convert_folder("music")      # un .wav déposé devient un .mp3 (l'original reste en local)
+        convert_folder("sfx")
         _summarize_config(cfg, f"BUILD {game}")
     _clean_orphans(cfg)
     runtime = {"project": cfg.get("project", {}), "tracks": _runtime_tracks(cfg)}
@@ -239,7 +242,7 @@ def cmd_build(game: str, keep_portable: bool = False, portal: bool = True):
         src = os.path.join(gdir, d)
         if os.path.isdir(src):
             for fn in sorted(os.listdir(src)):
-                if os.path.isfile(os.path.join(src, fn)) and not fn.startswith("."):
+                if os.path.isfile(os.path.join(src, fn)) and not fn.startswith(".") and not fn.lower().endswith(".wav"):
                     ex.copy(os.path.join(src, fn), f"{d}/{fn}")
     for m in cfg.get("music", []):   # pochette rangée ailleurs que dans covers/
         if m.get("cover") and not m["cover"].startswith("covers/"):

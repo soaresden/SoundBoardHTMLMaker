@@ -1858,6 +1858,33 @@ input[type="range"]{ width:100%; accent-color:var(--accent); }
     });
   }
 
+  // ----- API publique : les scripts d'un jeu (inject/, extras/) peuvent piloter le soundboard -----
+  //   SB.playMusic("fichier.mp3")  SB.playSfx("fichier.mp3")  SB.stopMusic()  SB.stopAll()
+  //   SB.current() -> piste en cours ou null   |   SB.tracks -> toutes les pistes du soundboard
+  window.SB = {
+    tracks,
+    playMusic(file) {
+      const i = musics.findIndex(t => t.file === file);
+      if (i >= 0) { playIndex(i); return true; }
+      // Musique présente dans music/ mais pas rangée dans le soundboard
+      currentIndex = -1;
+      lastTrack = { file, name: file.replace(/\.[^.]+$/, ""), category: "", cover: null };
+      musicAudio.src = "music/" + file;
+      musicAudio.volume = Math.max(0, Math.min(1, musicVolume));
+      musicAudio.currentTime = 0;
+      musicAudio.play();
+      highlightActive(); updateNow();
+      nowTitle.textContent = lastTrack.name; nowSub.textContent = "Musique"; btnPlayPause.textContent = "⏸";
+      return true;
+    },
+    playSfx(file, vol) {
+      const t = sfxs.find(x => x.file === file);
+      playSfx(file, vol != null ? vol : (t ? t.volume : 1));
+    },
+    stopMusic, stopAll,
+    current() { return musicAudio.paused ? null : (musics[currentIndex] || lastTrack); },
+  };
+
   // ----- Mode hors-ligne : met tous les sons en cache via le Service Worker (sw.js) -----
   //   config.json > project.offline :
   //     "button" -> bouton "📥 Hors-ligne" dans l'en-tête (mise en cache à la demande)
