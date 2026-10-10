@@ -35,7 +35,7 @@
   const pcounts = m => Object.keys(m.players || { 1: 1 }).filter(k => /^\d+$/.test(k));
   const pchars = (m, n) => { const c = (m.players && m.players[n]) || ['Snake']; return c.some(x => !CE[x]) ? ROSTER.slice(0, n) : c; };
   const charInfo = n => CHARS().find(c => c.name === n) || {};
-  const defOf = n => (charInfo(n).stats || {}).def || 3;
+  const defOf = n => { const g = st.games && st.games[st.mid], p = g && g.players && g.players.find(x => x.name === n); return ((charInfo(n).stats || {}).def || 3) + (p && p.inv ? p.inv.reduce((s, i) => s + ((i.num && CARDS[i.num] && CARDS[i.num].def) || 0), 0) : 0); };
   const hpOf = n => (charInfo(n).stats || {}).hp || null;
   const stageSnd = m => (SND().stages || {})[m.id] || {};
   const AU = () => SND().auto || {};
@@ -55,36 +55,50 @@
   /* 🎒 Équipement : cartes de départ du personnage + cartes numérotées de la Memory Box (#001…) */
   const ITYPES = { ration: ['🍴', 'Ration', 1], chaff: ['✨', 'Chaff', 1], grenade: ['💣', 'Grenade', 1], gun: ['🔫', 'Arme', null], sgun: ['🔇', 'Arme silencieuse', null], other: ['🎒', 'Autre', null] };
   const START_GEAR = {
-    'Meryl': [['Handgun .50 Cal', 'gun'], ['Light Assault Rifle', 'gun']],
+    'Meryl': [['Pistolet (.50)', 'gun'], ['Fusil d\'assaut léger', 'gun']],
     'Gray Fox': [['Stealth Camouflage', 'other'], ['High-Frequency Blade', 'other'], ['Arm Cannon', 'gun']],
     'Otacon': [['ADV. Stealth Camouflage', 'other'], ['Rations', 'ration']],
   };
   const EQUIP_LIMIT = 3, BOX_MAX = 32;
-  /* Cartes Équipement débloquables : n° de carte = fiche Codec 10.NN (échantillon du rulebook WIP).
-     Effets résumés ; à confirmer sur les vraies cartes (jetons, coût). only = personnages autorisés. */
+  /* Cartes Équipement (relevées sur les cartes du jeu, n° « ITEM 0NN »).
+     kind = ce que l'assistant sait en faire ; cost = actions ; dice = dés lancés ; uses = munitions / jetons / doses ;
+     cls = pistol | rifle (pour les silencieux) ; only = personnages autorisés ; codec = fiche du Codec Book. */
+  const RATION_C = { name: 'Rations', type: 'ration', kind: 'heal', cost: 1, uses: 1, ic: '🍴', codec: '05.13', tip: 'Retire jusqu\'à 2 dégâts, puis défausse la carte.' };
+  const BOX_C = { type: 'other', kind: 'box', cost: 1, ic: '📦', codec: '06.02', tip: 'Hors LOS d\'un garde / d\'une caméra : remplace ta figurine par le carton. Les gardes te prennent pour un garde. Tu ressors si tu sautes un garde, entres dans une LOS ou fais autre chose que Sneak / Dash / Focus ; un garde qui finit adjacent et face à toi te démasque.' };
   const CARDS = {
-    1: { name: 'SOCOM (.45)', type: 'gun', tip: 'Attaque une cible en LOS. LOUD tant qu\'il n\'a pas de silencieux. Munitions illimitées (FAQ).' },
-    3: { name: 'Rations', type: 'ration', tip: 'Repas de combat (effet : voir la carte).' },
-    4: { name: 'Grenades incapacitantes', type: 'grenade', uses: 2, tip: 'Flash + bruit : assomme, jamais mortel. LOUD.' },
-    6: { name: 'C4', type: 'other', tip: 'Explosif télécommandé : toutes les charges posées sautent ensemble.' },
-    7: { name: 'Grenades', type: 'grenade', uses: 2, tip: 'Grenades à fragmentation.' },
-    8: { name: 'Claymore', type: 'other', tip: 'Mine directionnelle (arc de 60°).' },
-    9: { name: 'Nikita', type: 'other', tip: 'Missiles téléguidés : carburant et mobilité selon les dés (tu choisis l\'ordre). LOUD.' },
-    10: { name: 'Carton', type: 'other', tip: 'Le fameux carton.' },
-    11: { name: 'Médicament contre le rhume', type: 'other', uses: 1, tip: 'À tout moment de ton tour : rafraîchit tous tes jetons Focus.' },
-    13: { name: 'Carte de sécurité niv. 2', type: 'other', tip: 'Ouvre les portes jusqu\'au niveau 2.' },
-    14: { name: 'Masque à gaz', type: 'other', tip: 'Permet de rester dans le gaz.' },
-    16: { name: 'Corde', type: 'other', tip: 'Pour le rappel.' },
-    17: { name: 'Lance-missile', type: 'other', tip: 'Missile en ligne droite jusqu\'au premier obstacle. LOUD.' },
-    18: { name: 'Fusil de sniper', type: 'gun', tip: 'Coûte 2 actions. LOUD.' },
-    19: { name: 'Diazépam', type: 'other', uses: 2, tip: '2 doses. Une dose (pas une action) : relance les dés que tu veux, pour toutes tes actions du tour.' },
-    20: { name: 'Mouchoir de Sniper Wolf', type: 'other', only: ['Otacon'], tip: 'Otacon uniquement.' },
-    21: { name: 'Gilet pare-balles', type: 'other', only: ['Snake', 'Meryl'], tip: 'Réduit les dégâts. Snake et Meryl uniquement.' },
-    22: { name: 'Carte de sécurité niv. 3', type: 'other', tip: 'Ouvre les portes jusqu\'au niveau 3.' },
-    23: { name: 'Bandana', type: 'other', only: ['Snake'], tip: 'Snake uniquement.' },
+    1: { name: 'Pistolet (.45)', type: 'gun', kind: 'shoot', cls: 'pistol', cost: 1, dice: ['w'], ic: '🔫', codec: '02.01', tip: 'Attaque une cible en LOS (1 dé). LOUD. Munitions illimitées.' },
+    2: RATION_C, 6: RATION_C, 12: RATION_C, 15: RATION_C,
+    3: { name: 'Grenade chaff', type: 'chaff', kind: 'chaff', cost: 1, uses: 1, ic: '✨', codec: '05.12', tip: 'Jusqu\'à la fin du round : caméras et capteurs ignorés dans la zone. Garde dans ta zone → tu attires l\'attention (?). Puis défausse.' },
+    4: { name: 'Grenade incapacitante', type: 'grenade', kind: 'stun', cost: 1, uses: 1, ic: '💥', codec: '07.08', tip: 'Case en LOS à 5 cases max : chaque garde à 2 cases (en LOS de la case) devient KO ★. LOUD. Puis défausse. Sans effet sur les VR Boss.' },
+    5: { name: 'C-4', type: 'other', kind: 'c4', cost: 1, uses: 2, ic: '🧨', codec: '02.06', tip: 'Poser (1) : un C-4 sur une case adjacente. Faire sauter (1) : chaque C-4 inflige 2 dégâts à toute figurine à 1 case en LOS ; gardes dans la zone et pas de ! → ton ! sur le C-4 le plus proche.' },
+    7: { name: 'Grenade', type: 'grenade', kind: 'frag', cost: 1, uses: 1, ic: '💣', codec: '02.06', tip: 'Case en LOS à 5 cases max : 2 dégâts à toutes les figurines à 2 cases (en LOS de la case). LOUD. Puis défausse.' },
+    8: { name: 'Mines Claymore', type: 'other', kind: 'plant', cost: 1, uses: 2, ic: '🪤', codec: '02.06', tip: 'Pose sur une case adjacente. Une figurine qui y entre : 2 dégâts à chaque figurine à 2 cases en LOS ; gardes dans la zone et pas de ! → ton ! sur la mine.' },
+    9: { name: 'Nikita', type: 'other', kind: 'missile', cost: 1, uses: 3, dice: ['w', 'w', 'w'], ic: '🚀', codec: '06.01', tip: 'Missile posé à côté, puis 2 dés noirs : avance du résultat d\'un dé dans une direction, puis (option) de l\'autre. Obstacle / figurine → attaque (3 dés) toutes les figurines à 1 case. LOUD.' },
+    10: Object.assign({ name: 'Carton A' }, BOX_C), 27: Object.assign({ name: 'Carton B' }, BOX_C),
+    11: { name: 'Médicament', type: 'other', kind: 'free', cost: 0, uses: 1, ic: '💊', codec: '06.03', tip: 'À tout moment de ton tour : rafraîchit tous tes jetons Focus. Puis défausse.' },
+    13: { name: 'Carte magnétique niv. 3', type: 'other', kind: 'key', cost: 1, uses: 1, ic: '💳', codec: '06.06', tip: 'Ouvre une porte jusqu\'au niveau 3 sur ta case. Puis défausse.' },
+    14: { name: 'Masque à gaz', type: 'other', kind: 'scan', cost: 1, ic: '😷', codec: '06.05', tip: 'Ignore le gaz. Télépathie résiduelle (1) : regarde la carte du dessus Guard Order ou Guard Reaction puis remets-la.' },
+    16: { name: 'Corde', type: 'other', kind: 'rope', cost: 1, uses: 5, ic: '🪢', codec: '06.07', tip: 'Ligote un garde KO adjacent : il ignore les Réveils. Un garde qui marche sur la corde la retire.' },
+    17: { name: 'Lance-missile', type: 'other', kind: 'missile', cost: 1, uses: 3, dice: ['w', 'w', 'w'], ic: '🚀', codec: '06.08', tip: 'Le missile part tout droit jusqu\'à un obstacle ou une figurine, puis attaque (3 dés) toutes les figurines à 1 case en LOS. LOUD.' },
+    18: { name: 'Fusil de sniper', type: 'gun', kind: 'shoot', cls: 'rifle', cost: 2, dice: ['w', 'w', 'w'], uses: 6, ic: '🎯', codec: '05.10', tip: '1 munition : attaque une cible en LOS (3 dés). 2 actions. LOUD.' },
+    19: { name: 'Pentazémine', type: 'other', kind: 'free', cost: 0, uses: 2, ic: '💊', codec: '06.09', tip: '1 dose à tout moment : jusqu\'à la fin du tour, chaque jet peut relancer les dés voulus une fois.' },
+    20: { name: 'Mouchoir', type: 'other', kind: 'passive', only: ['Otacon'], ic: '🧣', codec: '06.11', tip: '1×/round : modifie un dé noir de ±1 quand tu pirates.' },
+    21: { name: 'Gilet pare-balles', type: 'other', kind: 'passive', def: 1, only: ['Snake', 'Meryl'], ic: '🦺', codec: '06.12', tip: 'Défense +1 (appliquée aux attaques des gardes).' },
+    22: { name: 'Carte magnétique niv. 4', type: 'other', kind: 'key', cost: 1, uses: 1, ic: '💳', codec: '06.06', tip: 'Ouvre une porte jusqu\'au niveau 4 sur ta case. Puis défausse.' },
+    23: { name: 'Bandana', type: 'other', kind: 'passive', only: ['Snake'], ic: '🎽', codec: '07.05', tip: 'Tes armes ne consomment plus de munitions.' },
+    24: { name: 'Silencieux de pistolet', type: 'other', kind: 'passive', sil: 'pistol', ic: '🔇', codec: '07.01', tip: 'Le pistolet n\'est plus LOUD.' },
+    25: { name: 'Fusil d\'assaut', type: 'gun', kind: 'shoot', cls: 'rifle', cost: 1, dice: ['w', 'w'], uses: 6, ic: '🔫', codec: '05.10', tip: '1 munition : attaque une cible en LOS (2 dés). LOUD.' },
+    26: { name: 'Bombe à retardement', type: 'other', kind: 'plant', cost: 1, uses: 1, ic: '⏲️', codec: '02.06', tip: 'Pose-la à côté. Au début de ton tour suivant : 3 dégâts à toutes les figurines à 2 cases en LOS ; gardes dans la zone et pas de ! → ton ! dessous.' },
+    28: { name: 'Lunettes de vision nocturne', type: 'other', kind: 'scan', cost: 1, ic: '🥽', codec: '07.04', tip: 'Ignore les capteurs laser. Repérage (1) : retourne tous les jetons ? face cachée à 5 cases.' },
+    29: { name: 'Lunettes thermiques', type: 'other', kind: 'scan', cost: 2, ic: '🥽', codec: '07.04', tip: 'Ignore les capteurs laser. Scan (2) : retourne 1 jeton ? face cachée de ta zone, même derrière une porte.' },
+    30: { name: 'Camouflage optique', type: 'other', kind: 'stealth', cost: 1, uses: 2, ic: '👻', codec: '07.02', tip: '1 charge : jusqu\'à la fin du tour, pas de ! quand tu es dans la LOS d\'un garde ou d\'une caméra, et les gardes sautés n\'attaquent pas. Le bruit compte toujours.' },
+    31: { name: 'Carte PAL', type: 'other', kind: 'passive', ic: '🗝️', codec: '07.06', tip: 'Relance 1 dé à chaque jet pour déverrouiller une porte.' },
+    32: { name: 'Silencieux de fusil', type: 'other', kind: 'passive', sil: 'rifle', ic: '🔇', codec: '07.01', tip: 'Le fusil n\'est plus LOUD.' },
   };
   const cardInfo = n => CARDS[n] || LS.get('mgsg.cards', {})[n] || null;
-  const mkCard = (n, kn) => Object.assign(mkItem(kn.name, kn.type, n), kn.uses != null ? { uses: kn.uses } : {});
+  const mkCard = (n, kn) => Object.assign(mkItem(kn.name, kn.type, n), { uses: kn.uses != null ? kn.uses : null }, kn.ic ? { ic: kn.ic } : {});
+  const hasCard = (p, n) => !!(p && p.inv && p.inv.some(i => i.num === n));
+  const icOf = i => i.ic || ITYPES[i.type][0];
   const mkItem = (name, type, num) => ({ id: 'i' + Math.random().toString(36).slice(2, 8), name, type, num: num || null, uses: ITYPES[type][2] });
   function startInv(m, name) {
     const inv = (START_GEAR[name] || []).map(([n, t]) => mkItem(n, t));
@@ -100,7 +114,7 @@
   }
   function invChips(p) {
     if (!p.inv) return '<span style="opacity:.6">équipement non renseigné</span>';
-    return p.inv.length ? p.inv.map(i => `<span class="chip ${i.uses === 0 ? 'off' : ''}">${ITYPES[i.type][0]} ${esc(i.name)}${i.uses != null ? ' ×' + i.uses : ''}</span>`).join('') : '<span style="opacity:.6">aucun objet</span>';
+    return p.inv.length ? p.inv.map(i => `<span class="chip ${i.uses === 0 ? 'off' : ''}">${icOf(i)} ${esc(i.name)}${i.uses != null ? ' ×' + i.uses : ''}</span>`).join('') : '<span style="opacity:.6">aucun objet</span>';
   }
   function invEditor(m, g, only) {
     const box = Object.assign({}, LS.get('mgsg.cards', {}), CARDS), pend = ui.cardAsk, solo = only != null;
@@ -111,14 +125,14 @@
       p.inv = p.inv || [];
       const cards = p.inv.filter(i => i.num).length;
       return `<div class="ma-inv"><div class="ma-inv-h">${CE[p.name] || ''} <b>${p.name}</b><span style="flex:1"></span><span class="${cards > EQUIP_LIMIT ? 'warn' : ''}" style="opacity:.8;font-size:.85rem">cartes Memory Box : ${cards} (limite : voir son dashboard)</span></div>
-        <div>${p.inv.map(i => `<span class="chip" title="${esc((i.num && (CARDS[i.num] || {}).tip) || '')}">${ITYPES[i.type][0]} ${esc(i.name)}${i.num ? ` <small>${num3(i.num)}</small>` : ''}${i.uses != null ? ` <button class="ma-mini" data-a="invUse" data-p="${pi}" data-i="${i.id}" data-v="-1">−</button><b>${i.uses}</b><button class="ma-mini" data-a="invUse" data-p="${pi}" data-i="${i.id}" data-v="1">＋</button>` : ''} <button class="ma-mini red" data-a="invRm" data-p="${pi}" data-i="${i.id}">✕</button></span>`).join('') || `<span style="opacity:.6">${p.name === 'Snake' ? 'aucun équipement de départ (On-Site Procurement)' : 'rien pour l\'instant'}</span>`}</div>
+        <div>${p.inv.map(i => `<span class="chip" title="${esc((i.num && CARDS[i.num] ? CARDS[i.num].tip + (CARDS[i.num].codec ? ' — Codec ' + CARDS[i.num].codec : '') : ''))}">${icOf(i)} ${esc(i.name)}${i.num ? ` <small>${num3(i.num)}</small>` : ''}${i.uses != null ? ` <button class="ma-mini" data-a="invUse" data-p="${pi}" data-i="${i.id}" data-v="-1">−</button><b>${i.uses}</b><button class="ma-mini" data-a="invUse" data-p="${pi}" data-i="${i.id}" data-v="1">＋</button>` : ''} <button class="ma-mini red" data-a="invRm" data-p="${pi}" data-i="${i.id}">✕</button></span>`).join('') || `<span style="opacity:.6">${p.name === 'Snake' ? 'aucun équipement de départ (On-Site Procurement)' : 'rien pour l\'instant'}</span>`}</div>
         <div class="ma-inv-add"><span style="opacity:.75">＋ objet :</span>${Object.entries(ITYPES).map(([k, t]) => `<button class="ma-b sm" data-a="invAdd" data-p="${pi}" data-v="${k}">${t[0]} ${t[1]}</button>`).join('')}</div>
       </div>`;
     }).join('');
     const who = !solo && g.players.length > 1 ? `<div class="ma-inv-add"><span style="opacity:.75">Donner à :</span>${g.players.map((q, i) => `<button class="ma-b sm ${i === to ? 'on' : ''}" data-a="boxTo" data-v="${i}">${CE[q.name] || ''} ${q.name}</button>`).join('')}</div>` : '';
     const nums = Array.from({ length: BOX_MAX }, (_, k) => { const n = k + 1, h = holder(n), kn = box[n], other = h >= 0 && h !== to;
       const banned = kn && kn.only && !kn.only.includes(g.players[to].name);
-      return `<button class="ma-b sm num ${h === to ? 'on' : ''} ${other ? 'other' : ''} ${kn ? 'known' : ''}" data-a="invCard" data-p="${to}" data-v="${n}" ${(solo && other) || banned ? 'disabled' : ''} title="${kn ? esc(kn.name + (kn.tip ? ' — ' + kn.tip : '')) : 'carte inconnue'}${h >= 0 ? ' — chez ' + g.players[h].name : ''}">${h >= 0 ? (CE[g.players[h].name] || '') : kn ? ITYPES[kn.type][0] : ''}${num3(n)}${kn ? `<small>${esc(kn.name)}</small>` : ''}</button>`; }).join('');
+      return `<button class="ma-b sm num ${h === to ? 'on' : ''} ${other ? 'other' : ''} ${kn ? 'known' : ''}" data-a="invCard" data-p="${to}" data-v="${n}" ${(solo && other) || banned ? 'disabled' : ''} title="${kn ? esc(kn.name + (kn.tip ? ' — ' + kn.tip : '')) : 'carte inconnue'}${h >= 0 ? ' — chez ' + g.players[h].name : ''}">${h >= 0 ? (CE[g.players[h].name] || '') : kn ? (kn.ic || ITYPES[kn.type][0]) : ''}${num3(n)}${kn ? `<small>${esc(kn.name)}</small>` : ''}</button>`; }).join('');
     const ask = pend ? `<div class="ma-ask"><p>Carte <b>${num3(pend.n)}</b> : qu'est-ce que c'est ? (je m'en souviendrai pour les prochaines missions)</p>${Object.entries(ITYPES).map(([k, t]) => `<button class="ma-b sm" data-a="invCardType" data-v="${k}">${t[0]} ${t[1]}</button>`).join(' ')} <button class="ma-b sm red" data-a="invCardNo">Annuler</button></div>` : '';
     return players + `<div class="ma-inv box"><div class="ma-inv-h">📦 <b>Memory Box</b> <span style="opacity:.75;font-size:.85rem">commune : le groupe se partage les cartes débloquées, chacune va à un seul personnage</span></div>${who}<div class="ma-inv-add">${nums}</div>${ask}</div>`;
   }
@@ -432,7 +446,7 @@
     await sleep(ms);
   }
   function armMove(m, g, p, id) {
-    const a = ACTS.find(q => q.id === id), pp = playerPiece(g, p.name);
+    const a = actById(id, p), pp = playerPiece(g, p.name);
     if (!a || a.c > p.left || !pp || pp.x == null) return false;
     const S = toS(g), cells = GG().reach(world(m), S, S.figs.find(f => f.id === pp.id), a.move);
     if (!Object.keys(cells).length) return false;
@@ -441,6 +455,7 @@
   // une action est-elle jouable maintenant ? → null, sinon la raison (plateau quadrillé)
   function whyNot(m, g, p, a) {
     if (a.c > p.left) return 'plus assez de points';
+    if (a.item) { const it = itemOf(p, a); if (!it) return 'carte défaussée'; if (a.eff === 'detonate') { if (!it.planted) return 'aucun C-4 posé'; } else if (it.uses != null && it.uses <= 0 && !(a.eff === 'shoot' && hasCard(p, 23))) return a.eff === 'shoot' || a.eff === 'missile' ? 'plus de munitions' : 'plus de jetons'; }
     if (a.need && !hasItem(p, a.need)) return { ration: 'pas de ration', chaff: 'pas de chaff', grenade: 'pas de grenade', gun: 'pas d\'arme', sgun: 'pas d\'arme silencieuse' }[a.need];
     if (!isGrid(m)) return null;
     const pp = playerPiece(g, p.name); if (!pp || pp.x == null) return a.move || a.atk ? 'pion pas posé' : null;
@@ -451,12 +466,14 @@
     if (a.id === 'drag' || a.id === 'disguise') return near(['ko1', 'ko2', 'dead']) ? null : 'aucun corps à côté';
     if (a.id === 'h2h' || a.id === 'combo') return GG().adjacentTargets(W, S, me).length ? null : 'aucun garde à côté';
     if (a.id === 'silent') return GG().behindTargets(W, S, me).length ? null : 'pas dans le dos d\'un garde';
-    if (a.id === 'shoot' || a.id === 'shootS') return GG().losTargets(W, S, me).length ? null : 'aucune cible en vue';
+    if (a.id === 'shoot' || a.id === 'shootS' || a.eff === 'shoot') return GG().losTargets(W, S, me).length ? null : 'aucune cible en vue';
+    if (a.eff === 'rope') return near(['ko1', 'ko2']) ? null : 'aucun garde KO à côté';
+    if (a.eff === 'box') return GG().watchers(W, S, { x: pp.x, y: pp.y }).length ? 'tu es dans une LOS' : null;
     if (a.id === 'elev') return W.shaftOf[here] || GG().shaftAdjacent(W, pp.x, pp.y).length ? null : 'pas d\'ascenseur ici';
     return null;
   }
   async function gridMove(dest, info) {
-    const m = mission(), g = game(), W = world(m), p = g.players[g.cur], a = ACTS.find(q => q.id === ui.pend.act);
+    const m = mission(), g = game(), W = world(m), p = g.players[g.cur], a = actById(ui.pend.act, p);
     const pp = playerPiece(g, p.name); if (!pp) return;
     snap(); ui.pend = null; ui.busy = true;
     const pp0 = { x: pp.x, y: pp.y };
@@ -476,12 +493,14 @@
     }
     ui.busy = false;
     log(`${a.i} ${p.name} : ${a.n} → case ${dest.x},${dest.y}`, '', p.name);
+    if (seenBy.size && p.stealth) { toast('👻 Camouflage optique : le garde ne te voit pas.', 2500); seenBy.clear(); }
     if (seenBy.size) {
       const list = [...seenBy.values()]; const cam = list.some(w => w.cam);
       if (cam) A.sfx(AU().camSpot);
       setTimeout(() => { setAtt(g, p, 2, cam && list.length === 1 ? 'vu par une caméra' : 'vu par un garde'); save(); render(); }, cam ? 650 : 0);
       toast(`👁️ <b>${p.name} est repéré</b> par ${list.map(w => w.cam ? 'une caméra' : 'un garde').join(', ')} !`, 3500);
     }
+    if (leaps.length && p.stealth) leaps.length = 0;
     if (leaps.length) {
       setAtt(g, p, 2, 'saut par-dessus un garde');
       ui.queue = leaps.map(() => ({ kind: 'guardAtk', victim: p.name, def: defOf(p.name), fixed: ['b', 'b'], title: `🤸 Le garde sauté attaque ${p.name} : 2 dés noirs`, defLabel: `de ${p.name}` }));
@@ -594,7 +613,7 @@
       toast(n ? `📻 ${n} garde(s) en renfort sur l'icône radio du Barracks.` : '📻 Radio-In : pas de renfort (Guard Count atteint ou pas de Barracks).', 4500);
     }
     if (v === 'lost') { const dead = g.pieces.filter(p => p.k === 'dead').length, n = Math.floor(dead / 3); if (g.deck) { g.deck.drawn += n; g.deck.burned += n; } log(`☠ Lost Contact : ${n} carte(s) brûlée(s)`, 'sys'); toast(n ? `☠ ${n} carte(s) brûlée(s) (révélées, mises dessous). GAME OVER parmi elles ? → perdu.` : '☠ Lost Contact : moins de 3 morts, rien.', 4500); }
-    if (v === 'stay') { const names = GG().stayAlert(W, toS(g)); names.forEach(nm => { const p = g.players.find(x => x.name === nm); if (p && p.att === 0) setAtt(g, p, 1, 'Stay Alert'); }); log(`❓ Stay Alert : ${names.join(', ') || 'personne'}`, 'sys'); if (!names.length) toast('❓ Stay Alert : personne à 2 cases d\'un garde.'); }
+    if (v === 'stay') { const names = GG().stayAlert(W, toS(g)); names.forEach(nm => { const p = g.players.find(x => x.name === nm); if (p && p.att === 0) setAtt(g, p, 1, 'Stay Alert'); else if (p && p.att === 1) placeAtt(g, p); /* ? posé ou déplacé sous la figurine ; si ! déjà posé, rien */ }); log(`❓ Stay Alert : ${names.join(', ') || 'personne'}`, 'sys'); if (!names.length) toast('❓ Stay Alert : personne à 2 cases d\'un garde.'); }
   }
   function camCheck(m, g) {
     const W = world(m), S = toS(g);
@@ -688,6 +707,7 @@
   .ma-invl{display:flex;flex-wrap:wrap;gap:2px;align-items:center;margin:4px 0;font-size:.9rem}.ma-invl .chip{padding:1px 8px;font-size:.8rem}
   .ma-mini{border:1px solid #39407a;background:#1a2150;color:#fff;border-radius:7px;min-width:24px;height:24px;padding:0 5px;margin:0 2px;font:700 13px system-ui;cursor:pointer}
   .ma-mini.red{border-color:#a3304a;color:#ff9aa5}.ma-mini.on{background:#2f4bd0}
+  .ma-cd{font:800 2.2rem ui-monospace,monospace;letter-spacing:.12em;text-align:center;color:#3dffa0;background:#06140e;border:1px solid #1f7a4a;border-radius:10px;padding:4px 0;margin:4px 0}
   .ma-act.on{background:#1f7a4a;border-color:#3dffa0;box-shadow:0 0 0 2px #3dffa0 inset}
   .ma-mv{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0;padding:6px 8px;border-radius:10px;background:rgba(61,255,160,.12);border:1px solid #3dffa0}
   .ma-att{display:flex;gap:6px;align-items:center;margin:6px 0;flex-wrap:wrap}
@@ -1025,7 +1045,44 @@
     { id: 'wall', i: '🧱', n: 'Dos au mur', c: 0, auto: 'wall', tip: 'Ambiance.' },
     { id: 'codec', i: '📞', n: 'Codec', c: 0, auto: 'codec', tip: 'Numéro Codec → Codec Book (gratuit).' },
   ];
-  const actsFor = p => ACTS.filter(a => (!a.only || a.only === p.name) && !(a.gun && p.name === 'Otacon'));
+  const GENERIC = ['shoot', 'shootS', 'gren', 'chaff', 'ration'];   // remplacées par les cartes quand l'inventaire est renseigné
+  const actsFor = p => ACTS.filter(a => (!a.only || a.only === p.name) && !(a.gun && p.name === 'Otacon') && !(p.inv && GENERIC.includes(a.id))).concat(itemActs(p));
+  const actById = (id, p) => ACTS.find(a => a.id === id) || (p ? itemActs(p).find(a => a.id === id) : null) || null;
+  function itemActs(p) {
+    if (!p || !p.inv) return [];
+    const out = [];
+    p.inv.forEach(it => {
+      const cd = it.num ? CARDS[it.num] : null, kind = cd ? cd.kind : it.type === 'gun' || it.type === 'sgun' ? 'shoot' : it.type === 'ration' ? 'heal' : it.type === 'grenade' ? 'frag' : it.type === 'chaff' ? 'chaff' : null;
+      if (!kind || kind === 'passive') return;
+      const b = { id: 'it-' + it.id, item: it.id, i: icOf(it), n: it.name, c: cd ? cd.cost : 1, tip: (cd && cd.tip) || '', eff: kind };
+      if (kind === 'shoot') {
+        const cls = cd ? cd.cls : /fusil|rifle/i.test(it.name) ? 'rifle' : 'pistol';
+        const sil = it.type === 'sgun' || p.inv.some(x => x.num && CARDS[x.num] && CARDS[x.num].sil === cls);
+        out.push(Object.assign(b, { atk: 'kill', dice: cd ? cd.dice : null, loud: sil ? 0 : 1, gun: 1, ammo: it.uses != null, sfx: sil ? 'mgs-socom-silenced.mp3' : cls === 'rifle' ? 'mgs-fa-mas.mp3' : 'mgs-socom.mp3', n: it.name + (sil ? ' 🔇' : '') }));
+      } else if (kind === 'heal') out.push(Object.assign(b, { n: 'Ration', auto: 'ration' }));
+      else if (kind === 'chaff') out.push(Object.assign(b, { gun: 1, auto: 'chaff', thenAuto: 'chaffJam' }));
+      else if (kind === 'stun' || kind === 'frag') out.push(Object.assign(b, { gun: 1, loud: 1, sfx: 'mgs-grenade.mp3', then: 'mgs-explosion.mp3' }));
+      else if (kind === 'c4') { out.push(Object.assign(b, { n: 'Poser C-4', gun: 1, sfx: 'mgs-pick-up-item.mp3' })); out.push(Object.assign({}, b, { id: 'it-' + it.id + '-x', n: 'Faire sauter C-4', i: '💥', eff: 'detonate', gun: 1, sfx: 'mgs-explosion.mp3' })); }
+      else if (kind === 'plant') out.push(Object.assign(b, { n: 'Poser : ' + it.name, gun: 1, sfx: 'mgs-pick-up-item.mp3' }));
+      else if (kind === 'missile') out.push(Object.assign(b, { gun: 1, loud: 1, sfx: 'mgs-grenade.mp3', then: 'mgs-explosion.mp3' }));
+      else if (kind === 'box') out.push(Object.assign(b, { n: 'Se cacher (carton)' }));
+      else if (kind === 'stealth') out.push(Object.assign(b, { n: 'Camouflage optique' }));
+      else out.push(Object.assign(b, kind === 'key' ? { sfx: 'mgs-door-open.mp3' } : {}));
+    });
+    return out;
+  }
+  const itemOf = (p, a) => a && a.item && p.inv ? p.inv.find(i => i.id === a.item) : null;
+  // consomme la carte (munition, jeton, dose) ; défausse quand il n'en reste plus
+  function consume(p, a) {
+    if (a.need) return useItem(p, a.need);
+    const it = itemOf(p, a); if (!it) return;
+    if (a.eff === 'shoot' && hasCard(p, 23)) return;            // bandana : munitions infinies
+    if (a.eff === 'detonate') { it.planted = 0; return; }
+    if (a.eff === 'c4' || a.eff === 'plant') it.planted = (it.planted || 0) + 1;
+    if (it.uses == null) return;
+    it.uses = Math.max(0, it.uses - 1);
+    if (it.uses === 0 && !(a.eff === 'c4' && it.planted)) { p.inv = p.inv.filter(x => x !== it); toast(`${icOf(it)} <b>${esc(it.name)}</b> épuisé : défausse la carte (elle revient dans la Memory Box au prochain stage).`, 3800); }
+  }
 
   function setAtt(g, p, v, why, manual) {
     const before = p.att;
@@ -1090,7 +1147,7 @@
     else if (ui.pend && !moving) h += pendHtml(m, g, p);
     else if (p.ask) h += askHtml(p);
     else {
-      const ma = moving && ACTS.find(x => x.id === ui.pend.act);
+      const ma = moving && actById(ui.pend.act, p);
       h += moving ? `<div class="ma-mv">${ma.i} <b>${ma.n}</b> : 👆 touche une case verte (ou fais glisser ton pion) <span style="flex:1"></span><button class="ma-b sm red" data-a="cancel">✕</button></div>`
         : `<p style="opacity:.8;margin:6px 0">Choisis une action (ou touche ton pion pour marcher).</p>`;
       const grid = isGrid(m);
@@ -1103,7 +1160,7 @@
     return h;
   }
   function pendHtml(m, g, p) {
-    const pd = ui.pend, a = ACTS.find(x => x.id === pd.act);
+    const pd = ui.pend, a = actById(pd.act, p);
     const pp = playerPiece(g, p.name);
     if (pd.type === 'move') return `<div class="ma-ask"><p>${a.i} <b>${a.n}</b> : ${a.tip}<br>👆 <b>Touche sur le plan la case où ${p.name} va.</b></p>
       ${pp && pp.x != null ? '' : '<p style="opacity:.8">Ton pion n\'est pas sur le plan : pose-le (« À poser »), ou valide sans le plan.</p>'}
@@ -1112,6 +1169,15 @@
       const W6 = world(m), names = { B2: 'Sous-sol B2', B1: 'Sous-sol B1', L1: 'Rez-de-chaussée L1', main: 'Ascenseur' };
       if (pd.mode === 'call') return `<div class="ma-ask"><p>🛗 Appeler l'ascenseur à la cage <b>${names[pd.to] || pd.to}</b> ? (il est actuellement en ${names[g.elev] || g.elev})</p><button class="ma-b pri" data-a="elevGo" data-v="${pd.to}">🛗 Appeler (1 action)</button> <button class="ma-b red" data-a="cancel">Annuler</button></div>`;
       return `<div class="ma-ask"><p>🛗 Où va l'ascenseur ? (tout ce qui est dedans voyage avec)</p>${Object.keys(W6.shafts).filter(k => k !== g.elev).map(k => `<button class="ma-b pri" data-a="elevGo" data-v="${k}">${names[k] || k}</button>`).join(' ')} <button class="ma-b red" data-a="cancel">Annuler</button></div>`;
+    }
+    if (pd.type === 'codec') {
+      const q = pd.q || '', key = q.length === 4 ? q.slice(0, 2) + '.' + q.slice(2) : null, txt = key && (window.MGS_CODEC || {})[key];
+      const shown = (q + '____').slice(0, 4).replace(/^(..)(..)$/, '$1.$2');
+      return `<div class="ma-ask ma-codec2"><p>📞 <b>Codec</b> : tape le numéro (sur le plateau, une carte, un dashboard…)</p>
+        <div class="ma-cd">${shown}</div>
+        <div class="ma-kp">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map(n => `<button class="ma-b" data-a="cdk" data-v="${n}">${n}</button>`).join('')}<button class="ma-b" data-a="cdd">⌫</button></div>
+        ${key ? `<div class="ma-res">${txt ? `<b>${key}</b> — ${esc(txt)}` : `<b>${key}</b> : pas dans mes résumés. Lis la fiche dans le Codec Book.`}<div style="opacity:.7;font-size:.85rem;margin-top:4px">Numéro imprimé sur le plateau : 1 seul appel par stage, par le joueur sur la case. Numéro sur un composant : quand tu veux.</div></div>` : ''}
+        <button class="ma-b red" data-a="cancel">Fermer</button></div>`;
     }
     if (pd.type === 'target') return `<div class="ma-ask"><p>${a.i} <b>${a.n}</b> : ${a.tip}<br>👆 <b>Touche le garde visé sur le plan.</b></p>
       <button class="ma-b" data-a="targetNo">Cible hors plan</button> <button class="ma-b red" data-a="cancel">Annuler</button></div>`;
@@ -1207,7 +1273,7 @@
     log('🏆 MISSION RÉUSSIE : ' + why, 'win');
   }
   function endTurnFollow(g) {
-    ui.pend = null; ui.lastMove = null;
+    ui.pend = null; ui.lastMove = null; g.players.forEach(x => { if (x.done) x.stealth = false; });
     const i = g.players.findIndex(x => !x.done);
     if (i >= 0) { g.cur = i; setTimeout(() => { A.sfx(AU().codec); turnBanner(`${CE[g.players[i].name] || ''} Au tour de ${g.players[i].name}`); }, 250); }
     else toast('✅ Tout le monde a joué → <b>Phase Ennemie</b>');
@@ -1253,6 +1319,7 @@
   /* ---------- actions ---------- */
   function spend(g, p, a) { p.left -= a.c; if (a.noisy) p.noisy += a.c; if (a.c) p.s.act++; }
   function startAct(m, g, p, a) {
+    if (a.id === 'codec') { A.sfx(AU().codec); ui.pend = { type: 'codec', act: 'codec', q: '' }; return false; }
     if (isGrid(m)) {
       const pp = playerPiece(g, p.name);
       const goal = GRID(m).goal || {};
@@ -1285,7 +1352,7 @@
     if (a.move) { ui.pend = { type: 'move', act: a.id }; return false; }
     if (a.atk) {
       if (isBoss(m) && !isSneak(m) && a.atk !== 'silent') {
-        spend(g, p, a); if (a.need) useItem(p, a.need); if (a.sfx) A.sfx(a.sfx); if (a.loud) setAtt(g, p, 2, 'action LOUD');
+        spend(g, p, a); consume(p, a); if (a.sfx) A.sfx(a.sfx); if (a.loud) setAtt(g, p, 2, 'action LOUD');
         openPad({ kind: 'boss', actor: p.name, def: bossDef(m), title: `${a.i} ${a.n} sur ${esc((m.boss || {}).name || 'le boss')}`, fixed: a.dice || null, color: 'b', defLabel: 'du boss', back: p.name === 'Snake' && !p.sneakUsed, icon: a.i });
         return true;
       }
@@ -1294,7 +1361,12 @@
     spend(g, p, a); afterSimple(g, p, a); return true;
   }
   function afterSimple(g, p, a) {
-    if (a.need) useItem(p, a.need);
+    consume(p, a);
+    if (a.eff === 'heal') { const d = Math.min(2, p.dmg); p.dmg -= d; log(`🍴 ${p.name} : Ration, −${d} dégât(s)`, '', p.name); }
+    if (a.eff === 'chaff') { const m = mission(); g.chaff = g.round; if (g.grid) { const S = toS(g), me = S.figs.find(f => f.kind === 'player' && f.name === p.name); if (me && GG().guardInZone(world(m), S, me)) setTimeout(() => { setAtt(g, p, 1, 'chaff (garde dans la zone)'); save(); render(); }, 900); } }
+    if (a.eff === 'stealth') p.stealth = true;
+    if (a.eff === 'box') p.boxed = true;
+    if (a.eff === 'detonate' && g.grid && !g.players.some(x => x.att === 2)) { const S = toS(g), me = S.figs.find(f => f.kind === 'player' && f.name === p.name); if (me && GG().guardInZone(world(mission()), S, me)) setAtt(g, p, 2, 'explosion du C-4'); }
     if (a.id === 'item') ui.inv = true;
     if (a.sfx) A.sfx(a.sfx); if (a.auto) A.sfx(AU()[a.auto]);
     if (a.then) setTimeout(() => A.sfx(a.then), 900); if (a.thenAuto) setTimeout(() => A.sfx(AU()[a.thenAuto]), 900);
@@ -1305,7 +1377,7 @@
     if (a.leap) setAtt(g, p, 2, 'saut par-dessus un garde');
   }
   function doMove(x, y) {
-    const g = game(), p = g.players[g.cur], a = ACTS.find(q => q.id === ui.pend.act); snap();
+    const g = game(), p = g.players[g.cur], a = actById(ui.pend.act, p); snap();
     const pp = playerPiece(g, p.name);
     if (pp) { pp.x = x; pp.y = y; }
     spend(g, p, a); p.s.move++;
@@ -1315,8 +1387,8 @@
     ui.pend = null; save(); render();
   }
   function chooseTarget(tg) {
-    const g = game(), m = mission(), p = g.players[g.cur], a = ACTS.find(q => q.id === ui.pend.act); snap();
-    ui.pend = null; spend(g, p, a); if (a.need) useItem(p, a.need);
+    const g = game(), m = mission(), p = g.players[g.cur], a = actById(ui.pend.act, p); snap();
+    ui.pend = null; spend(g, p, a); consume(p, a);
     if (a.sfx) A.sfx(a.sfx);
     if (a.loud) setAtt(g, p, 2, 'action LOUD');
     if (a.atk === 'silent') { g.dead++; p.s.kill++; p.s.atk++; if (tg) { tg.k = 'dead'; tg.hurt = false; } log(`🤫 ${p.name} : élimination silencieuse`, '', p.name); toast('🤫 Garde éliminé sans bruit : remplace-le par un jeton Mort.'); save(); render(); return; }
@@ -1349,6 +1421,8 @@
         save(); syncAlert(); render(); } return; }
       case 'pk': { const pd = ui.pad; const lim = pd.fixed ? pd.fixed.length : 12; const i = pd.vals.length; if (i >= lim) return; const col = pd.fixed ? pd.fixed[i] : pd.color; if (v === '!' && col !== 'w') return; pd.vals.push(v === '!' ? '!' : +v); render(); return; }
       case 'pdel': ui.pad.vals.pop(); render(); return;
+      case 'cdk': if (ui.pend && ui.pend.type === 'codec') { ui.pend.q = ((ui.pend.q || '').length >= 4 ? '' : ui.pend.q || '') + v; if (ui.pend.q.length === 4) A.sfx(AU().codec); } render(); return;
+      case 'cdd': if (ui.pend && ui.pend.type === 'codec') ui.pend.q = (ui.pend.q || '').slice(0, -1); render(); return;
       case 'pdef': ui.pad.def = Math.max(1, Math.min(8, ui.pad.def + +v)); render(); return;
       case 'pcol': ui.pad.color = ui.pad.color === 'w' ? 'b' : 'w'; render(); return;
       case 'invToggle': ui.inv = !ui.inv; ui.cardAsk = null; render(); return;
@@ -1397,8 +1471,8 @@
       case 'water': p.water = !p.water; if (p.water) A.sfx(AU().water); break;
       case 'att': setAtt(g, p, +v, null, true); break;
       case 'dmg': if (+v > 0) damage(m, g, p, 1, ''); else p.dmg = Math.max(0, p.dmg - 1); break;
-      case 'act': { if (ui.pend && ui.pend.type === 'move' && ui.pend.act === v) { undo.pop(); ui.pend = null; break; } const ac = ACTS.find(x => x.id === v); if (!ac || ac.c > p.left) { undo.pop(); return; } if (!startAct(m, g, p, ac)) undo.pop(); break; }
-      case 'moveNo': { const ac = ACTS.find(q => q.id === ui.pend.act); spend(g, p, ac); p.s.move++; steps(ac.id === 'dash' ? 'dash' : 'sneak', ac.move, p.water); log(`${ac.i} ${p.name} : ${ac.n}`, '', p.name); ui.pend = null; break; }
+      case 'act': { if (ui.pend && ui.pend.type === 'move' && ui.pend.act === v) { undo.pop(); ui.pend = null; break; } const ac = actById(v, p); if (!ac || ac.c > p.left) { undo.pop(); return; } if (!startAct(m, g, p, ac)) undo.pop(); break; }
+      case 'moveNo': { const ac = actById(ui.pend.act, p); spend(g, p, ac); p.s.move++; steps(ac.id === 'dash' ? 'dash' : 'sneak', ac.move, p.water); log(`${ac.i} ${p.name} : ${ac.n}`, '', p.name); ui.pend = null; break; }
       case 'targetNo': undo.pop(); chooseTarget(null); return;
       case 'pok': applyPad(m, g); if (ui.queue && ui.queue.length) openPad(ui.queue.shift()); break;
       case 'end': {
