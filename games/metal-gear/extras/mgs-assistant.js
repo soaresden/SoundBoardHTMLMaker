@@ -60,6 +60,31 @@
     'Otacon': [['ADV. Stealth Camouflage', 'other'], ['Rations', 'ration']],
   };
   const EQUIP_LIMIT = 3, BOX_MAX = 32;
+  /* Cartes Équipement débloquables : n° de carte = fiche Codec 10.NN (échantillon du rulebook WIP).
+     Effets résumés ; à confirmer sur les vraies cartes (jetons, coût). only = personnages autorisés. */
+  const CARDS = {
+    1: { name: 'SOCOM (.45)', type: 'gun', tip: 'Attaque une cible en LOS. LOUD tant qu\'il n\'a pas de silencieux. Munitions illimitées (FAQ).' },
+    3: { name: 'Rations', type: 'ration', tip: 'Repas de combat (effet : voir la carte).' },
+    4: { name: 'Grenades incapacitantes', type: 'grenade', uses: 2, tip: 'Flash + bruit : assomme, jamais mortel. LOUD.' },
+    6: { name: 'C4', type: 'other', tip: 'Explosif télécommandé : toutes les charges posées sautent ensemble.' },
+    7: { name: 'Grenades', type: 'grenade', uses: 2, tip: 'Grenades à fragmentation.' },
+    8: { name: 'Claymore', type: 'other', tip: 'Mine directionnelle (arc de 60°).' },
+    9: { name: 'Nikita', type: 'other', tip: 'Missiles téléguidés : carburant et mobilité selon les dés (tu choisis l\'ordre). LOUD.' },
+    10: { name: 'Carton', type: 'other', tip: 'Le fameux carton.' },
+    11: { name: 'Médicament contre le rhume', type: 'other', uses: 1, tip: 'À tout moment de ton tour : rafraîchit tous tes jetons Focus.' },
+    13: { name: 'Carte de sécurité niv. 2', type: 'other', tip: 'Ouvre les portes jusqu\'au niveau 2.' },
+    14: { name: 'Masque à gaz', type: 'other', tip: 'Permet de rester dans le gaz.' },
+    16: { name: 'Corde', type: 'other', tip: 'Pour le rappel.' },
+    17: { name: 'Lance-missile', type: 'other', tip: 'Missile en ligne droite jusqu\'au premier obstacle. LOUD.' },
+    18: { name: 'Fusil de sniper', type: 'gun', tip: 'Coûte 2 actions. LOUD.' },
+    19: { name: 'Diazépam', type: 'other', uses: 2, tip: '2 doses. Une dose (pas une action) : relance les dés que tu veux, pour toutes tes actions du tour.' },
+    20: { name: 'Mouchoir de Sniper Wolf', type: 'other', only: ['Otacon'], tip: 'Otacon uniquement.' },
+    21: { name: 'Gilet pare-balles', type: 'other', only: ['Snake', 'Meryl'], tip: 'Réduit les dégâts. Snake et Meryl uniquement.' },
+    22: { name: 'Carte de sécurité niv. 3', type: 'other', tip: 'Ouvre les portes jusqu\'au niveau 3.' },
+    23: { name: 'Bandana', type: 'other', only: ['Snake'], tip: 'Snake uniquement.' },
+  };
+  const cardInfo = n => CARDS[n] || LS.get('mgsg.cards', {})[n] || null;
+  const mkCard = (n, kn) => Object.assign(mkItem(kn.name, kn.type, n), kn.uses != null ? { uses: kn.uses } : {});
   const mkItem = (name, type, num) => ({ id: 'i' + Math.random().toString(36).slice(2, 8), name, type, num: num || null, uses: ITYPES[type][2] });
   function startInv(m, name) {
     const inv = (START_GEAR[name] || []).map(([n, t]) => mkItem(n, t));
@@ -78,7 +103,7 @@
     return p.inv.length ? p.inv.map(i => `<span class="chip ${i.uses === 0 ? 'off' : ''}">${ITYPES[i.type][0]} ${esc(i.name)}${i.uses != null ? ' ×' + i.uses : ''}</span>`).join('') : '<span style="opacity:.6">aucun objet</span>';
   }
   function invEditor(m, g, only) {
-    const box = LS.get('mgsg.cards', {}), pend = ui.cardAsk, solo = only != null;
+    const box = Object.assign({}, LS.get('mgsg.cards', {}), CARDS), pend = ui.cardAsk, solo = only != null;
     const to = solo ? only : Math.min(ui.boxTo || 0, g.players.length - 1);
     const num3 = n => '#' + String(n).padStart(3, '0');
     const holder = n => g.players.findIndex(q => (q.inv || []).some(i => i.num === n));
@@ -86,13 +111,14 @@
       p.inv = p.inv || [];
       const cards = p.inv.filter(i => i.num).length;
       return `<div class="ma-inv"><div class="ma-inv-h">${CE[p.name] || ''} <b>${p.name}</b><span style="flex:1"></span><span class="${cards > EQUIP_LIMIT ? 'warn' : ''}" style="opacity:.8;font-size:.85rem">cartes Memory Box : ${cards} (limite : voir son dashboard)</span></div>
-        <div>${p.inv.map(i => `<span class="chip">${ITYPES[i.type][0]} ${esc(i.name)}${i.num ? ` <small>${num3(i.num)}</small>` : ''}${i.uses != null ? ` <button class="ma-mini" data-a="invUse" data-p="${pi}" data-i="${i.id}" data-v="-1">−</button><b>${i.uses}</b><button class="ma-mini" data-a="invUse" data-p="${pi}" data-i="${i.id}" data-v="1">＋</button>` : ''} <button class="ma-mini red" data-a="invRm" data-p="${pi}" data-i="${i.id}">✕</button></span>`).join('') || `<span style="opacity:.6">${p.name === 'Snake' ? 'aucun équipement de départ (On-Site Procurement)' : 'rien pour l\'instant'}</span>`}</div>
+        <div>${p.inv.map(i => `<span class="chip" title="${esc((i.num && (CARDS[i.num] || {}).tip) || '')}">${ITYPES[i.type][0]} ${esc(i.name)}${i.num ? ` <small>${num3(i.num)}</small>` : ''}${i.uses != null ? ` <button class="ma-mini" data-a="invUse" data-p="${pi}" data-i="${i.id}" data-v="-1">−</button><b>${i.uses}</b><button class="ma-mini" data-a="invUse" data-p="${pi}" data-i="${i.id}" data-v="1">＋</button>` : ''} <button class="ma-mini red" data-a="invRm" data-p="${pi}" data-i="${i.id}">✕</button></span>`).join('') || `<span style="opacity:.6">${p.name === 'Snake' ? 'aucun équipement de départ (On-Site Procurement)' : 'rien pour l\'instant'}</span>`}</div>
         <div class="ma-inv-add"><span style="opacity:.75">＋ objet :</span>${Object.entries(ITYPES).map(([k, t]) => `<button class="ma-b sm" data-a="invAdd" data-p="${pi}" data-v="${k}">${t[0]} ${t[1]}</button>`).join('')}</div>
       </div>`;
     }).join('');
     const who = !solo && g.players.length > 1 ? `<div class="ma-inv-add"><span style="opacity:.75">Donner à :</span>${g.players.map((q, i) => `<button class="ma-b sm ${i === to ? 'on' : ''}" data-a="boxTo" data-v="${i}">${CE[q.name] || ''} ${q.name}</button>`).join('')}</div>` : '';
     const nums = Array.from({ length: BOX_MAX }, (_, k) => { const n = k + 1, h = holder(n), kn = box[n], other = h >= 0 && h !== to;
-      return `<button class="ma-b sm num ${h === to ? 'on' : ''} ${other ? 'other' : ''}" data-a="invCard" data-p="${to}" data-v="${n}" ${solo && other ? 'disabled' : ''} title="${kn ? esc(kn.name) : 'type inconnu'}${h >= 0 ? ' — chez ' + g.players[h].name : ''}">${h >= 0 ? (CE[g.players[h].name] || '') : kn ? ITYPES[kn.type][0] : ''}${num3(n)}</button>`; }).join('');
+      const banned = kn && kn.only && !kn.only.includes(g.players[to].name);
+      return `<button class="ma-b sm num ${h === to ? 'on' : ''} ${other ? 'other' : ''} ${kn ? 'known' : ''}" data-a="invCard" data-p="${to}" data-v="${n}" ${(solo && other) || banned ? 'disabled' : ''} title="${kn ? esc(kn.name + (kn.tip ? ' — ' + kn.tip : '')) : 'carte inconnue'}${h >= 0 ? ' — chez ' + g.players[h].name : ''}">${h >= 0 ? (CE[g.players[h].name] || '') : kn ? ITYPES[kn.type][0] : ''}${num3(n)}${kn ? `<small>${esc(kn.name)}</small>` : ''}</button>`; }).join('');
     const ask = pend ? `<div class="ma-ask"><p>Carte <b>${num3(pend.n)}</b> : qu'est-ce que c'est ? (je m'en souviendrai pour les prochaines missions)</p>${Object.entries(ITYPES).map(([k, t]) => `<button class="ma-b sm" data-a="invCardType" data-v="${k}">${t[0]} ${t[1]}</button>`).join(' ')} <button class="ma-b sm red" data-a="invCardNo">Annuler</button></div>` : '';
     return players + `<div class="ma-inv box"><div class="ma-inv-h">📦 <b>Memory Box</b> <span style="opacity:.75;font-size:.85rem">commune : le groupe se partage les cartes débloquées, chacune va à un seul personnage</span></div>${who}<div class="ma-inv-add">${nums}</div>${ask}</div>`;
   }
@@ -656,6 +682,7 @@
   .ma-act:disabled small{color:#ff9aa5}
   .ma-inv{padding:6px 0;border-bottom:1px dashed #26306a}.ma-inv:last-child{border-bottom:0}
   .ma-inv-h{display:flex;align-items:center;gap:6px;margin-bottom:3px}.ma-inv-h .warn{color:#ff8a96!important;opacity:1!important}
+  .ma-inv-add .num.known{display:inline-flex;flex-direction:column;align-items:center;line-height:1.05;padding:3px 6px}.ma-inv-add .num small{font-size:.66rem;font-weight:600;opacity:.85;max-width:92px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ma-inv.box{margin-top:4px;padding-top:8px;border-top:1px solid #39407a}.ma-inv-add .num.other{opacity:.55}
   .ma-inv-add{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:4px}.ma-inv-add .num{min-width:0;padding:3px 6px;font-size:.8rem}
   .ma-invl{display:flex;flex-wrap:wrap;gap:2px;align-items:center;margin:4px 0;font-size:.9rem}.ma-invl .chip{padding:1px 8px;font-size:.8rem}
@@ -1334,8 +1361,9 @@
         // la carte est chez un autre personnage : elle passe à celui-ci (une carte = un seul personnage)
         const from = g.players.find(o => o !== q && (o.inv || []).some(i => i.num === n));
         if (from) { const it = from.inv.find(i => i.num === n); from.inv = from.inv.filter(i => i !== it); q.inv.push(it); save(); render(); return; }
-        const kn = LS.get('mgsg.cards', {})[n];
-        if (kn) { q.inv.push(mkItem(kn.name, kn.type, n)); save(); } else ui.cardAsk = { p: +b.dataset.p, n };
+        const kn = cardInfo(n);
+        if (kn && kn.only && !kn.only.includes(q.name)) { toast(`⛔ ${esc(kn.name)} : réservé à ${kn.only.join(' / ')}.`); return; }
+        if (kn) { q.inv.push(mkCard(n, kn)); save(); } else ui.cardAsk = { p: +b.dataset.p, n };
         render(); return; }
       case 'invCardType': { const ca = ui.cardAsk; if (!ca) return; const box = LS.get('mgsg.cards', {}); const nm = `Carte #${String(ca.n).padStart(3, '0')} (${ITYPES[v][1]})`;
         box[ca.n] = { type: v, name: nm }; LS.set('mgsg.cards', box); const q = g.players[ca.p]; q.inv.push(mkItem(nm, v, ca.n)); ui.cardAsk = null; save(); render(); return; }
