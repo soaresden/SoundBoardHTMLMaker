@@ -1,0 +1,30 @@
+{
+  "id": "Abominable_Sectaire",
+  "name": "Abominable Sectaire",
+  "emoji": "👹",
+  "camp": "Seul",
+  "description": "Rôle: Abominable_Sectaire",
+  "actions": {
+    "DebutPartie": {
+      "enabled": true,
+      "type": "dividePlayers",
+      "phase": "gameStart",
+      "targets": {},
+      "stateKey": "sectaireDivision"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Doit éliminer tous les joueurs d'un groupe défini par le Meneur.",
+  "actionType": "NightActive",
+  "tips": "Convertissez les villageois à votre cause - plus vous êtes nombreux, plus vous êtes forts.",
+  "isWolf": false
+}

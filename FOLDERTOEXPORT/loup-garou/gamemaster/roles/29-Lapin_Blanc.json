@@ -1,0 +1,30 @@
+{
+  "id": "Lapin_Blanc",
+  "name": "Lapin Blanc",
+  "emoji": "🐰",
+  "camp": "Seul",
+  "description": "Rôle: Lapin_Blanc",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "randomEvent",
+      "phase": "everyNight",
+      "targets": {},
+      "stateKey": "lapinEvent"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Doit donner du chocolat à tous les joueurs vivants. Peut en donner 2 par nuit.",
+  "actionType": "NightActive",
+  "tips": "Échappez-vous rapidement - vous êtes insaisissable.",
+  "isWolf": false
+}

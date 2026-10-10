@@ -1,0 +1,32 @@
+{
+  "id": "Garde_Du_Corps",
+  "name": "Garde Du Corps",
+  "emoji": "💪",
+  "camp": "Village",
+  "description": "Rôle: Garde_Du_Corps",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "protect",
+      "phase": "everyNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "gardeProtection"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Protège un joueur en prenant l'attaque à sa place. A deux vies.",
+  "actionType": "NightActive",
+  "tips": "Protégez votre charge - soyez le mur inébranlable.",
+  "isWolf": false
+}

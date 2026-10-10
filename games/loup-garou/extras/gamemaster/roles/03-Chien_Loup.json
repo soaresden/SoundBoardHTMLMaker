@@ -1,0 +1,44 @@
+{
+  "id": "Chien_Loup",
+  "name": "Chien Loup",
+  "emoji": "🐕",
+  "camp": "Village",
+  "isWolf": true,
+  "ui": {
+    "selectionRenderer": "chienLoup"
+  },
+  "description": "Rôle: Chien_Loup",
+  "actions": {
+    "DebutPartie": {
+      "enabled": true,
+      "type": "chooseSide",
+      "phase": "gameStart",
+      "targets": {},
+      "stateKey": "chienChoice"
+    },
+    "mdj_night_actions": [
+      {
+        "id": "join_wolves",
+        "icon": "🐺",
+        "label": "Devenir Loup"
+      },
+      {
+        "id": "stay_villager",
+        "icon": "👤",
+        "label": "Rester Villageois"
+      }
+    ]
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#4F7A37",
+      "emojiColor": "#85262D"
+    }
+  },
+  "pouvoir": "La premiere nuit, choisit un camp (Village ou Loups) et doit gagner avec ce camp.",
+  "actionType": "NightActive",
+  "tips": "Choisissez bien votre camp - vous détenez l'équilibre du jeu.",
+  "nightActive": [
+    1
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "id": "Gitane",
+  "name": "Gitane",
+  "emoji": "🔮",
+  "camp": "Village",
+  "description": "Rôle: Gitane",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "senseConnection",
+      "phase": "everyNight",
+      "targets": {
+        "count": 2
+      },
+      "stateKey": "gitaneSense"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Distribue des questions qui seront posées aux morts pendant le jeu.",
+  "actionType": "NightActive",
+  "tips": "Lisez dans les cœurs - les cartes ne mentent jamais.",
+  "isWolf": false
+}

@@ -1,0 +1,32 @@
+{
+  "id": "Noctambule",
+  "name": "Noctambule",
+  "emoji": "🦉",
+  "camp": "Village",
+  "description": "Rôle: Noctambule",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "spy",
+      "phase": "everyNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "noctambuloObserve"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Chaque nuit, choisit un joueur dont elle bloque le pouvoir pour cette nuit.",
+  "actionType": "NightActive",
+  "tips": "Vaquez la nuit pendant que le village dort - profitez de l'obscurité.",
+  "isWolf": false
+}

@@ -1,0 +1,32 @@
+{
+  "id": "Loup_Garou_Voyant",
+  "name": "Loup Garou Voyant",
+  "emoji": "🐺",
+  "camp": "Loups",
+  "isWolf": true,
+  "description": "Rôle: Loup_Garou_Voyant",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "hunt",
+      "phase": "everyNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "loupVoyantKill"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Découvre le rôle exact d'un joueur chaque nuit comme la Voyante.",
+  "actionType": "NightActive",
+  "tips": "Espionnez le village la nuit - informez vos frères loups."
+}

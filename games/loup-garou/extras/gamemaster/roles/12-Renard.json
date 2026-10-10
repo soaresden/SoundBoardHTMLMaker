@@ -1,0 +1,41 @@
+{
+  "id": "Renard",
+  "name": "Renard",
+  "emoji": "🦊",
+  "camp": "Village",
+  "ui": {
+    "selectionRenderer": "renard"
+  },
+  "description": "Rôle: Renard",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "discover",
+      "phase": "everyNight",
+      "targets": {
+        "count": 3
+      },
+      "stateKey": "renardDetection"
+    },
+    "mdj_night_actions": [
+      {
+        "id": "sniff",
+        "icon": "👃",
+        "label": "Renifler (3 joueurs)"
+      }
+    ]
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#AB6840",
+      "emojiColor": "#1A2B45"
+    },
+    "affectedColor": {
+      "borderColor": "#AB6840"
+    }
+  },
+  "pouvoir": "Flaire le nombre de Loups parmi 3 joueurs sélectionnés (0, 1, 2 ou 3).",
+  "actionType": "NightActive",
+  "tips": "Flairez les mensonges - votre nez ne trompe jamais.",
+  "isWolf": false
+}

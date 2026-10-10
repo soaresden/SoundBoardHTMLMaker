@@ -1,0 +1,31 @@
+{
+  "id": "Loup_Garou_Blanc",
+  "name": "Loup Garou Blanc",
+  "emoji": "🐺",
+  "camp": "Seul",
+  "isWolf": true,
+  "ui": {
+    "selectionRenderer": "wolfKill"
+  },
+  "description": "Rôle: Loup_Garou_Blanc",
+  "actions": {
+    "ToutesNuitsPaires": {
+      "enabled": true,
+      "type": "huntSelectively",
+      "phase": "everyOtherNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "blancKill"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#EED8BB",
+      "emojiColor": "#050301"
+    }
+  },
+  "pouvoir": "Doit tuer tous les villageois ET tous les loups pour gagner seul.",
+  "actionType": "NightActive",
+  "tips": "Cachez votre nature lupine - paraissez villageois à tous les yeux."
+}

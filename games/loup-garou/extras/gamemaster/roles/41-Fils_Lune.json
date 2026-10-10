@@ -1,0 +1,37 @@
+{
+  "id": "Fils_Lune",
+  "name": "Fils Lune",
+  "emoji": "🌙",
+  "camp": "Village",
+  "pouvoir": "Si tué la nuit, les Loups-Garous ne peuvent pas tuer quelqu'un d'autre cette nuit.",
+  "description": "Le Fils de la Lune est un villageois spécial dont la mort affecte le pouvoir des Loups-Garous.",
+  "actions": {
+    "PostMortem": {
+      "enabled": true,
+      "type": "pauseWolfKill",
+      "phase": "onDeath",
+      "targets": {},
+      "stateKey": "filsEffect"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "actionType": "DayActive",
+  "tips": "Soyez fort chaque nuit - les loups tremblent devant vous.",
+  "isWolf": false,
+  "nightActive": [
+    2,
+    4,
+    6,
+    8,
+    10
+  ]
+}

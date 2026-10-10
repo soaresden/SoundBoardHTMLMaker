@@ -1,0 +1,31 @@
+{
+  "id": "Grand_Mechant_Loup",
+  "name": "Grand Mechant Loup",
+  "emoji": "🐺",
+  "camp": "Loups",
+  "isWolf": true,
+  "ui": {
+    "selectionRenderer": "wolfKill"
+  },
+  "description": "Rôle: Grand_Mechant_Loup",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "extraKill",
+      "phase": "everyNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "grandLoupKill"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#1C2325",
+      "emojiColor": "#FFFFFF"
+    }
+  },
+  "pouvoir": "Tant qu'aucun autre Loup n'est mort, peut dévorer une victime supplémentaire chaque nuit.",
+  "actionType": "NightActive",
+  "tips": "Soyez le leader des loups - imposez votre volonté féroce."
+}

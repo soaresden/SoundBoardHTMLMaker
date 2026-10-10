@@ -1,0 +1,43 @@
+name: Generate Roles Index
+
+on:
+  push:
+    paths:
+      - 'gamemaster/roles/*.json'
+      - '.github/workflows/generate-roles-index.yml'
+  workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Generate roles index
+        run: node gamemaster/generate-roles-index.js
+
+      - name: Check if index changed
+        id: check
+        run: |
+          if git diff --quiet gamemaster/roles/index.json; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push index
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add gamemaster/roles/index.json
+          git commit -m "chore: regenerate roles index"
+          git push

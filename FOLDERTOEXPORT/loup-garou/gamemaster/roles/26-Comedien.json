@@ -1,0 +1,32 @@
+{
+  "id": "Comedien",
+  "name": "Comedien",
+  "emoji": "🎪",
+  "camp": "Village",
+  "description": "Rôle: Comedien",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "changeRole",
+      "phase": "everyNightFirst3",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "comedienChange"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Chaque nuit, choisit parmi 3 cartes pour avoir un pouvoir temporaire.",
+  "actionType": "NightActive",
+  "tips": "Jouez la comédie - faites croire à n'importe quel mensonge.",
+  "isWolf": false
+}

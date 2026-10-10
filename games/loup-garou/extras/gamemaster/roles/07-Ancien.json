@@ -1,0 +1,30 @@
+{
+  "id": "Ancien",
+  "name": "Ancien",
+  "emoji": "👴",
+  "camp": "Village",
+  "isWolf": false,
+  "description": "Villageois très résistant : survit à la première attaque des Loups-Garous.",
+  "actions": {
+    "NoAction": {
+      "enabled": true,
+      "type": "noAction",
+      "phase": "none",
+      "targets": {},
+      "stateKey": "ancien"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Survit à la PREMIÈRE attaque des Loups-Garous (il faut l'attaquer 2 fois). En revanche, s'il est tué par le village (vote), la Sorcière ou le Chasseur, TOUS les villageois à pouvoir perdent leur pouvoir jusqu'à la fin de la partie.",
+  "actionType": "NoActions",
+  "tips": "Ne le tuez pas au village : cela ferait perdre leurs pouvoirs à la Voyante, au Salvateur, à la Sorcière, etc."
+}

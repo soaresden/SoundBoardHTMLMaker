@@ -1,0 +1,35 @@
+{
+  "id": "Cupidon",
+  "name": "Cupidon",
+  "emoji": "💘",
+  "camp": "Village",
+  "ui": {
+    "selectionRenderer": "cupidonLover"
+  },
+  "pouvoir": "Désigne deux amoureux lors de la première nuit. Si l'un meurt, l'autre meurt également.",
+  "visual": {
+    "roleColor": {
+      "fondColor": "#D6899E",
+      "emojiColor": "#0C87B8"
+    },
+    "affectedColor": {
+      "borderColor": "#D6899E"
+    }
+  },
+  "actionType": "NightActive",
+  "nightActive": [
+    1
+  ],
+  "borderLifetime": "game",
+  "tips": "Vous ne gagnez que si vos deux amoureux survivent jusqu'à la fin - aidez-les à éliminer tous les autres, quel que soit leur camp.",
+  "actions": {
+    "mdj_night_actions": [
+      {
+        "id": "lover",
+        "icon": "🏹",
+        "label": "Colorer les amoureux (2)"
+      }
+    ]
+  },
+  "isWolf": false
+}

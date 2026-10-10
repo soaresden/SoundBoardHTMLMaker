@@ -1,0 +1,32 @@
+{
+  "id": "Infect_Pere_Loups",
+  "name": "Infect Pere Loups",
+  "emoji": "🐺",
+  "camp": "Seul",
+  "isWolf": true,
+  "description": "Rôle: Infect_Pere_Loups",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "convert",
+      "phase": "everyNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "pereConvert"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Au lieu d'éliminer une victime, peut l'infecter pour la transformer en Loup.",
+  "actionType": "NightActive",
+  "tips": "Guidez les loups - vous êtes leur vision et leur force."
+}

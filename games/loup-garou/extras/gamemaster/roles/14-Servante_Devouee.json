@@ -1,0 +1,32 @@
+{
+  "id": "Servante_Devouee",
+  "name": "Servante Devouee",
+  "emoji": "👸",
+  "camp": "Village",
+  "description": "Rôle: Servante_Devouee",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "roleSwapDead",
+      "phase": "everyNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "servantSwap"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Donne sa vie pour sauver un autre joueur désigné.",
+  "actionType": "NightActive",
+  "tips": "Servez votre maître loyalement - votre destin est le sien.",
+  "isWolf": false
+}

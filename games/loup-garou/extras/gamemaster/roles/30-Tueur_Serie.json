@@ -1,0 +1,32 @@
+{
+  "id": "Tueur_Serie",
+  "name": "Tueur Serie",
+  "emoji": "🔪",
+  "camp": "Seul",
+  "description": "Rôle: Tueur_Serie",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "kill",
+      "phase": "everyNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "tueurKill"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Chaque nuit, peut éliminer n'importe quel joueur. Immun aux attaques des Loups.",
+  "actionType": "NightActive",
+  "tips": "Frappez dans l'ombre - semblez innocent et inoffensif.",
+  "isWolf": false
+}

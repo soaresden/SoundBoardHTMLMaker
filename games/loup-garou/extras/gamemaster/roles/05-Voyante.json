@@ -1,0 +1,41 @@
+{
+  "id": "Voyante",
+  "name": "Voyante",
+  "emoji": "👁️",
+  "camp": "Village",
+  "ui": {
+    "selectionRenderer": "voyante"
+  },
+  "description": "Rôle: Voyante",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "discover",
+      "phase": "everyNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "voyantSelection"
+    },
+    "mdj_night_actions": [
+      {
+        "id": "see_role",
+        "icon": "👁️",
+        "label": "Voir le rôle d'un joueur"
+      }
+    ]
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#7B357A",
+      "emojiColor": "#F5DA66"
+    },
+    "affectedColor": {
+      "borderColor": "#7B357A"
+    }
+  },
+  "pouvoir": "Découvre le rôle exact d'un joueur chaque nuit.",
+  "actionType": "NightActive",
+  "tips": "Cherchez la vérité chaque nuit - mais prudence à qui vous la révélez.",
+  "isWolf": false
+}

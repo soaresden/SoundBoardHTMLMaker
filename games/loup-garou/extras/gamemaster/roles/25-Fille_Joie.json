@@ -1,0 +1,32 @@
+{
+  "id": "Fille_Joie",
+  "name": "Fille Joie",
+  "emoji": "💃",
+  "camp": "Village",
+  "description": "Rôle: Fille_Joie",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "visit",
+      "phase": "everyNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "filleVisit"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Gagne des amis en dormant avec eux, formant une alliance secrète.",
+  "actionType": "NightActive",
+  "tips": "Séduisez et manipulez - le charme est plus puissant que la force.",
+  "isWolf": false
+}

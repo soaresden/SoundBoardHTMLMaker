@@ -1,0 +1,26 @@
+{
+  "id": "Petite_Fille",
+  "name": "Petite Fille",
+  "emoji": "👧",
+  "camp": "Village",
+  "description": "Rôle: Petite_Fille",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "spy",
+      "phase": "everyNight",
+      "targets": {},
+      "stateKey": "petiteFilleEcoute"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#2E3155",
+      "emojiColor": "#D2CC94"
+    }
+  },
+  "pouvoir": "Observe les réunions nocturnes des Loups-Garous sans être vue.",
+  "actionType": "NightActive",
+  "tips": "Observez les loups - personne ne suspecte une enfant.",
+  "isWolf": false
+}

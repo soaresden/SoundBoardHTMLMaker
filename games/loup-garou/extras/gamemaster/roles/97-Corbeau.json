@@ -1,0 +1,42 @@
+{
+  "id": "Corbeau",
+  "name": "Corbeau",
+  "emoji": "🐦‍⬛",
+  "camp": "Village",
+  "ui": {
+    "selectionRenderer": "corbeau"
+  },
+  "description": "Rôle: Corbeau",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "curse",
+      "phase": "everyNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "corbeauCurse"
+    },
+    "mdj_night_actions": [
+      {
+        "id": "steal_votes",
+        "icon": "🐦‍⬛",
+        "label": "Donnez 2 votes"
+      }
+    ]
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#00008B",
+      "emojiColor": "#D79E2E"
+    },
+    "affectedColor": {
+      "borderColor": "#00008B"
+    }
+  },
+  "pouvoir": "Donnez 2 votes contre quelqu'un au matin",
+  "actionType": "NightActive",
+  "borderLifetime": "next_night",
+  "tips": "Maudissez les personnes dont vous suspectez.",
+  "isWolf": false
+}

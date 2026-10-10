@@ -1,0 +1,69 @@
+/* Boutons de joueurs - VIOLET par défaut */
+button[style*="purple"],
+button[style*="#"],
+.player-button {
+  background: linear-gradient(135deg, #6b4c9a 0%, #8b6cb9 100%) !important;
+  color: #ffffff !important;
+  border-color: #9966ff !important;
+}
+
+/* Boutons SÉLECTIONNÉS - VERT (pas bleu!) */
+button[style*="blue"],
+button[style*="0066ff"],
+button[style*="rgb(0"],
+button.selected,
+button[data-selected="true"],
+.blue-button {
+  background-color: #4a9d6f !important;
+  border-color: #66d999 !important;
+  color: #ffffff !important;
+}
+
+/* Hover - Vert plus clair */
+button[style*="blue"]:hover,
+button.selected:hover,
+button[data-selected="true"]:hover {
+  background-color: #5fb87f !important;
+  border-color: #7fff99 !important;
+}
+
+/* Active/Focus - Vert foncé */
+button[style*="blue"]:active,
+button[style*="blue"]:focus,
+button.selected:active,
+button.selected:focus {
+  background-color: #3d8a5e !important;
+  border-color: #66d999 !important;
+  outline: none !important;
+}
+
+/* Loups-Garous - Fond légèrement ROUGE */
+.wolf-role,
+button[data-role*="Loup"],
+button[data-role*="Simple_Loup"],
+button[data-role*="Grand_Mechant"],
+button[data-role*="Blanc"],
+button[data-role*="Voyant"],
+button[data-role*="Infect"] {
+  background-color: #8b3a3a !important;
+  border-color: #d46666 !important;
+}
+
+/* Garder le bouton Retour blanc */
+button[style*="white"],
+.btn-return,
+.btn-cancel {
+  background-color: #ffffff !important;
+  color: #333333 !important;
+  border-color: #cccccc !important;
+}
+
+/* Bouton Suivant - Dégradé violet */
+.btn-next,
+.btn-continue,
+button[style*="gradient"],
+button[style*="c9"] {
+  background: linear-gradient(135deg, #6b4c9a 0%, #9966ff 100%) !important;
+  color: #ffffff !important;
+  border-color: #9966ff !important;
+}

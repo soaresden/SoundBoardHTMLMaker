@@ -1,0 +1,37 @@
+{
+  "id": "Louveteau",
+  "name": "Louveteau",
+  "emoji": "🐶",
+  "camp": "Loups",
+  "isWolf": true,
+  "description": "Rôle: Louveteau",
+  "actions": {
+    "PostMortem": {
+      "enabled": true,
+      "type": "bonusKill",
+      "phase": "onDeath",
+      "targets": {},
+      "stateKey": "louveteauEffect"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Peut mordre une personne pour la transformer en Simple Loup-Garou.",
+  "actionType": "DayActive",
+  "tips": "Aidez les loups à grandir - leur puissance est votre fierté.",
+  "nightActive": [
+    2,
+    4,
+    6,
+    8,
+    10
+  ]
+}

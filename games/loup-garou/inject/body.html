@@ -1,0 +1,60 @@
+  <script>
+    // Fichiers du Maître du Jeu à mettre en cache pour le mode hors-ligne (rôles + images de cartes)
+    window.SB_OFFLINE_EXTRA_URLS = function () {
+      const urls = ["gamemaster/roles/index.json"];
+      const mapping = window.ROLE_FILE_MAPPING || {};
+      Object.entries(mapping).forEach(([rid, file]) => {
+        if (file) urls.push("gamemaster/roles/" + file + ".json");
+        if (window.getRoleImagePath) urls.push(window.getRoleImagePath(rid));
+      });
+      return urls;
+    };
+  </script>
+
+  <!-- ===== GAME MASTER - Loup-Garou Manager ===== -->
+  <script src="gamemaster/utils/player-names.js?v=2"></script>
+  <script src="gamemaster/utils/roles-data.js?v=1"></script>
+  <script src="gamemaster/utils/load-roles-json.js?v=6"></script>
+  <script src="gamemaster/utils/get-ordered-roles.js?v=1"></script>
+  <script src="gamemaster/core/statuses-data.js?v=2"></script>
+  <script src="gamemaster/utils/logging-system.js?v=1"></script>
+  <script src="gamemaster/utils/navigation-system.js?v=1"></script>
+  <script src="gamemaster/utils/logging.js?v=1"></script>
+  <script src="gamemaster/core/orchestrator.js?v=2"></script>
+  <script src="gamemaster/core/game-master.js?v=2"></script>
+  <script src="gamemaster/core/statuses-handlers.js?v=2"></script>
+  <script src="gamemaster/phases/01-ChooseCard.js?v=3"></script>
+  <script src="gamemaster/phases/02-TableAndRename.js?v=69"></script>
+  <script src="gamemaster/phases/02b-DeckNames.js?v=74"></script>
+  <script src="gamemaster/phases/02-TirageMode.js?v=1"></script>
+  <script src="gamemaster/phases/03-FirstNight.js?v=1"></script>
+  <!-- FirstNightMDJ split en modules (core d'abord, puis augmentations de prototype) -->
+  <script src="gamemaster/phases/03-FirstNightMDJ-00-core.js?v=79"></script>
+  <script src="gamemaster/phases/03-FirstNightMDJ-01-init-render.js?v=95"></script>
+  <script src="gamemaster/phases/03-FirstNightMDJ-02-map.js?v=98"></script>
+  <script src="gamemaster/phases/03-FirstNightMDJ-03-summary-lynch-mayor.js?v=99"></script>
+  <script src="gamemaster/phases/03-FirstNightMDJ-04-night-flow.js?v=96"></script>
+  <script src="gamemaster/phases/03-FirstNightMDJ-05-role-actions.js?v=96"></script>
+  <script src="gamemaster/phases/03-FirstNightMDJ-06-ui-timer-styles.js?v=80"></script>
+  <script src="gamemaster/phases/04-FirstNight-Actions.js?v=1"></script>
+  <script src="gamemaster/phases/04-MayorElection.js?v=1"></script>
+  <script src="gamemaster/phases/05-Day.js?v=2"></script>
+  <script src="gamemaster/phases/06-Night.js?v=1"></script>
+  <script src="gamemaster/phases/06-Night-MDJ.js?v=1"></script>
+  <script src="gamemaster/phases/04-RevealSequential.js?v=1"></script>
+  <script src="gamemaster/phases/05-ModeAssiste.js?v=1"></script>
+  <!-- UI Modules -->
+  <script src="gamemaster/ui/01-WindowsButtons.js?v=5"></script>
+  <script src="gamemaster/ui/02-CardSelection.js?v=76"></script>
+  <script src="gamemaster/ui/02b-ModeSelection.js?v=1"></script>
+  <script src="gamemaster/ui/03-LiveMap.js?v=68"></script>
+  <script src="gamemaster/ui/04-RoleDetailandTips.js?v=1"></script>
+  <script src="gamemaster/ui/05-RoleActions.js?v=1"></script>
+  <script src="gamemaster/ui/06-NightPhase.js?v=1"></script>
+  <script src="gamemaster/ui/07-MayorElectionPhase.js?v=1"></script>
+  <script src="gamemaster/ui/08-DayPhase.js?v=1"></script>
+  <!-- Main UI -->
+  <script src="gamemaster/ui/game-master-ui.js?v=70"></script>
+  <script src="gamemaster/ui/10-MobileGM.js?v=3"></script>
+ 
+  <script src="gamemaster/core/game-master-init.js?v=3"></script>

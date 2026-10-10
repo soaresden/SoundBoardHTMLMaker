@@ -1,0 +1,30 @@
+{
+  "id": "Pyromane",
+  "name": "Pyromane",
+  "emoji": "🔥",
+  "camp": "Seul",
+  "description": "Rôle: Pyromane",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "arson",
+      "phase": "everyNight",
+      "targets": {},
+      "stateKey": "pyromaneFire"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Peut déclencher un feu qui élimine un bâtiment et son occupant.",
+  "actionType": "NightActive",
+  "tips": "Enflammez le village - semer le chaos est votre passion.",
+  "isWolf": false
+}

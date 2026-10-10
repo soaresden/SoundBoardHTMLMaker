@@ -1,0 +1,30 @@
+{
+  "id": "Mystique",
+  "name": "Mystique",
+  "emoji": "🔮",
+  "camp": "Village",
+  "description": "Rôle: Mystique",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "countEnemies",
+      "phase": "everyNight",
+      "targets": {},
+      "stateKey": "mystiqueCount"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Reçoit des messages cryptiques du Meneur sur les rôles des joueurs.",
+  "actionType": "NightActive",
+  "tips": "Cachez votre véritable nature - le secret est votre plus grande arme.",
+  "isWolf": false
+}

@@ -1,0 +1,32 @@
+{
+  "id": "Marionnettiste",
+  "name": "Marionnettiste",
+  "emoji": "🎭",
+  "camp": "Village",
+  "description": "Rôle: Marionnettiste",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "controlAction",
+      "phase": "everyNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "marionnetteControl"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Désigne un joueur comme 'marionnette' qui obéit à ses ordres pendant la journée.",
+  "actionType": "NightActive",
+  "tips": "Contrôlez les esprits faibles - façonnez le village à votre image.",
+  "isWolf": false
+}

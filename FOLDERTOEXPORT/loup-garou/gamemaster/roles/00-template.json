@@ -1,0 +1,35 @@
+{
+  "_doc": "MODÈLE DE RÔLE — copier ce fichier en NN[-lettre]-Mon_Role.json. Le NUMÉRO du fichier = ordre d'appel de nuit (43 passe avant 43a). L'id DOIT être identique à la partie après le tiret du nom de fichier. Après tout changement : node gamemaster/generate-roles-index.js (ou redémarrer le serveur) ET bumper CACHE_VERSION dans utils/load-roles-json.js. Voir FORMAT-ROLES.md pour le détail.",
+  "id": "template",
+  "name": "Nom Affiché",
+  "emoji": "🎭",
+  "camp": "Village",
+  "_doc_camp": "Village | Loups | Seul (rien d'autre)",
+  "isWolf": false,
+  "_doc_isWolf": "OBLIGATOIRE (booléen). true = compte comme loup (meute, parité, détections Renard/Ours...)",
+  "tag": "Custom",
+  "_doc_tag": "\"Custom\" = affiché dans la catégorie 🛠️ CUSTOM. Omettre pour un rôle officiel.",
+  "actionType": "NightActive",
+  "_doc_actionType": "NightActive (appelé la nuit) | DayActive | NoActions",
+  "pouvoir": "Description courte du pouvoir (affichée au MDJ).",
+  "actions": {
+    "MonAction": {
+      "enabled": true,
+      "type": "kill",
+      "_doc_type": "types moteur reconnus : kill/extraKill/bonusKill/hunt (tue), potions, isolate (Creuseur), protect/tankProtection/amuletProtection/bless (immunise), surviveDayKill, surviveFireOnce, redirectDeathOnce, killNeighbors, killOneNeighbor, voteWeightSacrifice, pauseWolfKill, dieOnTie, winOnFirstDeath...",
+      "phase": "everyNight",
+      "_doc_phase": "everyNight | everyOtherNight (nuits paires) | everyOddNight (impaires) | everyNightFrom2 | everyNightFirst3 | firstNight. NE PAS utiliser nightActive:[1..10] (casse à la nuit 11) ; seul nightActive:[1] est toléré pour un rôle 1re-nuit-uniquement.",
+      "targets": { "count": 1 }
+    }
+  },
+  "ui": {
+    "_doc": "selectionRenderer optionnel : cupidonLover, wolfKill, sorciere, apprentiSorcier, salvateur, voyante, renard, corbeau, recognition, voleur, chienLoup, enfantSauvage. OMETTRE pour la sélection générique de cibles.",
+    "selectionRenderer": "recognition"
+  },
+  "visual": {
+    "roleColor": { "fondColor": "#5174db", "textColor": "#ffffff", "emojiColor": "#ffffff" },
+    "affectedColor": { "borderColor": "#c77dff" }
+  },
+  "loverCount": 2,
+  "_doc_loverCount": "uniquement pour les rôles type Cupidon/Clubbeur (nombre d'amoureux)"
+}

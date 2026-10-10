@@ -1,0 +1,32 @@
+{
+  "id": "Tireur",
+  "name": "Tireur",
+  "emoji": "🔫",
+  "camp": "Village",
+  "description": "Rôle: Tireur",
+  "actions": {
+    "TousLesJours": {
+      "enabled": true,
+      "type": "shoot",
+      "phase": "everyDay",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "tireurShoot"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Possède deux balles pour éliminer des joueurs pendant le jour.",
+  "actionType": "DayActive",
+  "tips": "Tirez juste et sans merci - visez toujours le bon cible.",
+  "isWolf": false
+}

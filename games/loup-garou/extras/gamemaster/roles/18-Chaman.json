@@ -1,0 +1,32 @@
+{
+  "id": "Chaman",
+  "name": "Chaman",
+  "emoji": "🧙",
+  "camp": "Village",
+  "description": "Rôle: Chaman",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "talkToDead",
+      "phase": "everyNightFrom2",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "chamanTalk"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Peut communiquer avec les esprits pour obtenir des informations.",
+  "actionType": "NightActive",
+  "tips": "Communiquez avec les esprits - ils vous révèleront la vérité.",
+  "isWolf": false
+}

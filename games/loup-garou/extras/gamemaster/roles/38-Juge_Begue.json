@@ -1,0 +1,30 @@
+{
+  "id": "Juge_Begue",
+  "name": "Juge Begue",
+  "emoji": "⚖️",
+  "camp": "Village",
+  "description": "Rôle: Juge_Begue",
+  "actions": {
+    "UneFoisPartie": {
+      "enabled": true,
+      "type": "secondVote",
+      "phase": "anyTime",
+      "targets": {},
+      "stateKey": "jugeSecondVote"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Une seule fois, peut forcer un nouveau vote immédiatement.",
+  "actionType": "NightActive",
+  "tips": "Bafouille et crée la confusion - le doute est votre allié.",
+  "isWolf": false
+}

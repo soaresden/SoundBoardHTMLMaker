@@ -1,0 +1,28 @@
+{
+  "id": "Chasseur",
+  "name": "Chasseur",
+  "emoji": "🏹",
+  "camp": "Village",
+  "description": "Rôle: Chasseur",
+  "actions": {
+    "PostMortem": {
+      "enabled": true,
+      "type": "killOnDeath",
+      "phase": "onDeath",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "chasseurKill"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6B785C",
+      "emojiColor": "#E9C55A"
+    }
+  },
+  "pouvoir": "Peut éliminer un dernier joueur avant de mourir.",
+  "actionType": "DayActive",
+  "tips": "Défendez le village avec honneur - emportez vos ennemis avec vous.",
+  "isWolf": false
+}

@@ -1,0 +1,41 @@
+{
+  "id": "Salvateur",
+  "name": "Salvateur",
+  "emoji": "🖖",
+  "camp": "Village",
+  "ui": {
+    "selectionRenderer": "salvateur"
+  },
+  "description": "Rôle: Salvateur",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "protect",
+      "phase": "everyNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "salvatorProtection"
+    },
+    "mdj_night_actions": [
+      {
+        "id": "protect",
+        "icon": "🛡️",
+        "label": "Protéger un joueur"
+      }
+    ]
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#EBCF10",
+      "emojiColor": "#D27E82"
+    },
+    "affectedColor": {
+      "borderColor": "#EBCF10"
+    }
+  },
+  "pouvoir": "Protège un joueur de l'élimination par les Loups chaque nuit.",
+  "actionType": "NightActive",
+  "tips": "Défendez les faibles la nuit - vous êtes leur dernière protection.",
+  "isWolf": false
+}

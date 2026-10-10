@@ -1,0 +1,32 @@
+{
+  "id": "Joueur_Flute",
+  "name": "Joueur Flute",
+  "emoji": "🎵",
+  "camp": "Seul",
+  "description": "Rôle: Joueur_Flute",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "charm",
+      "phase": "everyNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "fluteCharm"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Peut faire dormir (endormir) deux joueurs qui ne pourront pas agir la nuit suivante.",
+  "actionType": "NightActive",
+  "tips": "Hypnotisez vos cibles - elles deviendront vos alliés.",
+  "isWolf": false
+}

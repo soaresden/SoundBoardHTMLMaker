@@ -1,0 +1,32 @@
+{
+  "id": "Necromancien",
+  "name": "Necromancien",
+  "emoji": "💀",
+  "camp": "Village",
+  "description": "Rôle: Necromancien",
+  "actions": {
+    "ToutesNuits": {
+      "enabled": true,
+      "type": "resurrect",
+      "phase": "everyNight",
+      "targets": {
+        "count": 1
+      },
+      "stateKey": "necroResurrect"
+    }
+  },
+  "visual": {
+    "roleColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    },
+    "affectedColor": {
+      "fondColor": "#6b4c9a",
+      "borderColor": "#ffffff"
+    }
+  },
+  "pouvoir": "Peut échanger silencieusement avec les morts pendant la nuit.",
+  "actionType": "NightActive",
+  "tips": "Commandez aux morts - les cadavres ont des secrets à révéler.",
+  "isWolf": false
+}

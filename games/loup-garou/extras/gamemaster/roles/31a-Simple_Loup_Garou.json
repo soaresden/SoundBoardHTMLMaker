@@ -1,0 +1,19 @@
+{
+  "id": "Simple_Loup_Garou",
+  "name": "Simple Loup Garou",
+  "emoji": "🐺",
+  "camp": "Loups",
+  "isWolf": true,
+  "ui": {
+    "selectionRenderer": "wolfKill"
+  },
+  "pouvoir": "Connaît les autres loups-garous. La nuit, tuez ensemble un villageois.",
+  "visual": {
+    "roleColor": {
+      "fondColor": "#872E30",
+      "emojiColor": "#E2C998"
+    }
+  },
+  "actionType": "NightActive",
+  "tips": "Travaillez avec vos frères - l'union fait la force."
+}

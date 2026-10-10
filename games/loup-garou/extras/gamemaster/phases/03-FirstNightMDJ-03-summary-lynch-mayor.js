@@ -1,0 +1,1638 @@
+// Auto-split module of FirstNightMDJ — augments prototype. Load AFTER 03-FirstNightMDJ-00-core.js
+Object.assign(FirstNightMDJ.prototype, {
+
+
+  /**
+   * Render the role listbox with breathing animation on current role
+   * IMPORTANT: Shows all night-active roles in order (01, 02, 03, ...)
+   */
+  /**
+   * Get night summary HTML with comboboxes for special deaths
+   * Includes Montreur_Ours growl detection
+   */
+  getNightSummaryHtml() {
+    const players = this.gm.state.players || [];
+    const alivePlayers = players.filter(p => !this.deadPlayerIds.has(p.id));
+    const deadPlayers = players.filter(p => this.deadPlayerIds.has(p.id));
+
+    // Check for dead Chasseur and Chevalier
+    const deadChaseur = deadPlayers.find(p => p.role === 'Chasseur');
+    const deadChevalier = deadPlayers.find(p => p.role === 'Chevalier_Epee_Rouille');
+
+    // Check for Montreur_Ours and detect wolves nearby
+    const montreurOursPlayer = alivePlayers.find(p => p.role === 'Montreur_Ours');
+    let montreurOursHtml = '';
+
+    if (montreurOursPlayer) {
+      // Find the bear's position in the players array to check left and right neighbors
+      const idx = players.findIndex(p => p.id === montreurOursPlayer.id);
+      const leftIdx = idx === 0 ? players.length - 1 : idx - 1;
+      const rightIdx = idx === players.length - 1 ? 0 : idx + 1;
+
+      // Check for wolves (skip dead players between)
+      let leftNeighbor = players[leftIdx];
+      let rightNeighbor = players[rightIdx];
+
+      // Skip dead players to find alive neighbors
+      let leftWolfIdx = leftIdx;
+      while (this.deadPlayerIds.has(players[leftWolfIdx].id) && leftWolfIdx !== idx) {
+        leftWolfIdx = leftWolfIdx === 0 ? players.length - 1 : leftWolfIdx - 1;
+      }
+
+      let rightWolfIdx = rightIdx;
+      while (this.deadPlayerIds.has(players[rightWolfIdx].id) && rightWolfIdx !== idx) {
+        rightWolfIdx = rightWolfIdx === players.length - 1 ? 0 : rightWolfIdx + 1;
+      }
+
+      leftNeighbor = players[leftWolfIdx];
+      rightNeighbor = players[rightWolfIdx];
+
+      const leftIsWolf = leftNeighbor && !this.deadPlayerIds.has(leftNeighbor.id) &&
+                         (leftNeighbor.role?.includes('Loup') || leftNeighbor.role?.includes('Wolf'));
+      const rightIsWolf = rightNeighbor && !this.deadPlayerIds.has(rightNeighbor.id) &&
+                          (rightNeighbor.role?.includes('Loup') || rightNeighbor.role?.includes('Wolf'));
+
+      const hasWolfNearby = leftIsWolf || rightIsWolf;
+      const growlText = hasWolfNearby
+        ? '🐻 L\'ours du Montreur d\'Ours grogne ! Ça sent le loup !'
+        : '🐻 Ça ne grogne pas, pas de loup à proximité de l\'ours';
+
+      montreurOursHtml = `
+        <div style="padding:12px; background:rgba(139,69,19,0.2); border:2px solid #8B4513; border-radius:6px; margin-bottom:12px;">
+          <h4 style="margin:0 0 8px 0; color:#D2B48C; font-size:12px;">${growlText}</h4>
+        </div>
+      `;
+    }
+
+    let html = '';
+
+    // Chasseur revenge kill
+    if (deadChaseur) {
+      // Le Chasseur peut tuer N'IMPORTE QUI de vivant (sauf lui-même)
+      const validTargets = alivePlayers.filter(p => p.id !== deadChaseur.id);
+      html += `
+        <div style="padding:12px; background:rgba(210,180,140,0.2); border:2px solid #D4A574; border-radius:6px; margin-bottom:12px;">
+          <h4 style="margin:0 0 8px 0; color:#D4A574; font-size:12px;">🏹 ${deadChaseur.name} (Chasseur) - Vengeance</h4>
+          <p style="margin:0 0 8px 0; color:#ddd; font-size:11px;">Le Chasseur peut tirer avant sa mort</p>
+          <select id="chasseur-target" style="width:100%; padding:6px; background:#333; color:#fff; border:1px solid #666; border-radius:3px; font-size:11px;">
+            <option value="">-- Sélectionner une cible --</option>
+            ${validTargets.map(p => {
+              const roleData = this.rolesLoader.getRole(p.role);
+              return `<option value="${p.id}">${p.name} (${roleData?.name || p.role})</option>`;
+            }).join('')}
+          </select>
+        </div>
+      `;
+    }
+
+    // Chevalier death curse
+    if (deadChevalier) {
+      const wolvesAlive = alivePlayers.filter(p => p.role && (p.role.includes('Loup') || p.role.includes('Wolf')));
+      const leftWolf = wolvesAlive.length > 0 ? wolvesAlive[0].name : '?';
+      html += `
+        <div style="padding:12px; background:rgba(255,215,0,0.15); border:2px solid #FFD700; border-radius:6px; margin-bottom:12px;">
+          <h4 style="margin:0 0 8px 0; color:#FFD700; font-size:12px;">⚔️ ${deadChevalier.name} (Chevalier) - Malédiction</h4>
+          <p style="margin:0 0 8px 0; color:#ddd; font-size:11px;">Le loup à sa gauche (${leftWolf}) mourra demain matin</p>
+        </div>
+      `;
+    }
+
+    // Montreur_Ours growl detection
+    html += montreurOursHtml;
+
+    // Rappel Corbeau : +2 votes contre la cible désignée cette nuit (à prendre en compte au vote)
+    const _corbeauRes = this.roleStates && this.roleStates['Corbeau'] && this.roleStates['Corbeau'].result;
+    const _corbeauAlive = (this.gm && this.gm.state && this.gm.state.players || []).some(pl => pl.role === 'Corbeau' && !this.deadPlayerIds.has(pl.id));
+    if (_corbeauAlive && _corbeauRes && _corbeauRes.action === 'steal_votes' && Array.isArray(_corbeauRes.targets)) {
+      const _cbTargetId = _corbeauRes.targets.find(t => !String(t).startsWith('potion-'));
+      const _cbTarget = _cbTargetId && (this.gm && this.gm.state && this.gm.state.players || []).find(p => p.id === _cbTargetId);
+      if (_cbTarget && !this.deadPlayerIds.has(_cbTarget.id)) {
+        html += `
+      <div style="padding:10px; margin-bottom:8px; background:rgba(40,40,60,0.9); border:2px solid #7a7ab0; border-radius:6px;">
+        <span style="color:#e0e0f0; font-size:11px; font-weight:700;">\u{1F426}\u{200D}\u{2B1B} Corbeau : <b>+2 votes</b> contre <b>${_cbTarget.name}</b> au vote d'aujourd'hui.</span>
+      </div>`;
+      }
+    }
+
+    // Lynch combobox
+    const nonWolves = alivePlayers.filter(p => !p.role || (!p.role.includes('Loup') && !p.role.includes('Wolf')));
+    html += `
+      <div style="padding:12px; background:rgba(150,100,200,0.2); border:2px solid #9966CC; border-radius:6px;">
+        <h4 style="margin:0 0 8px 0; color:#9966CC; font-size:12px;">🪓 Vote du Village - Au Bûcher!</h4>
+        <p style="margin:0 0 8px 0; color:#ddd; font-size:11px;">Qui sera exécuté aujourd'hui?</p>
+        <select id="lynch-target" style="width:100%; padding:6px; background:#333; color:#fff; border:1px solid #666; border-radius:3px; font-size:11px;">
+          <option value="">-- Sélectionner une victime --</option>
+          ${nonWolves.map(p => {
+            const roleData = this.rolesLoader.getRole(p.role);
+            return `<option value="${p.id}">${p.name} (${roleData?.name || 'Villageois'})</option>`;
+          }).join('')}
+        </select>
+      </div>
+    `;
+
+    return html;
+  }
+,
+
+
+  /**
+   * Disable the role listbox (gray it out, no interactions)
+   */
+  disableRoleListbox() {
+    const listbox = document.getElementById('role-listbox');
+    if (!listbox) return;
+
+    // Gray out and disable interactions
+    listbox.style.opacity = '0.5';
+    listbox.style.pointerEvents = 'none';
+    listbox.style.backgroundColor = 'rgba(50, 50, 50, 0.5)';
+  }
+,
+
+
+  /**
+   * Render Night Summary - Shows completed actions and deaths
+   * IMPORTANT: Blue zone (listbox) remains unchanged - just disable clicks
+   */
+  renderNightSummary() {
+    console.log(`[MDJ] 🌙 renderNightSummary() called`);
+    const listbox = document.getElementById('role-listbox');
+
+    if (!listbox) return;
+
+    // ☀️ DÉBRIEF : on RÉVÈLE maintenant les morts de la nuit sur la map
+    if (!this.gm.state.revealDeaths) {
+      this.gm.state.revealDeaths = true;
+      if (this.gm && typeof this.gm.saveState === 'function') this.gm.saveState();
+    }
+
+    // (Avant: on désactivait les clics de la zone bleue.)
+    // On garde la liste CLIQUABLE pour permettre de re-saisir un rôle depuis l'écran de résumé.
+    const _lb = document.getElementById('role-listbox');
+    if (_lb) { _lb.style.opacity = '1'; _lb.style.pointerEvents = 'auto'; }
+
+    // UPDATE RIGHT PANEL WITH NIGHT SUMMARY
+    const titleBig = document.getElementById('action-title-big');
+    const actionControls = document.getElementById('action-controls');
+    const actionInfo = document.getElementById('action-info');
+
+    if (titleBig) {
+      // CRITICAL: Show correct night number (currentNight, not hardcoded Nuit 1)
+      titleBig.innerHTML = `🌙 Résumé Nuit ${this.currentNight}`;
+      titleBig.style.background = '#1a3a52';
+    }
+
+    if (actionControls) {
+      actionControls.innerHTML = `
+        <div style="padding:12px; color:#ccc; font-size:12px;">
+          ${this.getNightSummaryHtml()}
+        </div>
+      `;
+    }
+
+    // IMPORTANT : la map + le panneau live se rafraîchissent APRÈS le calcul du résumé
+    // (les morts de dernière minute — Chevalier, etc. — y sont appliquées).
+    if (typeof this.renderLiveMap === 'function') this.renderLiveMap();
+    if (typeof this.renderLiveDeaths === 'function') this.renderLiveDeaths();
+
+    if (actionInfo) {
+      const _braisesAlive = (this.gm.state.players||[]).some(p => p.role === 'Custom_Chauffeur_Braises' && !this.deadPlayerIds.has(p.id));
+      const _braisesWarn = _braisesAlive ? `<div style="margin-bottom:10px; padding:9px 12px; background:rgba(255,106,0,0.15); border:1px solid #ff6a00; border-radius:8px; color:#ffce9e; font-size:12px; font-weight:700; line-height:1.35;">🔥 Attention \u00e0 bien compter <u>DOUBLE</u> la voix du Chauffeur de Braises (sans dire qui c'est).</div>` : '';
+      actionInfo.innerHTML = `
+        ${_braisesWarn}
+        <button id="night-summary-btn-lynch" class="btn-validate-action lg-fire-btn"
+                style="width:100%; padding:14px; border-radius:8px; cursor:pointer; font-size:14px;">
+          🪓 AU BÛCHER <span class="lg-flame">🔥</span> !
+        </button>
+      `;
+      // Add event listeners for combobox changes (update avatar on selection)
+      const chasseurSelect = document.getElementById('chasseur-target');
+      const lynchSelect = document.getElementById('lynch-target');
+
+      const updateAvatarForCombobox = (selectElement) => {
+        const victimId = selectElement.value;
+
+        const mdjMap = document.getElementById('mdj-live-map');
+        if (!mdjMap) return;
+
+        // FIX « mort fantôme » : restaurer d'abord les 💀 de PREVIEW (joueurs non réellement morts)
+        // posés par une sélection précédente du combobox.
+        mdjMap.querySelectorAll('.mdj-player-point.killed').forEach(pt => {
+          const pid = pt.dataset.playerId;
+          if (pid && !this.deadPlayerIds.has(pid)) {
+            pt.classList.remove('killed');
+            const em = pt.querySelector('.mdj-point-emoji');
+            if (em) { em.textContent = pt.dataset.originalEmoji || em.textContent; em.style.opacity = '1'; }
+            const dt = pt.querySelector('.mdj-point-dot');
+            if (dt) { dt.style.filter = ''; dt.style.opacity = '1'; }
+          }
+        });
+
+        if (!victimId) return;
+
+        const victimPoint = mdjMap.querySelector(`[data-player-id="${victimId}"]`);
+        if (victimPoint) {
+          // Add killed visual state
+          victimPoint.classList.add('killed');
+          const emoji = victimPoint.querySelector('.mdj-point-emoji');
+          if (emoji && !victimPoint.dataset.originalEmoji) {
+            victimPoint.dataset.originalEmoji = emoji.textContent;
+          }
+          if (emoji) {
+            emoji.textContent = '💀';
+            emoji.style.opacity = '0.6';
+          }
+          const dot = victimPoint.querySelector('.mdj-point-dot');
+          if (dot) {
+            dot.style.filter = 'grayscale(100%)';
+            dot.style.opacity = '0.6';
+          }
+          console.log(`[MDJ] Avatar updated - ${this.getPlayerName(victimId)} marked for death`);
+        }
+      };
+
+      if (chasseurSelect) {
+        chasseurSelect.addEventListener('change', () => updateAvatarForCombobox(chasseurSelect));
+      }
+      if (lynchSelect) {
+        lynchSelect.addEventListener('change', () => updateAvatarForCombobox(lynchSelect));
+      }
+
+      // Servante Devouee prend le role d'un mort
+      const servanteSelect = document.getElementById('servante-take-target');
+      if (servanteSelect) {
+        servanteSelect.addEventListener('change', () => {
+          const deadId = servanteSelect.value;
+          if (!deadId) return;
+          const ps = this.gm.state.players || [];
+          const servantePlayer = ps.find(p => p.role === 'Servante_Devouee' && !this.deadPlayerIds.has(p.id));
+          const deadP = ps.find(p => p.id === deadId);
+          if (servantePlayer && deadP) {
+            this.transformations[servantePlayer.id] = { from: 'Servante_Devouee', to: deadP.role, reason: `reprend le role de ${deadP.name}` };
+            servantePlayer.role = deadP.role;
+            console.log(`[MDJ] Servante ${servantePlayer.name} reprend le role de ${deadP.name}`);
+            this.renderLiveMap();
+            this.quickSave?.();
+          }
+        });
+      }
+
+      // Reassignation du maire si le maire meurt cette nuit
+      const mayorReassignSelect = document.getElementById('mayor-reassign-target');
+      if (mayorReassignSelect) {
+        mayorReassignSelect.addEventListener('change', () => {
+          const newMayorId = mayorReassignSelect.value;
+          if (!newMayorId) return;
+          this.mayorId = newMayorId;
+          console.log(`[MDJ] Maire reassigne a ${this.getPlayerName(newMayorId)}`);
+          this.renderLiveMap();
+          this.quickSave?.();
+        });
+      }
+
+      // 🚌 Chauffeur de Bus mort cette nuit : reporter la mort sur quelqu'un d'autre
+      const busSelect = document.getElementById('bus-target');
+      if (busSelect) {
+        busSelect.addEventListener('change', () => {
+          const targetId = busSelect.value;
+          const ps = this.gm.state.players || [];
+          const busP = ps.find(p => p.role === 'Custom_Chauffeur_Bus' && this.deadPlayerIds.has(p.id) && !this.busHasRedirected);
+          if (!busP || !targetId) return;
+          if (typeof this.pushUndo === 'function') this.pushUndo('Report du Bus sur ' + this.getPlayerName(targetId));
+          const _busCause = this.deathCauses ? this.deathCauses[busP.id] : null;
+          const _before = new Set(this.deadPlayerIds);
+          this.deadPlayerIds.delete(busP.id);
+          if (this.deathCauses) delete this.deathCauses[busP.id];
+          this.deadPlayerIds.add(targetId);
+          this.deathCauses[targetId] = 'bus';
+          this.busHasRedirected = true;
+          if (typeof this.checkCupidonCascadingDeath === 'function') this.checkCupidonCascadingDeath(targetId);
+          // Mémorise TOUT (cible + amoureux en cascade + cause d'origine du Bus) pour pouvoir ANNULER
+          this.gm.state.busUndo = {
+            busId: busP.id,
+            busCause: _busCause || 'wolf',
+            killed: Array.from(this.deadPlayerIds).filter(id => !_before.has(id))
+          };
+          if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(busP.id, '🚌 a balance ' + this.getPlayerName(targetId) + ' a sa place (survit, demasque)');
+          this.quickSave?.();
+          if (typeof this.renderLiveMap === 'function') this.renderLiveMap();
+          this.renderNightSummary();
+        });
+      }
+
+      // 🏹 Chasseur mort la nuit : CONFIRMER le tir
+      const chasseurShootBtn = document.getElementById('chasseur-shoot-btn');
+      if (chasseurShootBtn) {
+        chasseurShootBtn.addEventListener('click', () => {
+          const sel = document.getElementById('chasseur-target');
+          const tid = sel && sel.value;
+          if (!tid) { alert('Choisis une cible pour le tir du Chasseur !'); return; }
+          if (this.deadPlayerIds.has(tid)) { alert(this.getPlayerName(tid) + ' est déjà mort.'); return; }
+          if (typeof this.pushUndo === 'function') this.pushUndo('Tir du Chasseur sur ' + this.getPlayerName(tid));
+          const _before = new Set(this.deadPlayerIds);
+          this.deadPlayerIds.add(tid);
+          this.deathCauses[tid] = 'chasseur';
+          this.chasseurHasShot = true;
+          if (typeof this.checkCupidonCascadingDeath === 'function') this.checkCupidonCascadingDeath(tid);
+          // Mémorise tout ce que le tir a tué (cible + cascades) pour pouvoir ANNULER
+          this.gm.state.chasseurUndo = { targetId: tid, killed: Array.from(this.deadPlayerIds).filter(id => !_before.has(id)) };
+          if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(tid, '🏹 Abattu par le tir de vengeance du Chasseur');
+          this.quickSave?.();
+          if (typeof this.renderLiveMap === 'function') this.renderLiveMap();
+          if (typeof this.checkVictoryNow === 'function') this.checkVictoryNow();
+          this.renderNightSummary();
+        });
+      }
+      // 🏹↩️ Annulation du tir du Chasseur
+      const chasseurCancelBtn = document.getElementById('chasseur-cancel-btn');
+      if (chasseurCancelBtn) {
+        chasseurCancelBtn.addEventListener('click', () => {
+          const cu = this.gm.state.chasseurUndo;
+          if (!cu) return;
+          (cu.killed || []).forEach(id => {
+            this.deadPlayerIds.delete(id);
+            if (this.deathCauses) delete this.deathCauses[id];
+          });
+          this.chasseurHasShot = false;
+          this.gm.state.chasseurUndo = null;
+          if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(cu.targetId, '↩️ Tir du Chasseur annulé');
+          this.quickSave?.();
+          if (typeof this.renderLiveMap === 'function') this.renderLiveMap();
+          this.renderNightSummary();
+        });
+      }
+
+      // ↩️ Annulation du report du Chauffeur de Bus (clic par erreur)
+      const busCancel = document.getElementById('bus-cancel-btn');
+      if (busCancel) {
+        busCancel.addEventListener('click', () => {
+          const bu = this.gm.state.busUndo;
+          if (!bu) return;
+          (bu.killed || []).forEach(id => {
+            this.deadPlayerIds.delete(id);
+            if (this.deathCauses) delete this.deathCauses[id];
+          });
+          this.deadPlayerIds.add(bu.busId);
+          this.deathCauses[bu.busId] = bu.busCause || 'wolf';
+          this.busHasRedirected = false;
+          this.gm.state.busUndo = null;
+          if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(bu.busId, '↩️ Report du Chauffeur de Bus annulé');
+          this.quickSave?.();
+          if (typeof this.renderLiveMap === 'function') this.renderLiveMap();
+          this.renderNightSummary();
+        });
+      }
+
+      // 🔥 Chauffeur de Braises : sacrifice s'il a pointé un innocent
+      const braisesBtn = document.getElementById('braises-sacrifice-btn');
+      if (braisesBtn) {
+        braisesBtn.addEventListener('click', () => {
+          const bid = braisesBtn.dataset.bid;
+          if (!bid || this.deadPlayerIds.has(bid)) return;
+          if (typeof this.pushUndo === 'function') this.pushUndo('Sacrifice du Chauffeur de Braises');
+          const _before = new Set(this.deadPlayerIds);
+          this.deadPlayerIds.add(bid);
+          this.deathCauses[bid] = 'braises';
+          if (typeof this.checkCupidonCascadingDeath === 'function') this.checkCupidonCascadingDeath(bid);
+          // Mémorise TOUT ce que ce clic a tué (lui + amoureux en cascade) pour pouvoir ANNULER
+          this.gm.state.braisesUndo = Array.from(this.deadPlayerIds).filter(id => !_before.has(id));
+          if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(bid, '🔥 Sacrifié : a pointé un innocent envoyé au bûcher');
+          this.quickSave?.();
+          if (typeof this.renderLiveMap === 'function') this.renderLiveMap();
+          this.renderNightSummary();
+        });
+      }
+
+      // ↩️ Annulation du sacrifice du Chauffeur de Braises (clic par erreur)
+      const braisesCancel = document.getElementById('braises-cancel-btn');
+      if (braisesCancel) {
+        braisesCancel.addEventListener('click', () => {
+          const bid = braisesCancel.dataset.bid;
+          const ids = (Array.isArray(this.gm.state.braisesUndo) && this.gm.state.braisesUndo.length)
+            ? this.gm.state.braisesUndo : (bid ? [bid] : []);
+          ids.forEach(id => {
+            this.deadPlayerIds.delete(id);
+            if (this.deathCauses) delete this.deathCauses[id];
+            if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(id, '↩️ Sacrifice du Chauffeur de Braises annulé');
+          });
+          this.gm.state.braisesUndo = [];
+          this.quickSave?.();
+          if (typeof this.renderLiveMap === 'function') this.renderLiveMap();
+          this.renderNightSummary();
+        });
+      }
+
+      const lynchBtn = actionInfo.querySelector('#night-summary-btn-lynch');
+      if (lynchBtn) {
+        lynchBtn.addEventListener('click', () => {
+          const lynchSelect = document.getElementById('lynch-target');
+          const victimId = lynchSelect?.value;
+
+          if (!victimId) {
+            alert('Veuillez sélectionner une victime!');
+            return;
+          }
+
+          console.log('[MDJ] Lynch execution for:', victimId);
+
+          // Check if LYNCHED VICTIM is Chasseur - he can shoot before dying!
+          const players = this.gm.state.players || [];
+          const lynchVictim = players.find(p => p.id === victimId);
+          const chasseurTargetSelect = document.getElementById('chasseur-target');
+
+          // CRITICAL: If victim is Chasseur and has not shot yet, let him shoot first!
+          if (lynchVictim && lynchVictim.role === 'Chasseur' && !this.chasseurHasShot && chasseurTargetSelect) {
+            const chasseurTargetId = chasseurTargetSelect.value;
+            if (chasseurTargetId && chasseurTargetId !== '') {
+              // Chasseur shoots first (only ONE shot per game!)
+              console.log(`[MDJ] 🏹 ${lynchVictim.name} (Chasseur) shoots before dying: ${this.getPlayerName(chasseurTargetId)}`);
+              this.deadPlayerIds.add(chasseurTargetId);
+              // CRITICAL: Mark the cause of death for Chasseur's victim
+              this.deathCauses[chasseurTargetId] = 'chasseur';
+              this.chasseurHasShot = true; // CRITICAL: Mark that Chasseur used his only shot
+              // CRITICAL: Check for cascading Cupidon death (if target is a lover)
+              this.checkCupidonCascadingDeath(chasseurTargetId);
+            }
+          }
+
+          // 🚌 Chauffeur de Bus lynche : il balance un remplacant et survit (1 fois)
+          if (lynchVictim && lynchVictim.role === 'Custom_Chauffeur_Bus' && !this.busHasRedirected) {
+            const aliveRepl = players.filter(p => !this.deadPlayerIds.has(p.id) && p.id !== victimId);
+            actionInfo.innerHTML = `
+              <div style="padding:10px; background:rgba(74,163,255,0.15); border:2px solid #4aa3ff; border-radius:8px;">
+                <div style="color:#bfe0ff; font-weight:700; font-size:12px; margin-bottom:6px;">🚌 Chauffeur de Bus : il balance quelqu'un a sa place (il survit cette fois, puis devient villageois)</div>
+                <select id="bus-lynch-target" style="width:100%; padding:6px; background:#333; color:#fff; border:1px solid #4aa3ff; border-radius:4px; font-size:12px;">
+                  <option value="">-- Choisir le remplacant --</option>
+                  ${aliveRepl.map(p => `<option value="${p.id}">${p.name} (${(this.rolesLoader.getRole(p.role)?.name) || p.role})</option>`).join('')}
+                </select>
+                <button id="bus-lynch-confirm" class="lg-fire-btn" style="width:100%; margin-top:8px; padding:10px; border-radius:6px; font-weight:800; cursor:pointer; font-size:12px;">🪓 Envoyer le remplacant au bucher 🔥</button>
+              </div>`;
+            const confirmBtn = actionInfo.querySelector('#bus-lynch-confirm');
+            if (confirmBtn) confirmBtn.addEventListener('click', () => {
+              const tid = document.getElementById('bus-lynch-target')?.value;
+              if (!tid) { alert('Choisis un remplacant !'); return; }
+              this.busHasRedirected = true;
+              if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(victimId, '🚌 a balance ' + this.getPlayerName(tid) + ' au bucher a sa place (survit, demasque)');
+              this.executeLynch(tid);
+            });
+            return;
+          }
+
+          // Execute lynch
+          this.executeLynch(victimId);
+        });
+      }
+    }
+  }
+,
+
+
+  /**
+   * Start mayor election at beginning of first night
+   * Zone bleue: Liste EXHAUSTIVE de tous les joueurs
+   * Zone rose: Formulaire d'élection (change à chaque sélection)
+   */
+  startMayorElection() {
+    const listbox = document.getElementById('role-listbox');
+    const titleBig = document.getElementById('action-title-big');
+    const actionControls = document.getElementById('action-controls');
+    const actionInfo = document.getElementById('action-info');
+
+    if (!listbox) return;
+
+    const players = this.gm.state.players || [];
+
+    // ZONE BLEUE: ALL players (exhaustive list)
+    // Dead players grayed out but still selectable
+    const playerListHtml = players
+      .map(p => {
+        const roleData = this.rolesLoader.getRole(p.role);
+        const isDead = this.deadPlayerIds.has(p.id);
+        const isSelected = this.selectedMayorId === p.id;
+
+        return `
+          <div class="listbox-item ${isSelected ? 'selected' : ''}"
+               data-player-id="${p.id}"
+               style="background: ${isSelected ? '#4a90e2' : isDead ? 'rgba(100,100,100,0.2)' : 'rgba(255,255,255,0.1)'};
+                      cursor: pointer;
+                      opacity: ${isDead ? 0.7 : 1};">
+            <span class="item-icon">${isDead ? '💀' : roleData?.emoji || '❓'}</span>
+            <span class="item-name">${isDead ? '💀 ' : ''}${p.name}</span>
+            ${isSelected ? '<span class="item-status">✓</span>' : ''}
+          </div>
+        `;
+      })
+      .join('');
+
+    listbox.innerHTML = `
+      <div style="padding: 12px; color: #fff; border-bottom: 1px solid rgba(255,255,255,0.1);">
+        <h3 style="margin: 0 0 8px 0; color: #FFD700; font-size: 14px;">👑 Élection du Maire</h3>
+        <p style="margin: 0; font-size: 11px; color: #aaa;">Tous les joueurs</p>
+      </div>
+      <div style="max-height: 600px; overflow-y: auto;">
+        ${playerListHtml}
+      </div>
+    `;
+
+    // Attach click handlers - ANY player can be selected
+    listbox.querySelectorAll('.listbox-item').forEach(item => {
+      const playerId = item.dataset.playerId;
+
+      item.addEventListener('click', () => {
+        this.selectedMayorId = playerId;
+        this.startTimer(); // Restart timer when selecting mayor
+        // Temporarily show badge preview on map
+        this.mayorId = playerId;
+        this.renderLiveMap();
+        this.mayorId = null; // Reset until officially elected
+        this.startMayorElection(); // Re-render with updated selection
+      });
+    });
+
+    // ZONE ROSE: Election form (changes on each selection)
+    if (titleBig) {
+      titleBig.innerHTML = '👑 Élection du Maire';
+      titleBig.style.background = '#FFD700';
+      titleBig.style.color = '#000';
+    }
+
+    const selectedPlayer = this.selectedMayorId ? players.find(p => p.id === this.selectedMayorId) : null;
+
+    if (actionControls) {
+      if (selectedPlayer) {
+        const selectedRole = this.rolesLoader.getRole(selectedPlayer.role);
+        const isDead = this.deadPlayerIds.has(selectedPlayer.id);
+
+        actionControls.innerHTML = `
+          <div style="padding: 12px; text-align: center; background: rgba(255,215,0,0.1); border-radius: 4px; border: 2px solid #FFD700;">
+            <div style="font-size: 32px; margin-bottom: 8px;">
+              ${isDead ? '💀' : selectedRole?.emoji || '❓'}
+            </div>
+            <div style="color: white; font-weight: bold; font-size: 14px;">
+              ${selectedPlayer.name}
+            </div>
+            <div style="color: #FFD700; font-size: 11px; margin-top: 6px;">
+              ${isDead ? 'Sera le nouveau Maire (décédé)' : 'Sera le nouveau Maire'}
+            </div>
+          </div>
+        `;
+      } else {
+        actionControls.innerHTML = `
+          <div style="padding: 12px; text-align: center; color: #aaa; font-size: 11px;">
+            Sélectionnez un joueur
+          </div>
+        `;
+      }
+    }
+
+    if (actionInfo) {
+      actionInfo.innerHTML = `
+        <div style="display: flex; gap: 8px;">
+          <button id="btn-elect-mayor" class="btn-validate-action" style="flex: 1; padding: 10px; background: #FFD700; color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px; opacity: ${this.selectedMayorId ? 1 : 0.5};">
+            ✓ Élire
+          </button>
+          <button id="btn-no-mayor" class="btn-cancel-action" style="flex: 1; padding: 10px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px;">
+            ✗ Pas de maire
+          </button>
+        </div>
+      `;
+
+      const electBtn = actionInfo.querySelector('#btn-elect-mayor');
+      const noMayorBtn = actionInfo.querySelector('#btn-no-mayor');
+
+      if (electBtn) {
+        electBtn.addEventListener('click', () => {
+          if (this.selectedMayorId) {
+            const mayor = players.find(p => p.id === this.selectedMayorId);
+            console.log(`[MDJ] 👑 ${mayor.name} elected as mayor ${this.deadPlayerIds.has(mayor.id) ? '(deceased)' : ''}`);
+            this.mayorId = this.selectedMayorId;
+            this.completeMayorElection();
+          }
+        });
+      }
+
+      if (noMayorBtn) {
+        noMayorBtn.addEventListener('click', () => {
+          console.log(`[MDJ] No mayor elected`);
+          this.mayorId = null;
+          this.completeMayorElection();
+        });
+      }
+    }
+  }
+,
+
+
+  /**
+   * Complete mayor election and move to role selection phase
+   * Now that mayor is elected, proceed with first night roles
+   */
+  completeMayorElection() {
+    if (typeof this.pushUndo === 'function') this.pushUndo('Élection du maire' + (this.mayorId ? ' : ' + this.getPlayerName(this.mayorId) : ' (aucun)'));
+    console.log('[MDJ] Mayor election complete - proceeding to first night roles');
+    console.log(`[MDJ] ✓ mayorId set to: ${this.mayorId}`);
+    this.mayorElectionCompleted = true;
+    this.selectedMayorId = null;
+    this.selectedLynchVictimId = null; // Clear any previous selection
+
+    // Re-render map with mayor badge
+    this.renderLiveMap();
+
+    // Re-render to show role list instead of mayor election
+    this.renderRoleListbox();
+  }
+,
+
+
+  /**
+   * Start voting/lynch phase after mayor election
+   */
+  startVotingPhase() {
+    const listbox = document.getElementById('role-listbox');
+    const titleBig = document.getElementById('action-title-big');
+    const actionControls = document.getElementById('action-controls');
+    const actionInfo = document.getElementById('action-info');
+
+    if (!listbox) return;
+
+    const players = this.gm.state.players || [];
+    const alivePlayers = this.playerRegistry.getAlive();
+
+    // ZONE BLEUE: Combobox for vote selection (with mayor medal if applicable)
+    const voteComboboxHtml = alivePlayers
+      .map(p => {
+        const roleData = this.rolesLoader.getRole(p.role);
+        const isMayor = this.mayorId && this.mayorId === p.id;
+        const displayName = isMayor ? `🎖️ ${p.name}` : p.name;
+        const isSelected = this.selectedLynchVictimId === p.id;
+        return `<option value="${p.id}" ${isSelected ? 'selected' : ''}>${displayName} (${roleData?.name || p.role})</option>`;
+      })
+      .join('');
+
+    listbox.innerHTML = `
+      <div style="padding: 12px; color: #fff; border-bottom: 1px solid rgba(255,255,255,0.1);">
+        <h3 style="margin: 0 0 8px 0; color: #e74c3c; font-size: 14px;">🗳️ Vote du Jour</h3>
+        <p style="margin: 0; font-size: 11px; color: #aaa;">Sélectionnez le joueur à éliminer:</p>
+      </div>
+      <div style="max-height: 600px; overflow-y: auto; padding: 8px 12px;">
+        <select class="day-vote-combobox" style="width: 100%; padding: 8px; margin: 0; font-size: 0.9rem; background: rgba(0,0,0,0.3); color: white; border: 1px solid #e74c3c; border-radius: 3px;">
+          <option value="">-- Choisir --</option>
+          ${voteComboboxHtml}
+      </select>
+    `;
+
+    // Attach change handler
+    const voteCombobox = listbox.querySelector('.day-vote-combobox');
+    if (voteCombobox) {
+      voteCombobox.addEventListener('change', () => {
+        this.selectedLynchVictimId = voteCombobox.value || null;
+        this.startVotingPhase(); // Re-render
+      });
+    }
+
+    // ZONE ROSE: Night summary + voting controls with 2-column table
+    if (titleBig) {
+      titleBig.innerHTML = '🗳️ Résultats Nuit 1 & Vote';
+      titleBig.style.background = '#e74c3c';
+      titleBig.style.color = '#fff';
+    }
+
+    // Render night summary (2-column table)
+    const nightSummaryHtml = this.getNightSummaryHtml();
+
+    const selectedVictim = this.selectedLynchVictimId ? players.find(p => p.id === this.selectedLynchVictimId) : null;
+    const selectedVictimRole = selectedVictim ? this.rolesLoader.getRole(selectedVictim.role) : null;
+
+    if (actionControls) {
+      actionControls.innerHTML = `
+        <!-- Night Summary 2-Column Table -->
+        <div style="margin-bottom: 12px;">
+          ${nightSummaryHtml}
+        </div>
+
+        <!-- Announcement when victim selected -->
+        ${selectedVictim ? `
+          <div style="padding: 12px; background: rgba(231,76,60,0.15); border-radius: 4px; border-left: 4px solid #e74c3c; margin-top: 12px;">
+            <div style="color: #fff; font-size: 11px; margin-bottom: 6px; font-weight: 600;">📣 Villageois vous avez décidé de tuer:</div>
+            <div style="color: #fff; font-weight: bold; font-size: 13px;">
+              ${selectedVictim.name}
+            </div>
+            <div style="color: #ffcccc; font-size: 11px; margin-top: 4px;">
+              il était ${selectedVictimRole?.emoji || '❓'} ${selectedVictimRole?.name || '?'}
+            </div>
+          </div>
+        ` : `
+          <div style="padding: 12px; text-align: center; color: #999; font-size: 11px; background: rgba(0,0,0,0.2); border-radius: 4px;">
+            Sélectionnez quelqu'un à envoyer au bûcher
+          </div>
+        `}
+      `;
+    }
+
+    if (actionInfo) {
+      const isDisabled = !selectedVictim;
+      const _braisesAlive = (this.gm.state.players||[]).some(p => p.role === 'Custom_Chauffeur_Braises' && !this.deadPlayerIds.has(p.id));
+      const _braisesWarn = _braisesAlive ? `<div style="margin-bottom:10px; padding:9px 12px; background:rgba(255,106,0,0.15); border:1px solid #ff6a00; border-radius:8px; color:#ffce9e; font-size:12px; font-weight:700; line-height:1.35;">🔥 Attention \u00e0 bien compter <u>DOUBLE</u> la voix du Chauffeur de Braises (sans dire qui c'est).</div>` : '';
+      actionInfo.innerHTML = `
+        ${_braisesWarn}
+        <button id="btn-lynch" class="btn-validate-action ${isDisabled ? '' : 'lg-fire-btn'}"
+                style="width: 100%; padding: 14px; border-radius: 8px; font-size: 14px; cursor: ${isDisabled ? 'not-allowed' : 'pointer'}; opacity: ${isDisabled ? 0.5 : 1}; ${isDisabled ? 'background:#999; color:#fff; border:none; font-weight:700;' : ''}">
+          🪓 AU BÛCHER <span class="lg-flame">🔥</span> !
+        </button>
+      `;
+
+      const lynchBtn = actionInfo.querySelector('#btn-lynch');
+      if (lynchBtn && !isDisabled) {
+        lynchBtn.addEventListener('click', () => {
+          if (this.selectedLynchVictimId) {
+            this.executeLynch(this.selectedLynchVictimId);
+          }
+        });
+      }
+    }
+  }
+,
+
+
+  /**
+   * Get HTML for night summary (actions + deaths) - 2-column table layout
+   */
+  getNightSummaryHtml() {
+    const players = this.gm.state.players || [];
+    window.__mdjAudio = this; // pour les boutons sons inline
+    const actions = [];
+    const deaths = [];
+
+    // CRITICAL: morts de CETTE nuit = morts actuels − morts au début de la nuit.
+    // Source unique de vérité (deadPlayerIds) : couvre TOUT — loups, potions (Sorcière/Apprenti),
+    // amoureux (chagrin), tunnel, chevalier, bus, savant, MDJ… — et ignore les roleStates
+    // périmés des nuits précédentes (ex: Loup Blanc qui n'agit pas cette nuit).
+    const _deadAtStart = (typeof this.getDeadAtNightStartSet === 'function')
+      ? this.getDeadAtNightStartSet() : new Set(this.gm.state.deadAtNightStart || []);
+    const deadThisNight = Array.from(this.deadPlayerIds).filter(id =>
+      !_deadAtStart.has(id) && players.some(pp => pp.id === id)
+    );
+    // (Le tir du Chasseur n'entre dans les morts QUE via le bouton 🏹 TIRER — confirmé.)
+    // Add lynch victim
+    const lynchSelect = typeof document !== 'undefined' ? document.getElementById('lynch-target') : null;
+    const lynchVictim = lynchSelect?.value;
+    if (lynchVictim) {
+      deadThisNight.push(lynchVictim);
+    }
+
+    // Malédiction du Chevalier : le loup maudit meurt au DÉBRIEF de la nuit suivante
+    // (il a donc pu jouer une dernière fois la nuit en cours).
+    if (this.chevalierCursedWolfId && (this.currentNight || 1) > (this.chevalierCurseSetNight || 0)) {
+      const cw = this.chevalierCursedWolfId;
+      if (!this.deadPlayerIds.has(cw)) {
+        this.deadPlayerIds.add(cw);
+        this.deathCauses[cw] = 'chevalier';
+        if (typeof this.checkCupidonCascadingDeath === 'function') this.checkCupidonCascadingDeath(cw);
+        if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(cw, "Mort — maudit par le Chevalier à l'Épée Rouillée");
+      }
+      if (!deadThisNight.includes(cw)) deadThisNight.push(cw);
+      this.chevalierCursedWolfId = null;
+      this.chevalierCurseSetNight = null;
+    }
+
+    // 🕳️ Creuseur de Tunnel : sa mort (isolement d'un Loup) est désormais appliquée
+    // EN DIRECT à la validation de son action (completeRoleAction) → déjà dans deadThisNight.
+
+    // Lynch can include ANYONE alive, even wolves - removed wolf filter
+    const alivePlayers = players.filter(p => !this.deadPlayerIds.has(p.id));
+
+    // Collect actions (ONLY role actions, not transformations or Montreur_Ours)
+    const transformations = [];
+    Object.entries(this.roleStates).sort((a, b) => ((a[1] && a[1]._seq) || 0) - ((b[1] && b[1]._seq) || 0)).forEach(([roleId, state]) => {
+      // N'afficher QUE les actions saisies CETTE nuit (les roleStates des rôles
+      // qui n'agissent pas cette nuit gardent leur résultat des nuits précédentes).
+      if ((state && state._night || 1) !== (this.currentNight || 1)) return;
+      if (state.completed && state.result?.targets?.length > 0) {
+        const roleData = this.rolesLoader.getRole(roleId);
+        const roleName = roleData?.name || roleId;
+        const emoji = roleData?.emoji || '❓';
+        const action = state.result.action;
+
+        const targets = state.result.targets
+          .filter(t => !t.startsWith('potion-'))
+          .map(id => this.getPlayerName(id))
+          .join(' et ');
+
+        if (action === 'lover' && targets) {
+          actions.push(`${emoji} ${roleName} a lié ${targets}`);
+        } else if (action === 'idol' && targets) {
+          actions.push(`${emoji} ${roleName} a désigné ${targets}`);
+        } else if (action === 'see_role' && targets) {
+          actions.push(`${emoji} ${roleName} a vu ${targets}`);
+        } else if (action === 'protect' && targets) {
+          actions.push(`${emoji} ${roleName} a protégé ${targets}`);
+        } else if (action === 'sniff' && targets) {
+          actions.push(`${emoji} ${roleName} a reniflé ${targets}`);
+        } else if (action === 'resurrect' && targets) {
+          actions.push(`${emoji} ${roleName} a sauvé ${targets} (potion de vie)`);
+        } else if (action === 'poison' && targets) {
+          actions.push(`${emoji} ${roleName} a empoisonné ${targets}`);
+        } else if (targets) {
+          actions.push(`${emoji} ${roleName} → ${targets}`);
+        }
+      }
+    });
+
+    // CRITICAL: Collect transformations separately (display BELOW action table, not inside)
+    Object.entries(this.transformations).forEach(([playerId, trans]) => {
+      if (trans.from === 'Enfant_Sauvage') {
+        const playerName = this.getPlayerName(playerId);
+        transformations.push(`🐒➡️🐺 ${playerName} (Enfant Sauvage) transformé en loup - ${trans.reason}`);
+      }
+    });
+
+    // Collect deaths
+    // Uniquement les morts de CETTE nuit (pas tout l'historique de la partie)
+    const deadPlayers = players.filter(p => this.deadPlayerIds.has(p.id) && deadThisNight.includes(p.id));
+    deadPlayers.forEach(p => {
+      const roleData = this.rolesLoader.getRole(p.role);
+      const emoji = roleData?.emoji || '❓';
+      const roleName = roleData?.name || p.role || '?';
+
+      let cause = 'Cause inconnue';
+      const deathCause = this.deathCauses[p.id];
+
+      if (deathCause === 'love') {
+        cause = 'Mort d\'amour';
+      } else if (deathCause === 'poison') {
+        cause = 'Tué par la potion de la Sorcière';
+      } else if (deathCause === 'poisonApprenti') {
+        cause = "Tué par la potion de l'Apprenti Sorcier";
+      } else if (deathCause === 'lynch') {
+        cause = 'Lynché par le village';
+      } else if (deathCause === 'chasseur') {
+        cause = 'Tué par la vengeance du Chasseur';
+      } else if (deathCause === 'chevalier') {
+        cause = 'Maudit par le Chevalier';
+      } else if (deathCause === 'tunnel') {
+        cause = 'Mort — a creusé un tunnel vers un Loup-Garou';
+      } else if (deathCause === 'braises') {
+        cause = 'Sacrifié — a pointé un innocent au bûcher';
+      } else if (deathCause === 'bus') {
+        cause = 'Balancé par le Chauffeur de Bus à sa place';
+      } else if (deathCause === 'savant') {
+        cause = 'Emporté dans la mort par le Savant Fou';
+      } else if (deathCause === 'mdj') {
+        cause = 'Décision du Maître du Jeu';
+      } else if (deathCause === 'wolf') {
+        // Auteur PRÉCIS : quel rôle loup a validé cette victime cette nuit
+        // (Loup Blanc, Grand Méchant Loup, meute, Loup Voyant, futur rôle loup...)
+        const _who = (typeof this.getWolfKillerLabel === 'function') ? this.getWolfKillerLabel(p.id) : '🐺 Les Loups';
+        cause = 'Dévoré par ' + _who;
+      }
+
+      deaths.push({ name: p.name, role: p.role, roleName: roleName, emoji: emoji, cause: cause });
+    });
+
+    // Check for Montreur d'Ours growl
+    let montreurOursHtml = '';
+    const montreurOursPlayer = players.find(p => p.role === 'Montreur_Ours' && !this.deadPlayerIds.has(p.id));
+    if (montreurOursPlayer) {
+      const idx = players.indexOf(montreurOursPlayer);
+      let leftIdx = idx === 0 ? players.length - 1 : idx - 1;
+      let rightIdx = idx === players.length - 1 ? 0 : idx + 1;
+
+      // Skip dead players to find living neighbors
+      let leftWolfIdx = leftIdx;
+      while (this.deadPlayerIds.has(players[leftWolfIdx].id) && leftWolfIdx !== idx) {
+        leftWolfIdx = leftWolfIdx === 0 ? players.length - 1 : leftWolfIdx - 1;
+      }
+      let rightWolfIdx = rightIdx;
+      while (this.deadPlayerIds.has(players[rightWolfIdx].id) && rightWolfIdx !== idx) {
+        rightWolfIdx = rightWolfIdx === players.length - 1 ? 0 : rightWolfIdx + 1;
+      }
+
+      const leftNeighbor = players[leftWolfIdx];
+      const rightNeighbor = players[rightWolfIdx];
+
+      const leftIsWolf = leftNeighbor && !this.deadPlayerIds.has(leftNeighbor.id) &&
+                         (leftNeighbor.role?.includes('Loup') || leftNeighbor.role?.includes('Wolf'));
+      const rightIsWolf = rightNeighbor && !this.deadPlayerIds.has(rightNeighbor.id) &&
+                          (rightNeighbor.role?.includes('Loup') || rightNeighbor.role?.includes('Wolf'));
+
+      const hasWolfNearby = leftIsWolf || rightIsWolf;
+      const growlText = hasWolfNearby
+        ? '🐻 L\'ours du Montreur d\'Ours grogne ! Ça sent le loup !'
+        : '🐻 Ça ne grogne pas, pas de loup à proximité de l\'ours';
+
+      // Bouton son UNIQUEMENT si l'ours grogne (pas de bouton si rien à jouer)
+      const growlBtn = hasWolfNearby
+        ? `<button onclick="window.__mdjAudio && window.__mdjAudio.mdjPlaySfx('universfield-bear-191995.mp3')" title="Jouer le son de l'ours" style="border:none; border-radius:6px; padding:4px 9px; background:rgba(139,69,19,0.8); color:#fff; font-size:13px; cursor:pointer;">🔊🐻</button>`
+        : '';
+      montreurOursHtml = `
+        <div style="padding:5px 7px; margin-bottom:4px; background:rgba(139,69,19,0.12); border-left:2px solid #8B4513; font-size:11px; line-height:1.4; display:flex; align-items:center; gap:8px;">
+          <span style="flex:1;">${growlText}</span>
+          ${growlBtn}
+        </div>
+      `;
+    }
+
+    // CRITICAL: Montreur_Ours and transformations are NOT in actions table - they go BELOW
+    // IMPROVED: Much better readability with larger fonts, better contrast, and proper styling
+    const actionsHtml = actions.length > 0
+      ? actions.map(a => `<div style="padding:4px 6px; margin-bottom:4px; font-size:10px; line-height:1.3; background:rgba(129,223,247,0.1); border-radius:2px; border-left:2px solid #00BFFF; color:#b0e8ff;">${a}</div>`).join('')
+      : '<div style="padding:6px; text-align:center; color:#666; font-size:9px; font-style:italic;">Aucune action</div>';
+
+    const deathsHtml = deaths.length > 0
+      ? deaths.map(d => `<div style="padding:4px 6px; margin-bottom:4px; font-size:10px; line-height:1.3; background:rgba(255,102,102,0.1); border-radius:2px; border-left:2px solid #ff4444;"><strong style="color:#ffaaaa; font-size:10px;">${d.emoji} ${d.name}</strong> <span style="color:#ffaaaa; opacity:.75; font-size:9px;">(${d.roleName || '?'})</span><br><span style="color:#ff8888; font-size:9px;">${d.cause}</span></div>`).join('')
+      : '<div style="padding:6px; text-align:center; color:#666; font-size:9px; font-style:italic;">Aucune mort</div>';
+
+    // Check for special role deaths that need handling
+    // Show Chasseur revenge box ONLY if he actually died this night and hasn't shot yet.
+    const deadChaseur = players.find(p => p.role === 'Chasseur' && deadThisNight.includes(p.id) && !this.chasseurHasShot) || null;
+    const deadChevalier = deaths.find(d => d.role === 'Chevalier_Epee_Rouille');
+
+    // Le Maire est un STATUT (this.mayorId), pas un role.
+    const mayorDiesThisNight = this.mayorId && deadThisNight.includes(this.mayorId);
+
+    // Build special sections HTML
+    let specialSectionsHtml = '';
+
+    if (mayorDiesThisNight) {
+      const mayorPlayer = players.find(p => p.id === this.mayorId);
+      const successors = players.filter(p =>
+        !this.deadPlayerIds.has(p.id) &&
+        !deadThisNight.includes(p.id) &&
+        p.id !== this.mayorId
+      );
+      const successorOptions = successors.map(p => `<option value="${p.id}">${p.name} (${(this.rolesLoader.getRole(p.role)?.name) || p.role})</option>`).join('');
+      specialSectionsHtml += `
+        <div style="border: 1px solid rgba(255,215,0,0.4); border-radius: 3px; padding: 6px; background: rgba(255,215,0,0.06); margin-bottom: 6px;">
+          <div style="color: #FFD700; font-size: 9px; font-weight: 700; margin-bottom: 3px;">\u{1F396}\uFE0F ${mayorPlayer?.name || 'Le Maire'} meurt — designer le nouveau Maire</div>
+          <select id="mayor-reassign-target" style="width: 100%; padding: 4px; font-size: 9px; border-radius: 2px; border: 1px solid #FFD700; background: #333; color: #fff;">
+            <option value="">-- Nouveau Maire --</option>
+            ${successorOptions}
+          </select>
+        </div>
+      `;
+    }
+
+    // SERVANTE DEVOUEE: si vivante et qu'un joueur est mort cette nuit, elle peut prendre son role
+    const servante = players.find(p => p.role === 'Servante_Devouee' && !this.deadPlayerIds.has(p.id));
+    const deadThisNightPlayers = players.filter(p => deadThisNight.includes(p.id));
+    if (servante && deadThisNightPlayers.length > 0) {
+      const opts = deadThisNightPlayers.map(p => {
+        const rd = this.rolesLoader.getRole(p.role);
+        return `<option value="${p.id}">${p.name} (${rd?.name || p.role})</option>`;
+      }).join('');
+      specialSectionsHtml += `
+        <div style="border: 1px solid rgba(120,200,160,0.4); border-radius: 3px; padding: 6px; background: rgba(120,200,160,0.07); margin-bottom: 6px;">
+          <div style="color: #8fe0b0; font-size: 9px; font-weight: 700; margin-bottom: 3px;">🧹 Servante Dévouée (${servante.name}) — prendre le rôle d'un mort ?</div>
+          <select id="servante-take-target" style="width: 100%; padding: 4px; font-size: 9px; border-radius: 2px; border: 1px solid #8fe0b0; background: #333; color: #fff;">
+            <option value="">-- Ne rien faire --</option>
+            ${opts}
+          </select>
+        </div>
+      `;
+    }
+
+    if (deadChaseur) {
+      const alivePlayers = players.filter(p => !this.deadPlayerIds.has(p.id));
+      const playerOptions = alivePlayers.map(p => {
+        const _rd = this.rolesLoader.getRole(p.role);
+        return `<option value="${p.id}">${p.name} (${_rd?.name || p.role})</option>`;
+      }).join('');
+      specialSectionsHtml += `
+        <div style="border: 1px solid rgba(200,150,100,0.3); border-radius: 3px; padding: 6px; background: rgba(200,150,100,0.05); margin-bottom: 6px;">
+          <div style="color: #d4a574; font-size: 9px; font-weight: 600; margin-bottom: 3px;">🏹 ${deadChaseur.name} (Chasseur) — tir de vengeance avant de mourir</div>
+          <select id="chasseur-target" style="width: 100%; padding: 4px; font-size: 9px; border-radius: 2px; border: 1px solid #555; background: #333; color: #fff;">
+            <option value="">-- Cible --</option>
+            ${playerOptions}
+          </select>
+          <button id="chasseur-shoot-btn" style="width:100%; margin-top:5px; padding:7px; font-size:10px; font-weight:800; border:1px solid #d4a574; border-radius:4px; background:rgba(212,165,116,0.3); color:#ffe3c2; cursor:pointer;">
+            🏹 TIRER (confirmer)
+          </button>
+        </div>
+      `;
+    } else {
+      // Tir déjà confirmé (Chasseur mort cette nuit) : trace + possibilité d'ANNULER
+      const _chDead = players.find(p => p.role === 'Chasseur' && deadThisNight.includes(p.id));
+      const _cu = this.gm.state.chasseurUndo;
+      if (_chDead && this.chasseurHasShot && _cu && (_cu.killed || []).some(id => this.deadPlayerIds.has(id))) {
+        const _names = (_cu.killed || []).filter(id => this.deadPlayerIds.has(id)).map(id => this.getPlayerName(id)).join(', ');
+        specialSectionsHtml += `
+          <div style="border: 1px solid rgba(212,165,116,0.5); border-radius: 3px; padding: 6px; background: rgba(212,165,116,0.08); margin-bottom: 6px;">
+            <div style="color: #ffe3c2; font-size: 9px; font-weight: 700; margin-bottom: 4px;">🏹 ${_chDead.name} (Chasseur) a abattu <b>${_names}</b></div>
+            <button id="chasseur-cancel-btn" style="width:100%; padding:6px; font-size:9px; font-weight:700; border:1px solid #4aa3ff; border-radius:4px; background:rgba(74,163,255,0.18); color:#cfe4ff; cursor:pointer;">
+              ↩️ Annuler le tir (clic par erreur)
+            </button>
+          </div>
+        `;
+      }
+    }
+
+    // 🚌 Chauffeur de Bus mort cette nuit : balance quelqu'un a sa place (survit 1 fois)
+    const busDeadNight = players.find(p => p.role === 'Custom_Chauffeur_Bus' && deadThisNight.includes(p.id) && !this.busHasRedirected) || null;
+    if (busDeadNight) {
+      const busTargets = players.filter(p => !this.deadPlayerIds.has(p.id) && p.id !== busDeadNight.id);
+      const busOpts = busTargets.map(p => `<option value="${p.id}">${p.name} (${(this.rolesLoader.getRole(p.role)?.name) || p.role})</option>`).join('');
+      specialSectionsHtml += `
+        <div style="border: 1px solid rgba(74,163,255,0.5); border-radius: 3px; padding: 6px; background: rgba(74,163,255,0.08); margin-bottom: 6px;">
+          <div style="color: #8fc4ff; font-size: 9px; font-weight: 700; margin-bottom: 3px;">🚌 ${busDeadNight.name} (Chauffeur de Bus) \u2014 balance quelqu'un a sa place</div>
+          <select id="bus-target" style="width: 100%; padding: 4px; font-size: 9px; border-radius: 2px; border: 1px solid #4aa3ff; background: #333; color: #fff;">
+            <option value="">-- Il meurt (pas de report) --</option>
+            ${busOpts}
+          </select>
+        </div>
+      `;
+    } else if (this.busHasRedirected && this.gm.state.busUndo) {
+      // Report déjà validé : afficher la TRACE + possibilité d'ANNULER
+      const _bu = this.gm.state.busUndo;
+      const _busP = players.find(p => p.id === _bu.busId);
+      const _stillDead = (_bu.killed || []).filter(id => this.deadPlayerIds.has(id));
+      if (_busP && _stillDead.length) {
+        const _names = _stillDead.map(id => this.getPlayerName(id)).join(', ');
+        specialSectionsHtml += `
+          <div style="border: 1px solid rgba(74,163,255,0.5); border-radius: 3px; padding: 6px; background: rgba(74,163,255,0.08); margin-bottom: 6px;">
+            <div style="color: #8fc4ff; font-size: 9px; font-weight: 700; margin-bottom: 4px;">🚌 ${_busP.name} a balancé <b>${_names}</b> à sa place — il survit (démasqué, devient villageois)</div>
+            <button id="bus-cancel-btn" style="width:100%; padding:6px; font-size:9px; font-weight:700; border:1px solid #4aa3ff; border-radius:4px; background:rgba(74,163,255,0.18); color:#cfe4ff; cursor:pointer;">
+              ↩️ Annuler le report (clic par erreur)
+            </button>
+          </div>
+        `;
+      }
+    }
+
+    // 🔥 Chauffeur de Braises : bouton de sacrifice s'il a pointé un innocent (envoyé au bûcher).
+    const braisesAlive = players.find(p => p.role === 'Custom_Chauffeur_Braises' && !this.deadPlayerIds.has(p.id)) || null;
+    if (braisesAlive) {
+      specialSectionsHtml += `
+        <div style="border: 1px solid rgba(255,106,0,0.5); border-radius: 3px; padding: 6px; background: rgba(255,106,0,0.08); margin-bottom: 6px;">
+          <div style="color: #ffce9e; font-size: 9px; font-weight: 700; margin-bottom: 4px;">🔥 ${braisesAlive.name} (Chauffeur de Braises)</div>
+          <button id="braises-sacrifice-btn" data-bid="${braisesAlive.id}" style="width:100%; padding:7px; font-size:10px; font-weight:700; border:1px solid #ff6a00; border-radius:4px; background:rgba(255,106,0,0.25); color:#ffd9b0; cursor:pointer;">
+            A-t-il pointé un innocent (envoyé au bûcher) ? → ☠️ Le sacrifier
+          </button>
+        </div>
+      `;
+    } else {
+      // ↩️ Sacrifice déjà validé (clic par erreur ?) : proposer l'ANNULATION
+      const braisesDead = players.find(p => p.role === 'Custom_Chauffeur_Braises' && this.deadPlayerIds.has(p.id) && this.deathCauses[p.id] === 'braises') || null;
+      if (braisesDead) {
+        specialSectionsHtml += `
+          <div style="border: 1px solid rgba(120,170,255,0.5); border-radius: 3px; padding: 6px; background: rgba(120,170,255,0.08); margin-bottom: 6px;">
+            <div style="color: #bcd6ff; font-size: 9px; font-weight: 700; margin-bottom: 4px;">🔥 ${braisesDead.name} (Chauffeur de Braises) — sacrifié</div>
+            <button id="braises-cancel-btn" data-bid="${braisesDead.id}" style="width:100%; padding:7px; font-size:10px; font-weight:700; border:1px solid #4aa3ff; border-radius:4px; background:rgba(74,163,255,0.2); color:#cfe4ff; cursor:pointer;">
+              ↩️ Annuler le sacrifice (clic par erreur)
+            </button>
+          </div>
+        `;
+      }
+    }
+
+    if (deadChevalier) {
+      // CRITICAL: Find the wolf to the left of the Chevalier
+      const chevalierPlayer = players.find(p => p.role === 'Chevalier_Epee_Rouille');
+      if (chevalierPlayer) {
+        const idx = players.indexOf(chevalierPlayer);
+        let leftIdx = idx === 0 ? players.length - 1 : idx - 1;
+
+        // Skip dead players to find alive neighbors
+        let leftWolfIdx = leftIdx;
+        while (this.deadPlayerIds.has(players[leftWolfIdx].id) && leftWolfIdx !== idx) {
+          leftWolfIdx = leftWolfIdx === 0 ? players.length - 1 : leftWolfIdx - 1;
+        }
+
+        const leftNeighbor = players[leftWolfIdx];
+        const isWolf = leftNeighbor && (leftNeighbor.role?.includes('Loup') || leftNeighbor.role?.includes('Wolf'));
+
+        if (isWolf && !this.deadPlayerIds.has(leftNeighbor.id)) {
+          // Marque ce loup comme maudit ; il meurt au débrief de la nuit SUIVANTE.
+          this.chevalierCursedWolfId = leftNeighbor.id;
+          this.chevalierCurseSetNight = this.currentNight || 1;
+          const wolfName = leftNeighbor.name;
+          console.log(`[MDJ] ⚔️ Chevalier : loup maudit à gauche = ${wolfName} (meurt au débrief de la nuit suivante)`);
+
+          specialSectionsHtml += `
+            <div style="border: 1px solid #FFD700; border-radius: 3px; padding: 6px; background: rgba(255,215,0,0.08); margin-bottom: 6px;">
+              <div style="color: #FFD700; font-size: 10px; font-weight: 700;">⚔️ <b>${wolfName}</b> (${(this.rolesLoader.getRole(leftNeighbor.role)?.name) || leftNeighbor.role}) — loup à gauche du Chevalier <b>${chevalierPlayer.name}</b> — est maudit</div>
+              <div style="color: #ffe9a0; font-size: 9px; margin-top:2px;">Il jouera encore la nuit prochaine, puis mourra (annoncé au débrief d'après).</div>
+            </div>
+          `;
+        }
+      }
+    }
+
+    // Banniere "aucun mort cette nuit" (ex: victime des loups immunisee + sorciere inactive)
+    const realDeathsThisNight = deadThisNight.filter(id => players.some(p => p.id === id) && this.deadPlayerIds.has(id));
+    const noDeathBanner = realDeathsThisNight.length === 0
+      ? `<div style="margin-bottom:8px; padding:8px; text-align:center; font-size:11px; font-weight:700; color:#9ee6b0; background:rgba(80,200,120,0.12); border:1px solid rgba(80,200,120,0.4); border-radius:6px;">🌙 Personne n'est mort cette nuit</div>`
+      : '';
+
+    // Événements de la nuit (chronologique) — depuis le journal, filtré à la nuit courante
+    const _jrn = (typeof this.getJournal === 'function' ? this.getJournal() : [])
+      .filter(e => e.night === (this.currentNight || 1) && e.kind === 'event');
+    const eventsChronoHtml = _jrn.length
+      ? _jrn.map(e => `<div style="font-size:10px; padding:2px 6px; border-left:2px solid #c79cff; color:#e8d8ff; line-height:1.3;">🕒 ${e.time} — ${e.text}</div>`).join('')
+      : '<div style="font-size:9px; opacity:.5; padding:4px 6px;">Aucun événement</div>';
+    const eventsPanel = `
+      <div style="border:1px solid rgba(201,124,255,0.3); border-radius:4px; padding:8px; margin-bottom:8px; background:rgba(60,40,90,0.15);">
+        <div style="color:#c79cff; font-size:10px; font-weight:700; margin-bottom:4px; text-transform:uppercase;">📜 Événements de la nuit</div>
+        <div style="max-height:120px; overflow-y:auto; display:flex; flex-direction:column; gap:2px;">${eventsChronoHtml}</div>
+      </div>`;
+
+    // Rappel Corbeau : +2 votes contre sa cible (s'il est vivant et a désigné)
+    let corbeauReminder = '';
+    const _cbRes = this.roleStates && this.roleStates['Corbeau'] && this.roleStates['Corbeau'].result;
+    const _cbAlive = (this.gm.state.players || []).some(pl => pl.role === 'Corbeau' && !this.deadPlayerIds.has(pl.id));
+    if (_cbAlive && _cbRes && _cbRes.action === 'steal_votes' && Array.isArray(_cbRes.targets)) {
+      const cbId = _cbRes.targets.find(t => !String(t).startsWith('potion-'));
+      const cb = cbId && (this.gm.state.players || []).find(p => p.id === cbId);
+      if (cb && !this.deadPlayerIds.has(cb.id)) {
+        corbeauReminder = `<div style="padding:8px; margin-bottom:8px; background:rgba(40,40,60,0.9); border:2px solid #7a7ab0; border-radius:6px; font-size:11px; font-weight:700; color:#e0e0f0;">🐦‍⬛ Corbeau : <b>+2 votes</b> contre <b>${cb.name}</b> au vote d'aujourd'hui.</div>`;
+      }
+    }
+
+    // STYLIZED COMPACT LAYOUT: Dark mode with purple/pink accents
+    return `
+      <style>
+        @keyframes lgFlameFlicker { 0%,100%{ text-shadow:0 0 6px #ff9d00, 0 0 12px #ff5a00; opacity:1;} 50%{ text-shadow:0 0 10px #ffd000, 0 0 22px #ff3000; opacity:0.85;} }
+        @keyframes lgFlameRise { 0%{ transform:translateY(0) scale(1);} 50%{ transform:translateY(-2px) scale(1.15);} 100%{ transform:translateY(0) scale(1);} }
+        .lg-flame { display:inline-block; animation: lgFlameRise 0.7s ease-in-out infinite; }
+        .lg-bucher-title { background:linear-gradient(90deg,#ffe000,#ff8a00,#ff2d00); -webkit-background-clip:text; background-clip:text; color:transparent; font-weight:900; animation: lgFlameFlicker 1s ease-in-out infinite; }
+        @keyframes lgFireBg { 0%{ background-position:0% 0%; } 50%{ background-position:0% 100%; } 100%{ background-position:0% 0%; } }
+        @keyframes lgFireGlow { 0%,100%{ box-shadow:0 0 10px #ff6a00, 0 0 22px rgba(255,60,0,0.5), inset 0 -6px 14px rgba(130,0,0,0.55); } 50%{ box-shadow:0 0 22px #ffb000, 0 0 38px rgba(255,120,0,0.7), inset 0 -10px 20px rgba(255,70,0,0.6); } }
+        @keyframes lgFlamesFlick { 0%,100%{ transform:scaleY(1) translateY(0); opacity:0.85; } 25%{ transform:scaleY(1.3) translateY(-1px); opacity:1; } 50%{ transform:scaleY(0.85) translateY(0); opacity:0.7; } 75%{ transform:scaleY(1.15) translateY(-1px); opacity:0.95; } }
+        .lg-fire-btn { position:relative; overflow:hidden; isolation:isolate; border:none !important; color:#fff !important; font-weight:900 !important; letter-spacing:0.5px; background:linear-gradient(180deg,#ffd24a 0%,#ff8a00 40%,#ff3a00 70%,#9c1500 100%) !important; background-size:100% 220% !important; animation: lgFireBg 1.6s ease-in-out infinite, lgFireGlow 0.9s ease-in-out infinite; text-shadow:0 1px 2px rgba(0,0,0,0.6), 0 0 8px rgba(255,190,0,0.7); }
+        .lg-fire-btn::before { content:''; position:absolute; left:-10%; right:-10%; bottom:-30%; height:90%; z-index:-1; pointer-events:none; background:radial-gradient(45% 100% at 20% 100%, #ffe07a 0%, #ff7a00 40%, transparent 72%), radial-gradient(45% 100% at 50% 100%, #fff0a0 0%, #ff5a00 42%, transparent 72%), radial-gradient(45% 100% at 80% 100%, #ffd24a 0%, #ff7a00 40%, transparent 72%); filter:blur(3px); transform-origin:bottom; animation: lgFlamesFlick 0.42s ease-in-out infinite; }
+        .lg-fire-btn::after { content:''; position:absolute; left:5%; right:5%; bottom:-15%; height:70%; z-index:-1; pointer-events:none; background:radial-gradient(50% 100% at 35% 100%, #fff4c0 0%, #ff9a00 45%, transparent 70%), radial-gradient(50% 100% at 70% 100%, #ffe07a 0%, #ff6a00 45%, transparent 70%); filter:blur(2px); transform-origin:bottom; animation: lgFlamesFlick 0.66s ease-in-out infinite 0.1s; }
+      </style>
+      <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 6px; padding: 10px; border: 1px solid rgba(201,124,255,0.2);">
+        ${noDeathBanner}
+        ${corbeauReminder}
+        <!-- Actions puis Morts, empilés (pleine largeur), sans scroll, chronologique -->
+        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:8px;">
+          <div style="border: 1px solid rgba(0,191,255,0.3); border-radius: 4px; padding: 8px; background: linear-gradient(135deg, rgba(0,191,255,0.08) 0%, rgba(0,100,150,0.06) 100%);">
+            <div style="color: #4dd0e1; font-size: 11px; font-weight: 700; margin-bottom: 5px; text-transform: uppercase;">📋 Actions de la nuit</div>
+            <div>${actionsHtml}</div>
+          </div>
+          <div style="border: 1px solid rgba(255,68,68,0.3); border-radius: 4px; padding: 8px; background: linear-gradient(135deg, rgba(255,68,68,0.08) 0%, rgba(150,30,30,0.06) 100%);">
+            <div style="color: #ff6b6b; font-size: 11px; font-weight: 700; margin-bottom: 5px; text-transform: uppercase;">☠️ Morts de la nuit</div>
+            <div>${deathsHtml}</div>
+          </div>
+        </div>
+
+        <!-- SPECIAL EVENTS -->
+        <div style="margin-bottom: 8px; font-size: 10px;">
+          ${specialSectionsHtml}
+          ${montreurOursHtml}
+          ${transformations.length > 0 ? transformations.map(t => `
+            <div style="padding:5px 6px; margin-bottom:4px; background: linear-gradient(90deg, rgba(170,34,14,0.15) 0%, rgba(100,20,10,0.08) 100%); border-radius:3px; border-left:3px solid #d9534f; font-size:10px; line-height:1.3; color:#e0a0a0;">
+              ${t}
+            </div>
+          `).join('') : ''}
+        </div>
+
+        <!-- LYNCH SELECTION -->
+        <div style="border: 1px solid rgba(201,124,255,0.4); border-radius: 4px; padding: 8px; background: linear-gradient(135deg, rgba(201,124,255,0.12) 0%, rgba(150,50,200,0.08) 100%);">
+          <div style="color:#ffd0a0; font-size: 11px; font-weight:700; margin-bottom: 6px;">Sélectionne la personne à envoyer au bûcher</div>
+          <select id="lynch-target" style="width: 100%; padding: 6px; font-size: 11px; border-radius: 4px; border: 1px solid #e0a0ff; background: #1a1a2e; color: #fff; font-weight: 600;">
+            <option value="" style="background: #1a1a2e; color: #fff;">-- Sélectionner --</option>
+            ${alivePlayers.map(p => {
+              const _rd = this.rolesLoader.getRole(p.role);
+              return `<option value="${p.id}" style="background: #1a1a2e; color: #fff;">${p.name} (${_rd?.name || p.role || '?'})</option>`;
+            }).join('')}
+          </select>
+        </div>
+      </div>
+    `;
+  }
+,
+
+
+  /**
+   * REUSABLE: Process lynch victim - returns all death data
+   * Can be called from ANY phase (Night 1, 2, Day, etc.)
+   * Returns: {victim, victimRole, cascadeDeaths, enfantSauvageTransformed}
+   */
+  processLynchVictim(victimId) {
+    const players = this.gm.state.players || [];
+    const victim = players.find(p => p.id === victimId);
+    const victimRole = this.rolesLoader.getRole(victim.role);
+
+    console.log(`[MDJ] 🔥 ${victim.name} lynched - role revealed: ${victim.role}`);
+
+    // Track cascade deaths
+    const deadBeforeCascade = new Set(this.deadPlayerIds);
+
+    // Add to dead players
+    this.deadPlayerIds.add(victimId);
+    this.deathCauses[victimId] = 'lynch';
+
+    // Check cascading Cupidon death
+    this.checkCupidonCascadingDeath(victimId);
+
+    // Find cascade deaths
+    const cascadeDeaths = [];
+    this.deadPlayerIds.forEach(id => {
+      if (!deadBeforeCascade.has(id) && id !== victimId) {
+        cascadeDeaths.push(id);
+      }
+    });
+
+    // Check Enfant Sauvage transformation
+    let enfantSauvageTransformed = null;
+    if (this.roleStates['Enfant_Sauvage']?.completed && this.roleStates['Enfant_Sauvage']?.result?.targets?.includes(victimId)) {
+      const enfantPlayer = players.find(p => p.role === 'Enfant_Sauvage');
+      if (enfantPlayer && !this.deadPlayerIds.has(enfantPlayer.id)) {
+        enfantSauvageTransformed = enfantPlayer;
+      }
+    }
+
+    return {victim, victimRole, cascadeDeaths, enfantSauvageTransformed};
+  }
+,
+
+
+  /**
+   * Execute lynch - kill player and reveal role
+   * NIGHT 1 SPECIFIC: Uses processLynchVictim() and displays UI
+   */
+  /**
+   * Effet de mort/vote du role lynche: { survives, type, note }.
+   * Pilote par le type d'action JSON (surviveDayKill, killNeighbors, etc.).
+   */
+  getLynchDeathEffect(roleId) {
+    // Cas special Ancien : tué par le village → les villageois perdent leurs pouvoirs
+    if (roleId === 'Ancien') {
+      return { survives:false, type:'ancien', note:"👴 L'Ancien est tué par le village → TOUS les villageois à pouvoir (Voyante, Salvateur, Sorcière, Chasseur, Renard, Juge…) PERDENT leur pouvoir jusqu'à la fin de la partie !" };
+    }
+    const rd = this.rolesLoader.getRole(roleId) || {};
+    const blocks = rd.actions ? Object.values(rd.actions) : [];
+    const special = ['surviveDayKill','surviveFireOnce','redirectDeathOnce','dieOnTie','killVoters','killNeighbors','killOneNeighbor','voteWeightSacrifice','bonusKill','pauseWolfKill','winOnFirstDeath','vultureCondition'];
+    let type = null;
+    for (const b of blocks) {
+      if (b && typeof b === 'object' && special.includes(b.type)) { type = b.type; break; }
+    }
+    const notes = {
+      surviveDayKill: "🤪 Idiot du Village démasqué : il SURVIT au vote (il ne pourra plus voter ensuite).",
+      killNeighbors: "🧪 Savant Fou : à sa mort, ses 2 voisins (vivants) meurent aussi — à appliquer.",
+      killVoters: "🦠 Lépreux lynché : la prochaine attaque des loups est gâchée — à appliquer.",
+      bonusKill: "🐺 Louveteau mort : les loups ont droit à une victime bonus — à appliquer.",
+      pauseWolfKill: "🌙 Fils de la Lune mort : les loups ne tueront personne la prochaine nuit — à appliquer.",
+      winOnFirstDeath: "👼 Ange Déchu : s'il est éliminé très tôt, il gagne SEUL — vérifier la condition !",
+      dieOnTie: "🐐 Bouc Émissaire : meurt automatiquement en cas d'ÉGALITÉ des votes.",
+      vultureCondition: "🦅 Président : condition de victoire spéciale — vérifier.",
+      surviveFireOnce: "🔥 Chauffeur de Braises : il RÉSISTE au feu une fois et SURVIT au bûcher. Renvoie-le au bûcher une 2e fois (ou un loup le tue) ; ensuite c'est un simple villageois.",
+      redirectDeathOnce: "🚌 Chauffeur de Bus : il balance un autre joueur à sa place et SURVIT (1 fois). Désigne la victime de substitution sur la carte ; ensuite c'est un simple villageois.",
+      killOneNeighbor: "💥 Kamikaze : à sa mort, il emporte UN voisin vivant — celui à sa GAUCHE OU celui à sa DROITE (TON choix). Force la mort du voisin choisi via la carte.",
+      voteWeightSacrifice: "🔥 Chauffeur de Braises : sa voix compte DOUBLE (+1 voix au vote). MAIS s'il pointe un joueur de l'équipe Village, il se sacrifie et MEURT au feu."
+    };
+    return { survives: (type === 'surviveDayKill' || type === 'surviveFireOnce'), type, note: type ? (notes[type] || '') : '' };
+  }
+,
+
+  executeLynch(victimId) {
+    if (typeof this.pushUndo === 'function') this.pushUndo('Bûcher : ' + this.getPlayerName(victimId));
+    const result = this.processLynchVictim(victimId);
+    const {victim, victimRole, cascadeDeaths, enfantSauvageTransformed} = result;
+    const players = this.gm.state.players || [];
+
+    // Effet de mort/vote du role lynche
+    const _lynchEffect = this.getLynchDeathEffect(victim.role);
+    if (_lynchEffect.survives) {
+      this.deadPlayerIds.delete(victimId);
+      if (this.deathCauses) delete this.deathCauses[victimId];
+      console.log(`[MDJ] 🤪 ${victim.name} (${victim.role}) survit au vote`);
+    }
+
+    // EFFETS AUTOMATIQUES AU LYNCH
+    let _extraDeathsHtml = '';
+    if (_lynchEffect.type === 'killNeighbors') {
+      // Savant Fou: emporte ses 2 voisins VIVANTS dans la mort
+      const idx = players.indexOf(victim);
+      const aliveNeighbor = (dir) => {
+        let i = idx;
+        for (let k = 0; k < players.length; k++) {
+          i = (i + dir + players.length) % players.length;
+          if (i === idx) break;
+          if (!this.deadPlayerIds.has(players[i].id)) return players[i];
+        }
+        return null;
+      };
+      const victimsN = [];
+      [aliveNeighbor(-1), aliveNeighbor(1)].forEach(n => {
+        if (n && !this.deadPlayerIds.has(n.id)) {
+          this.deadPlayerIds.add(n.id);
+          this.deathCauses[n.id] = 'savant';
+          this.checkCupidonCascadingDeath(n.id);
+          victimsN.push(n.name);
+        }
+      });
+      if (victimsN.length) {
+        _extraDeathsHtml = `<div style="margin-top:12px; padding:10px; background:rgba(170,34,14,0.15); border:2px solid #d9534f; border-radius:6px; color:#ffb3ba; font-size:11px; font-weight:600;">🧪 Le Savant Fou emporte ${victimsN.join(' et ')} dans la mort !</div>`;
+      }
+    } else if (_lynchEffect.type === 'pauseWolfKill' || _lynchEffect.type === 'killVoters') {
+      this.skipNextWolfKill = true;
+      console.log(`[MDJ] 🌙 Prochaine attaque des loups annulée (${victim.role})`);
+    } else if (_lynchEffect.type === 'bonusKill') {
+      this.wolvesBonusKill = true;
+    }
+
+    // CRITICAL: Check for Enfant Sauvage idol death - transform to wolf if idol is lynched
+    if (this.roleStates['Enfant_Sauvage']?.completed && this.roleStates['Enfant_Sauvage']?.result?.targets?.includes(victimId)) {
+      const enfantPlayer = players.find(p => p.role === 'Enfant_Sauvage');
+      if (enfantPlayer && !this.deadPlayerIds.has(enfantPlayer.id)) {
+        console.log(`[MDJ] 🐒➡️🐺 Enfant Sauvage ${enfantPlayer.name}'s idol ${victim.name} was LYNCHED! Transform to wolf`);
+
+        // Record the transformation
+        this.transformations[enfantPlayer.id] = {
+          from: 'Enfant_Sauvage',
+          to: 'Simple_Loup_Garou',
+          reason: `idol ${victim.name} lynché au bûcher`
+        };
+        // Change player role to wolf
+        enfantPlayer.role = 'Simple_Loup_Garou';
+        enfantPlayer.camp = 'Loup'; // Change team to Wolf
+        console.log(`[MDJ] ✓ ${enfantPlayer.name} is now a Simple Loup Garou (transformed from Enfant Sauvage)`);
+      }
+    }
+
+    // Update map to show dead player (sauf si le role survit au vote)
+    const mdjMap = document.getElementById('mdj-live-map');
+    if (mdjMap && !_lynchEffect.survives) {
+      const victimPoint = mdjMap.querySelector(`[data-player-id="${victimId}"]`);
+      if (victimPoint) {
+        victimPoint.style.filter = 'grayscale(100%) brightness(0.5)';
+        victimPoint.style.opacity = '0.6';
+
+        const emoji = victimPoint.querySelector('.mdj-point-emoji');
+        if (emoji) {
+          emoji.textContent = '💀';
+          emoji.style.opacity = '0.6';
+        }
+      }
+    }
+
+    // Show death announcement
+    const listbox = document.getElementById('role-listbox');
+    const actionControls = document.getElementById('action-controls');
+    const actionInfo = document.getElementById('action-info');
+
+    // Check if victim is Chasseur and can shoot
+    const isChaseur = victim.role === 'Chasseur';
+    const chasseurCanShoot = isChaseur && !this.chasseurHasShot;
+
+    if (actionControls) {
+      let html = `
+        <div style="padding: 16px; text-align: center; background: rgba(52,73,94,0.3); border-radius: 4px; border: 2px solid #34495e;">
+          <div style="font-size: 40px; margin-bottom: 12px;">
+            💀
+          </div>
+          <div style="color: white; font-weight: bold; font-size: 16px; margin-bottom: 8px;">
+            ${victim.name}
+          </div>
+          <div style="color: #bdc3c7; font-size: 12px; margin-bottom: 4px;">
+            était
+          </div>
+          <div style="color: ${victimRole?.visual?.roleColor?.textColor || '#fff'}; font-weight: bold; font-size: 14px;">
+            ${victimRole?.emoji || '❓'} ${victimRole?.name || '?'}
+          </div>
+      `;
+
+      // Display cascade deaths (lovers who died with victim)
+      if (cascadeDeaths.length > 0) {
+        cascadeDeaths.forEach(cascadeVictimId => {
+          const cascadeVictim = players.find(p => p.id === cascadeVictimId);
+          const cascadeVictimRole = this.rolesLoader.getRole(cascadeVictim.role);
+          html += `
+            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.2);">
+              <div style="font-size: 32px; margin-bottom: 8px;">💔</div>
+              <div style="color: #ffb3ba; font-weight: bold; font-size: 15px; margin-bottom: 6px;">
+                ${cascadeVictim.name}
+              </div>
+              <div style="color: #ffcccc; font-size: 11px; margin-bottom: 3px;">
+                aussi mort (amoureux)
+              </div>
+              <div style="color: ${cascadeVictimRole?.visual?.roleColor?.textColor || '#ffb3ba'}; font-weight: bold; font-size: 12px;">
+                ${cascadeVictimRole?.emoji || '❓'} ${cascadeVictimRole?.name || '?'}
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      // Display Enfant Sauvage transformation
+      if (enfantSauvageTransformed) {
+        html += `
+          <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(170,34,14,0.4);">
+            <div style="font-size: 32px; margin-bottom: 8px;">🐒➡️🐺</div>
+            <div style="color: #e0a0a0; font-weight: bold; font-size: 15px; margin-bottom: 6px;">
+              ${enfantSauvageTransformed.name}
+            </div>
+            <div style="color: #ffcccc; font-size: 11px; margin-bottom: 3px;">
+              rendu fou par la mort de son idole, est devenu loup!
+            </div>
+          </div>
+        `;
+      }
+
+      // If Chasseur and can shoot, show combobox first
+      if (chasseurCanShoot) {
+        const alivePlayers = players.filter(p => !this.deadPlayerIds.has(p.id) && p.id !== victimId);
+        // N'IMPORTE QUI de vivant (sauf lui-même)
+        const validTargets = alivePlayers;
+
+        html += `
+          <div style="margin-top: 16px; padding: 12px; background: rgba(210,180,140,0.2); border: 2px solid #D4A574; border-radius: 6px;">
+            <h4 style="margin:0 0 8px 0; color:#D4A574; font-size:12px;">🏹 ${victim.name} peut tirer avant de mourir!</h4>
+            <p style="margin:0 0 8px 0; color:#ddd; font-size:11px;">Choisir sa cible (n'importe quel joueur vivant) :</p>
+            <select id="chasseur-revenge-target" style="width:100%; padding:6px; background:#333; color:#fff; border:1px solid #666; border-radius:3px; font-size:11px;">
+              <option value="">-- Pas de tir --</option>
+              ${validTargets.map(p => `<option value="${p.id}">${p.name} (${(this.rolesLoader.getRole(p.role)?.name) || p.role})</option>`).join('')}
+            </select>
+          </div>
+        `;
+      } else {
+        html += `
+          <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1); color: #95a5a6; font-size: 11px;">
+            Rendormez-vous, 2ème Nuit!
+          </div>
+        `;
+      }
+
+      // Morts induites par l'effet (ex: voisins du Savant Fou)
+      if (_extraDeathsHtml) html += _extraDeathsHtml;
+
+      // Rappel MDJ de l'effet de mort/vote du role
+      if (_lynchEffect.note) {
+        html += `
+          <div style="margin-top: 14px; padding: 10px; background: rgba(255,180,80,0.12); border: 2px solid #ffb84d; border-radius: 6px; color:#ffd9a3; font-size:11px; font-weight:600;">
+            ⚠️ ${_lynchEffect.note}
+          </div>
+        `;
+      }
+
+      // Servante Devouee: peut prendre le role du lynche
+      const _servante = players.find(p => p.role === 'Servante_Devouee' && !this.deadPlayerIds.has(p.id) && p.id !== victimId);
+      if (_servante && !_lynchEffect.survives) {
+        html += `
+          <div style="margin-top: 14px; padding: 10px; background: rgba(120,200,160,0.1); border: 2px solid #8fe0b0; border-radius: 6px;">
+            <div style="color:#8fe0b0; font-size:11px; font-weight:700; margin-bottom:6px;">🧹 Servante Dévouée (${_servante.name}) prend le rôle de ${victim.name} ?</div>
+            <select id="lynch-servante-take" style="width:100%; padding:6px; background:#333; color:#fff; border:1px solid #8fe0b0; border-radius:3px; font-size:11px;">
+              <option value="">-- Ne rien faire --</option>
+              <option value="${victimId}">Oui, devenir ${victimRole?.name || victim.role}</option>
+            </select>
+          </div>
+        `;
+      }
+
+      // Si la victime du buchet etait le MAIRE: proposer un successeur
+      if (victimId === this.mayorId) {
+        const successors = players.filter(p => !this.deadPlayerIds.has(p.id) && p.id !== victimId);
+        html += `
+          <div style="margin-top: 14px; padding: 10px; background: rgba(255,215,0,0.1); border: 2px solid #FFD700; border-radius: 6px;">
+            <div style="color:#FFD700; font-size:12px; font-weight:700; margin-bottom:6px;">🎖️ ${victim.name} était Maire — désigner le nouveau Maire</div>
+            <select id="lynch-mayor-reassign" style="width:100%; padding:6px; background:#333; color:#fff; border:1px solid #FFD700; border-radius:3px; font-size:11px;">
+              <option value="">-- Nouveau Maire --</option>
+              ${successors.map(p => `<option value="${p.id}">${p.name} (${(this.rolesLoader.getRole(p.role)?.name) || p.role})</option>`).join('')}
+            </select>
+          </div>
+        `;
+      }
+
+      html += `
+        </div>
+      `;
+      actionControls.innerHTML = html;
+
+      // Handler Servante (cas lynch)
+      const lynchServanteSel = document.getElementById('lynch-servante-take');
+      if (lynchServanteSel) {
+        lynchServanteSel.addEventListener('change', () => {
+          if (!lynchServanteSel.value) return;
+          const ps = this.gm.state.players || [];
+          const servantePlayer = ps.find(p => p.role === 'Servante_Devouee' && !this.deadPlayerIds.has(p.id));
+          const deadP = ps.find(p => p.id === lynchServanteSel.value);
+          if (servantePlayer && deadP) {
+            this.transformations[servantePlayer.id] = { from: 'Servante_Devouee', to: deadP.role, reason: `reprend le role de ${deadP.name}` };
+            servantePlayer.role = deadP.role;
+            console.log(`[MDJ] 🧹 Servante ${servantePlayer.name} reprend le role de ${deadP.name}`);
+            this.renderLiveMap();
+            this.quickSave && this.quickSave();
+          }
+        });
+      }
+
+      // Handler de reassignation du maire (cas lynch)
+      const lynchMayorSel = document.getElementById('lynch-mayor-reassign');
+      if (lynchMayorSel) {
+        lynchMayorSel.addEventListener('change', () => {
+          if (lynchMayorSel.value) {
+            this.mayorId = lynchMayorSel.value;
+            console.log(`[MDJ] 🎖️ Nouveau Maire (apres lynch): ${this.getPlayerName(this.mayorId)}`);
+            this.renderLiveMap();
+            this.quickSave && this.quickSave();
+          }
+        });
+      }
+    }
+
+    if (actionInfo) {
+      if (chasseurCanShoot) {
+        actionInfo.innerHTML = `
+          <button id="btn-chasseur-shoot" style="width: 100%; padding: 12px; background: #D4A574; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px; margin-bottom: 8px;">
+            🏹 Tirer!
+          </button>
+          <button id="btn-skip-shot" style="width: 100%; padding: 12px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px;">
+            ⏭️ Ne pas tirer
+          </button>
+        `;
+
+        const shootBtn = actionInfo.querySelector('#btn-chasseur-shoot');
+        const skipBtn = actionInfo.querySelector('#btn-skip-shot');
+
+        const executeShot = () => {
+          const targetSelect = document.getElementById('chasseur-revenge-target');
+          const targetId = targetSelect?.value;
+
+          if (targetId) {
+            const targetPlayer = players.find(p => p.id === targetId);
+            console.log(`[MDJ] 🏹 ${victim.name} (Chasseur) shoots: ${targetPlayer.name}`);
+            if (typeof this.pushUndo === 'function') this.pushUndo('Tir du Chasseur sur ' + this.getPlayerName(targetId));
+            this.deadPlayerIds.add(targetId);
+            this.deathCauses[targetId] = 'chasseur';
+            this.chasseurHasShot = true;
+            this.checkCupidonCascadingDeath(targetId);
+            if (typeof this.logPlayerEvent === 'function') this.logPlayerEvent(targetId, '🏹 Abattu par le tir de vengeance du Chasseur');
+            // ☠️ Mise à jour IMMÉDIATE : icône grisée + panneau des morts, sans attendre
+            // « Continuer vers la nuit suivante »
+            if (typeof this.renderLiveMap === 'function') this.renderLiveMap();
+            if (typeof this.renderLiveDeaths === 'function') this.renderLiveDeaths();
+            // Decompte en direct: si le tir du Chasseur decide la partie, l'afficher tout de suite
+            this.checkVictoryNow();
+          } else {
+            console.log(`[MDJ] 🏹 ${victim.name} (Chasseur) chooses not to shoot`);
+            this.chasseurHasShot = true;
+          }
+
+          // Now show continue button
+          showContinueButton();
+        };
+
+        const showContinueButton = () => {
+          actionInfo.innerHTML = `
+            <button id="btn-continue-night2" style="width: 100%; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px;">
+              ✓ Continuer vers Nuit 2
+            </button>
+          `;
+
+          const continueBtn = actionInfo.querySelector('#btn-continue-night2');
+          if (continueBtn) {
+            continueBtn.addEventListener('click', () => {
+              console.log('[MDJ] Moving to Night 2');
+              if (this.gm && typeof this.gm.saveState === 'function') {
+                this.gm.saveState();
+              }
+              if (window.gameUI && typeof window.gameUI.saveGameStateToCache === 'function') {
+                window.gameUI.saveGameStateToCache();
+              }
+              this.startNight2();
+            });
+          }
+        };
+
+        if (shootBtn) {
+          shootBtn.addEventListener('click', executeShot);
+        }
+        if (skipBtn) {
+          skipBtn.addEventListener('click', () => {
+            console.log(`[MDJ] 🏹 ${victim.name} (Chasseur) skips shooting`);
+            this.chasseurHasShot = true;
+            showContinueButton();
+          });
+        }
+      } else {
+        actionInfo.innerHTML = `
+          <button id="btn-continue-night2" style="width: 100%; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px;">
+            ✓ Continuer vers Nuit 2
+          </button>
+        `;
+
+        const continueBtn = actionInfo.querySelector('#btn-continue-night2');
+        if (continueBtn) {
+          continueBtn.addEventListener('click', () => {
+            console.log('[MDJ] Moving to Night 2');
+            if (this.gm && typeof this.gm.saveState === 'function') {
+              this.gm.saveState();
+            }
+            if (window.gameUI && typeof window.gameUI.saveGameStateToCache === 'function') {
+              window.gameUI.saveGameStateToCache();
+            }
+            this.startNight2();
+          });
+        }
+      }
+    }
+
+    // Zone bleue stays as player list - already disabled by disableRoleListbox()
+
+    // Decompte en direct: recalcule la victoire immediatement apres le lynch
+    this.checkVictoryNow();
+  }
+
+});
