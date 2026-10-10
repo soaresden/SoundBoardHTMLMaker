@@ -253,7 +253,12 @@ window.MGS_SOUNDS = {
      "04. Cavern.mp3",
      "Cavern (Stage 1 & 9)"
     ]
-   ]
+   ],
+   "brief": "01-Brief.mp3",
+   "start": "04. Cavern.mp3",
+   "events": {
+    "A": "elevator"
+   }
   },
   "2": {
    "music": [
@@ -271,7 +276,12 @@ window.MGS_SOUNDS = {
      "snake-camera surveillance.mp3",
      "🐍 « Des caméras… »"
     ]
-   ]
+   ],
+   "start": "snowfield.mp3",
+   "events": {
+    "A": "pop",
+    "B": "pop"
+   }
   },
   "3": {
    "music": [
@@ -289,7 +299,13 @@ window.MGS_SOUNDS = {
      "je suis pas une bleue.mp3",
      "🔫 Meryl : « pas une bleue »"
     ]
-   ]
+   ],
+   "start": "05. Intruder 1.mp3",
+   "events": {
+    "A": "codec",
+    "B": "codec",
+    "C": "pop"
+   }
   },
   "4": {
    "music": [
@@ -335,7 +351,8 @@ window.MGS_SOUNDS = {
      "death-ocelot.mp3",
      "💀 Ocelot vaincu"
     ]
-   ]
+   ],
+   "start": "12. Duel.mp3"
   },
   "5": {
    "music": [
@@ -353,7 +370,8 @@ window.MGS_SOUNDS = {
      "tank hurt.mp3",
      "💥 Tank touché"
     ]
-   ]
+   ],
+   "start": "12. Duel.mp3"
   },
   "6": {
    "music": [
@@ -361,7 +379,13 @@ window.MGS_SOUNDS = {
      "08. Warhead Storage.mp3",
      "Warhead Storage"
     ]
-   ]
+   ],
+   "start": "08. Warhead Storage.mp3",
+   "events": {
+    "A": "codec",
+    "B": "pop",
+    "C": "pop"
+   }
   },
   "7": {
    "music": [
@@ -443,7 +467,10 @@ window.MGS_SOUNDS = {
      "ninja-022 AHhhhhhhhh.mp3",
      "🗣️ AHhhhhhhhh"
     ]
-   ]
+   ],
+   "start": "intro ninja.mp3",
+   "boss": "12. Duel.mp3",
+   "end": "ninja fini.mp3"
   },
   "8": {
    "music": [
@@ -485,7 +512,8 @@ window.MGS_SOUNDS = {
      "death-mantis.mp3",
      "💀 Mantis vaincu"
     ]
-   ]
+   ],
+   "start": "12. Duel.mp3"
   },
   "9": {
    "music": [
@@ -496,6 +524,16 @@ window.MGS_SOUNDS = {
     [
      "torture.mp3",
      "Torture"
+    ]
+   ],
+   "start": "04. Cavern.mp3",
+   "events": {
+    "A": "pop"
+   },
+   "cues": [
+    [
+     "torture.mp3",
+     "😖 Torture"
     ]
    ]
   },
@@ -559,7 +597,9 @@ window.MGS_SOUNDS = {
      "death-hind.mp3",
      "💀 Hind abattu"
     ]
-   ]
+   ],
+   "start": "hind.mp3",
+   "boss": "12. Duel.mp3"
   },
   "11": {
    "music": [
@@ -567,7 +607,8 @@ window.MGS_SOUNDS = {
      "12. Duel.mp3",
      "Duel — Boss Theme"
     ]
-   ]
+   ],
+   "start": "12. Duel.mp3"
   },
   "12": {
    "music": [
@@ -581,7 +622,8 @@ window.MGS_SOUNDS = {
      "raven m1 intro.mp3",
      "🦅 Raven : intro"
     ]
-   ]
+   ],
+   "start": "12. Duel.mp3"
   },
   "13": {
    "music": [
@@ -600,6 +642,26 @@ window.MGS_SOUNDS = {
     [
      "12. Duel.mp3",
      "Duel — Boss Theme"
+    ]
+   ],
+   "start": "16. Rex's Lair.mp3",
+   "events": {
+    "A": "pop",
+    "B": "pop",
+    "C": "win"
+   },
+   "cues": [
+    [
+     "16. Rex's Lair.mp3",
+     "🔑 PAL normale"
+    ],
+    [
+     "15. Colosseo.mp3",
+     "🧊 PAL froide"
+    ],
+    [
+     "14. Blast Furnace.mp3",
+     "🔥 PAL chaude"
     ]
    ]
   },
@@ -623,7 +685,9 @@ window.MGS_SOUNDS = {
      "death-liquid.mp3",
      "💀 Liquid vaincu"
     ]
-   ]
+   ],
+   "start": "16. Rex's Lair.mp3",
+   "boss": "12. Duel.mp3"
   },
   "VR60": {
    "music": [
@@ -639,7 +703,16 @@ window.MGS_SOUNDS = {
      "vr gameover.mp3",
      "VR Game Over"
     ]
-   ]
+   ],
+   "start": "19. VR Training.mp3",
+   "events": {
+    "A": "pop",
+    "B": "pop",
+    "C": "pop",
+    "D": "pop"
+   },
+   "end": "Vr2.mp3",
+   "fail": "vr gameover.mp3"
   }
  },
  "auto": {

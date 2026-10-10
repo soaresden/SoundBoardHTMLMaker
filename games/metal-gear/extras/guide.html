@@ -313,9 +313,9 @@ details.q p{margin:0 0 12px}
 <script src="guide/data.js?v=3"></script>
 <script src="guide/missions.js?v=3"></script>
 <script src="guide/lessons.js?v=3"></script>
-<script src="guide/sounds.js?v=2"></script>
+<script src="guide/sounds.js?v=3"></script>
 <script src="help-overlay.js?v=2"></script>
-<script src="mgs-assistant.js?v=21"></script>
+<script src="mgs-assistant.js?v=30"></script>
 <script>
 (function(){
   const $ = (s, r=document) => r.querySelector(s);
@@ -348,7 +348,7 @@ details.q p{margin:0 0 12px}
   if (!httpOK) offBtn.style.display = 'none'; // en file:// tout est déjà local
   else navigator.serviceWorker.register('sw.js').catch(() => {});
   offBtn.onclick = async () => {
-    const urls = ['guide.html', 'guide/data.js?v=3', 'guide/missions.js?v=3', 'guide/lessons.js?v=3', 'guide/sounds.js?v=2', 'help-overlay.js?v=2', 'mgs-assistant.js?v=21', 'sfx/codec.mp3',
+    const urls = ['guide.html', 'guide/data.js?v=3', 'guide/missions.js?v=3', 'guide/lessons.js?v=3', 'guide/sounds.js?v=3', 'help-overlay.js?v=2', 'mgs-assistant.js?v=30', 'sfx/codec.mp3',
       ...['guard-order-card','snake-dashboard','los-facing','los-box','obstacles','los-move','camera-trap-laser','waken','camera-tokens'].map(n => `guide/img/${n}.jpg`),
       ...M.flatMap(m => [...(m.images||[]), ...(m.pageImages||[])])];
     try {
