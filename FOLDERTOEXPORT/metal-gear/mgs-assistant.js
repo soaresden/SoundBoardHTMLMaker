@@ -8,6 +8,8 @@
    API : MGSAssistant.open({ mid, tab }) */
 (function () {
   if (window.MGSAssistant) return;
+  const tx = window.tx || ((fr) => fr);   // i18n.js : tx('FR', 'EN')
+  const EN = window.MGS_LANG === 'en';
   const $ = (s, r = document) => r.querySelector(s);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const MIS = () => window.MGS_MISSIONS || [];
@@ -53,9 +55,9 @@
     return { red: r ? +r : 7, blue, drawn: 0, burned: 0 };
   }
   /* 🎒 Équipement : cartes de départ du personnage + cartes numérotées de la Memory Box (#001…) */
-  const ITYPES = { ration: ['🍴', 'Ration', 1], chaff: ['✨', 'Chaff', 1], grenade: ['💣', 'Grenade', 1], gun: ['🔫', 'Arme', null], sgun: ['🔇', 'Arme silencieuse', null], other: ['🎒', 'Autre', null] };
+  const ITYPES = { ration: ['🍴', 'Ration', 1], chaff: ['✨', 'Chaff', 1], grenade: ['💣', 'Grenade', 1], gun: ['🔫', tx('Arme', 'Weapon'), null], sgun: ['🔇', tx('Arme silencieuse', 'Silenced weapon'), null], other: ['🎒', tx('Autre', 'Other'), null] };
   const START_GEAR = {
-    'Meryl': [['Pistolet (.50)', 'gun'], ['Fusil d\'assaut léger', 'gun']],
+    'Meryl': [[tx('Pistolet (.50)', 'Handgun (.50 cal)'), 'gun'], [tx('Fusil d\'assaut léger', 'Light Assault Rifle'), 'gun']],
     'Gray Fox': [['Stealth Camouflage', 'other'], ['High-Frequency Blade', 'other'], ['Arm Cannon', 'gun']],
     'Otacon': [['ADV. Stealth Camouflage', 'other'], ['Rations', 'ration']],
   };
@@ -63,46 +65,47 @@
   /* Cartes Équipement (relevées sur les cartes du jeu, n° « ITEM 0NN »).
      kind = ce que l'assistant sait en faire ; cost = actions ; dice = dés lancés ; uses = munitions / jetons / doses ;
      cls = pistol | rifle (pour les silencieux) ; only = personnages autorisés ; codec = fiche du Codec Book. */
-  const RATION_C = { name: 'Rations', type: 'ration', kind: 'heal', cost: 1, uses: 1, ic: '🍴', codec: '05.13', tip: 'Retire jusqu\'à 2 dégâts, puis défausse la carte.' };
-  const BOX_C = { type: 'other', kind: 'box', cost: 1, ic: '📦', codec: '06.02', tip: 'Hors LOS d\'un garde / d\'une caméra : remplace ta figurine par le carton. Les gardes te prennent pour un garde. Tu ressors si tu sautes un garde, entres dans une LOS ou fais autre chose que Sneak / Dash / Focus ; un garde qui finit adjacent et face à toi te démasque.' };
+  const RATION_C = { name: 'Rations', type: 'ration', kind: 'heal', cost: 1, uses: 1, ic: '🍴', codec: '05.13', tip: tx('Retire jusqu\'à 2 dégâts, puis défausse la carte.', 'Discard up to 2 damage, then discard this card.') };
+  const BOX_C = { type: 'other', kind: 'box', cost: 1, ic: '📦', codec: '06.02', tip: tx('Hors LOS d\'un garde / d\'une caméra : remplace ta figurine par le carton. Les gardes te prennent pour un garde. Tu ressors si tu sautes un garde, entres dans une LOS ou fais autre chose que Sneak / Dash / Focus ; un garde qui finit adjacent et face à toi te démasque.', 'If not in LOS of a Guard or Camera, swap your figure for the Cardboard Box. Guards and Cameras treat you as a Guard. You pop out if you leapfrog a Guard, move into or through a LOS, or do anything other than Sneak / Dash / Focus; a Guard ending its move adjacent and facing you uncovers you.') };
   const CARDS = {
-    1: { name: 'Pistolet (.45)', type: 'gun', kind: 'shoot', cls: 'pistol', cost: 1, dice: ['w'], ic: '🔫', codec: '02.01', tip: 'Attaque une cible en LOS (1 dé). LOUD. Munitions illimitées.' },
+    1: { name: tx('Pistolet (.45)', 'Pistol (.45 cal)'), type: 'gun', kind: 'shoot', cls: 'pistol', cost: 1, dice: ['w'], ic: '🔫', codec: '02.01', tip: tx('Attaque une cible en LOS (1 dé). LOUD. Munitions illimitées.', 'Attack a target in LOS (1 die). LOUD. Unlimited ammo.') },
     2: RATION_C, 6: RATION_C, 12: RATION_C, 15: RATION_C,
-    3: { name: 'Grenade chaff', type: 'chaff', kind: 'chaff', cost: 1, uses: 1, ic: '✨', codec: '05.12', tip: 'Jusqu\'à la fin du round : caméras et capteurs ignorés dans la zone. Garde dans ta zone → tu attires l\'attention (?). Puis défausse.' },
-    4: { name: 'Grenade incapacitante', type: 'grenade', kind: 'stun', cost: 1, uses: 1, ic: '💥', codec: '07.08', tip: 'Case en LOS à 5 cases max : chaque garde à 2 cases (en LOS de la case) devient KO ★. LOUD. Puis défausse. Sans effet sur les VR Boss.' },
-    5: { name: 'C-4', type: 'other', kind: 'c4', cost: 1, uses: 2, ic: '🧨', codec: '02.06', tip: 'Poser (1) : un C-4 sur une case adjacente. Faire sauter (1) : chaque C-4 inflige 2 dégâts à toute figurine à 1 case en LOS ; gardes dans la zone et pas de ! → ton ! sur le C-4 le plus proche.' },
-    7: { name: 'Grenade', type: 'grenade', kind: 'frag', cost: 1, uses: 1, ic: '💣', codec: '02.06', tip: 'Case en LOS à 5 cases max : 2 dégâts à toutes les figurines à 2 cases (en LOS de la case). LOUD. Puis défausse.' },
-    8: { name: 'Mines Claymore', type: 'other', kind: 'plant', cost: 1, uses: 2, ic: '🪤', codec: '02.06', tip: 'Pose sur une case adjacente. Une figurine qui y entre : 2 dégâts à chaque figurine à 2 cases en LOS ; gardes dans la zone et pas de ! → ton ! sur la mine.' },
-    9: { name: 'Nikita', type: 'other', kind: 'missile', cost: 1, uses: 3, dice: ['w', 'w', 'w'], ic: '🚀', codec: '06.01', tip: 'Missile posé à côté, puis 2 dés noirs : avance du résultat d\'un dé dans une direction, puis (option) de l\'autre. Obstacle / figurine → attaque (3 dés) toutes les figurines à 1 case. LOUD.' },
-    10: Object.assign({ name: 'Carton A' }, BOX_C), 27: Object.assign({ name: 'Carton B' }, BOX_C),
-    11: { name: 'Médicament', type: 'other', kind: 'free', cost: 0, uses: 1, ic: '💊', codec: '06.03', tip: 'À tout moment de ton tour : rafraîchit tous tes jetons Focus. Puis défausse.' },
-    13: { name: 'Carte magnétique niv. 3', type: 'other', kind: 'key', cost: 1, uses: 1, ic: '💳', codec: '06.06', tip: 'Ouvre une porte jusqu\'au niveau 3 sur ta case. Puis défausse.' },
-    14: { name: 'Masque à gaz', type: 'other', kind: 'scan', cost: 1, ic: '😷', codec: '06.05', tip: 'Ignore le gaz. Télépathie résiduelle (1) : regarde la carte du dessus Guard Order ou Guard Reaction puis remets-la.' },
-    16: { name: 'Corde', type: 'other', kind: 'rope', cost: 1, uses: 5, ic: '🪢', codec: '06.07', tip: 'Ligote un garde KO adjacent : il ignore les Réveils. Un garde qui marche sur la corde la retire.' },
-    17: { name: 'Lance-missile', type: 'other', kind: 'missile', cost: 1, uses: 3, dice: ['w', 'w', 'w'], ic: '🚀', codec: '06.08', tip: 'Le missile part tout droit jusqu\'à un obstacle ou une figurine, puis attaque (3 dés) toutes les figurines à 1 case en LOS. LOUD.' },
-    18: { name: 'Fusil de sniper', type: 'gun', kind: 'shoot', cls: 'rifle', cost: 2, dice: ['w', 'w', 'w'], uses: 6, ic: '🎯', codec: '05.10', tip: '1 munition : attaque une cible en LOS (3 dés). 2 actions. LOUD.' },
-    19: { name: 'Pentazémine', type: 'other', kind: 'free', cost: 0, uses: 2, ic: '💊', codec: '06.09', tip: '1 dose à tout moment : jusqu\'à la fin du tour, chaque jet peut relancer les dés voulus une fois.' },
-    20: { name: 'Mouchoir', type: 'other', kind: 'passive', only: ['Otacon'], ic: '🧣', codec: '06.11', tip: '1×/round : modifie un dé noir de ±1 quand tu pirates.' },
-    21: { name: 'Gilet pare-balles', type: 'other', kind: 'passive', def: 1, only: ['Snake', 'Meryl'], ic: '🦺', codec: '06.12', tip: 'Défense +1 (appliquée aux attaques des gardes).' },
-    22: { name: 'Carte magnétique niv. 4', type: 'other', kind: 'key', cost: 1, uses: 1, ic: '💳', codec: '06.06', tip: 'Ouvre une porte jusqu\'au niveau 4 sur ta case. Puis défausse.' },
-    23: { name: 'Bandana', type: 'other', kind: 'passive', only: ['Snake'], ic: '🎽', codec: '07.05', tip: 'Tes armes ne consomment plus de munitions.' },
-    24: { name: 'Silencieux de pistolet', type: 'other', kind: 'passive', sil: 'pistol', ic: '🔇', codec: '07.01', tip: 'Le pistolet n\'est plus LOUD.' },
-    25: { name: 'Fusil d\'assaut', type: 'gun', kind: 'shoot', cls: 'rifle', cost: 1, dice: ['w', 'w'], uses: 6, ic: '🔫', codec: '05.10', tip: '1 munition : attaque une cible en LOS (2 dés). LOUD.' },
-    26: { name: 'Bombe à retardement', type: 'other', kind: 'plant', cost: 1, uses: 1, ic: '⏲️', codec: '02.06', tip: 'Pose-la à côté. Au début de ton tour suivant : 3 dégâts à toutes les figurines à 2 cases en LOS ; gardes dans la zone et pas de ! → ton ! dessous.' },
-    28: { name: 'Lunettes de vision nocturne', type: 'other', kind: 'scan', cost: 1, ic: '🥽', codec: '07.04', tip: 'Ignore les capteurs laser. Repérage (1) : retourne tous les jetons ? face cachée à 5 cases.' },
-    29: { name: 'Lunettes thermiques', type: 'other', kind: 'scan', cost: 2, ic: '🥽', codec: '07.04', tip: 'Ignore les capteurs laser. Scan (2) : retourne 1 jeton ? face cachée de ta zone, même derrière une porte.' },
-    30: { name: 'Camouflage optique', type: 'other', kind: 'stealth', cost: 1, uses: 2, ic: '👻', codec: '07.02', tip: '1 charge : jusqu\'à la fin du tour, pas de ! quand tu es dans la LOS d\'un garde ou d\'une caméra, et les gardes sautés n\'attaquent pas. Le bruit compte toujours.' },
-    31: { name: 'Carte PAL', type: 'other', kind: 'passive', ic: '🗝️', codec: '07.06', tip: 'Relance 1 dé à chaque jet pour déverrouiller une porte.' },
-    32: { name: 'Silencieux de fusil', type: 'other', kind: 'passive', sil: 'rifle', ic: '🔇', codec: '07.01', tip: 'Le fusil n\'est plus LOUD.' },
+    3: { name: tx('Grenade chaff', 'Chaff Grenade'), type: 'chaff', kind: 'chaff', cost: 1, uses: 1, ic: '✨', codec: '05.12', tip: tx('Jusqu\'à la fin du round : caméras et capteurs ignorés dans la zone. Garde dans ta zone → tu attires l\'attention (?). Puis défausse.', 'Until the end of the round, players ignore Cameras and Sensors in this zone. Guard in your zone → you Draw Attention (?). Then discard.') },
+    4: { name: tx('Grenade incapacitante', 'Stun Grenade'), type: 'grenade', kind: 'stun', cost: 1, uses: 1, ic: '💥', codec: '07.08', tip: tx('Case en LOS à 5 cases max : chaque garde à 2 cases (en LOS de la case) devient KO ★. LOUD. Puis défausse. Sans effet sur les VR Boss.', 'Target a space in LOS within 5: each Guard within 2 spaces (in LOS of it) becomes KO ★. LOUD. Then discard. No effect on VR Bosses.') },
+    5: { name: 'C-4', type: 'other', kind: 'c4', cost: 1, uses: 2, ic: '🧨', codec: '02.06', tip: tx('Poser (1) : un C-4 sur une case adjacente. Faire sauter (1) : chaque C-4 inflige 2 dégâts à toute figurine à 1 case en LOS ; gardes dans la zone et pas de ! → ton ! sur le C-4 le plus proche.', 'Plant (1): one C-4 in an adjacent space. Detonate (1): each C-4 deals 2 damage to each figure within 1 space in LOS; Guards in that zone and your ! not on the map → place it on the nearest C-4.') },
+    7: { name: 'Grenade', type: 'grenade', kind: 'frag', cost: 1, uses: 1, ic: '💣', codec: '02.06', tip: tx('Case en LOS à 5 cases max : 2 dégâts à toutes les figurines à 2 cases (en LOS de la case). LOUD. Puis défausse.', 'Target a space in LOS within 5: 2 damage to all figures within 2 spaces (in LOS of it). LOUD. Then discard.') },
+    8: { name: tx('Mines Claymore', 'Claymore Mines'), type: 'other', kind: 'plant', cost: 1, uses: 2, ic: '🪤', codec: '02.06', tip: tx('Pose sur une case adjacente. Une figurine qui y entre : 2 dégâts à chaque figurine à 2 cases en LOS ; gardes dans la zone et pas de ! → ton ! sur la mine.', 'Plant in an adjacent space. When a figure moves into it: 2 damage to each figure within 2 spaces in LOS; Guards in that zone and your ! not on the map → place it on the mine.') },
+    9: { name: 'Nikita', type: 'other', kind: 'missile', cost: 1, uses: 3, dice: ['w', 'w', 'w'], ic: '🚀', codec: '06.01', tip: tx('Missile posé à côté, puis 2 dés noirs : avance du résultat d\'un dé dans une direction, puis (option) de l\'autre. Obstacle / figurine → attaque (3 dés) toutes les figurines à 1 case. LOUD.', 'Place the missile adjacent, roll 2 black dice: move it one result in any direction, then (optionally) the other. Obstacle / figure → attack (3 dice) all figures within 1 space. LOUD.') },
+    10: Object.assign({ name: tx('Carton A', 'Cardboard Box A') }, BOX_C), 27: Object.assign({ name: tx('Carton B', 'Cardboard Box B') }, BOX_C),
+    11: { name: tx('Médicament', 'Medicine'), type: 'other', kind: 'free', cost: 0, uses: 1, ic: '💊', codec: '06.03', tip: tx('À tout moment de ton tour : rafraîchit tous tes jetons Focus. Puis défausse.', 'Anytime during your turn: refresh all your Focus tokens. Then discard.') },
+    13: { name: tx('Carte magnétique niv. 3', 'Card Key Level 3'), type: 'other', kind: 'key', cost: 1, uses: 1, ic: '💳', codec: '06.06', tip: tx('Ouvre une porte jusqu\'au niveau 3 sur ta case. Puis défausse.', 'Unlock a door up to Level 3 in your space. Then discard.') },
+    14: { name: tx('Masque à gaz', 'Gas Mask'), type: 'other', kind: 'scan', cost: 1, ic: '😷', codec: '06.05', tip: tx('Ignore le gaz. Télépathie résiduelle (1) : regarde la carte du dessus Guard Order ou Guard Reaction puis remets-la.', 'Ignore Poison Gas. Residual Telepathy (1): reveal the top Guard Order or Guard Reaction card, then put it back.') },
+    16: { name: tx('Corde', 'Rope'), type: 'other', kind: 'rope', cost: 1, uses: 5, ic: '🪢', codec: '06.07', tip: tx('Ligote un garde KO adjacent : il ignore les Réveils. Un garde qui marche sur la corde la retire.', 'Tie up an adjacent KO\'d Guard: it ignores Waken. A Guard moving onto the rope removes it.') },
+    17: { name: tx('Lance-missile', 'Missile Launcher'), type: 'other', kind: 'missile', cost: 1, uses: 3, dice: ['w', 'w', 'w'], ic: '🚀', codec: '06.08', tip: tx('Le missile part tout droit jusqu\'à un obstacle ou une figurine, puis attaque (3 dés) toutes les figurines à 1 case en LOS. LOUD.', 'The missile flies straight until it hits an obstacle or a figure, then attacks (3 dice) all figures within 1 space in LOS. LOUD.') },
+    18: { name: tx('Fusil de sniper', 'Sniper Rifle'), type: 'gun', kind: 'shoot', cls: 'rifle', cost: 2, dice: ['w', 'w', 'w'], uses: 6, ic: '🎯', codec: '05.10', tip: tx('1 munition : attaque une cible en LOS (3 dés). 2 actions. LOUD.', '1 ammo: attack a target in LOS (3 dice). 2 actions. LOUD.') },
+    19: { name: tx('Pentazémine', 'Pentazemin'), type: 'other', kind: 'free', cost: 0, uses: 2, ic: '💊', codec: '06.09', tip: tx('1 dose à tout moment : jusqu\'à la fin du tour, chaque jet peut relancer les dés voulus une fois.', '1 pill anytime: until the end of your turn, you may reroll any number of dice once on each roll.') },
+    20: { name: tx('Mouchoir', 'Handkerchief'), type: 'other', kind: 'passive', only: ['Otacon'], ic: '🧣', codec: '06.11', tip: tx('1×/round : modifie un dé noir de ±1 quand tu pirates.', 'Once per round: modify a single black die by ±1 when hacking.') },
+    21: { name: tx('Gilet pare-balles', 'Body Armor'), type: 'other', kind: 'passive', def: 1, only: ['Snake', 'Meryl'], ic: '🦺', codec: '06.12', tip: tx('Défense +1 (appliquée aux attaques des gardes).', 'Defense +1 (applied to Guard attacks).') },
+    22: { name: tx('Carte magnétique niv. 4', 'Card Key Level 4'), type: 'other', kind: 'key', cost: 1, uses: 1, ic: '💳', codec: '06.06', tip: tx('Ouvre une porte jusqu\'au niveau 4 sur ta case. Puis défausse.', 'Unlock a door up to Level 4 in your space. Then discard.') },
+    23: { name: 'Bandana', type: 'other', kind: 'passive', only: ['Snake'], ic: '🎽', codec: '07.05', tip: tx('Tes armes ne consomment plus de munitions.', 'You do not discard ammo when using weapons.') },
+    24: { name: tx('Silencieux de pistolet', 'Pistol Suppressor'), type: 'other', kind: 'passive', sil: 'pistol', ic: '🔇', codec: '07.01', tip: tx('Le pistolet n\'est plus LOUD.', 'Ignore LOUD on the Pistol.') },
+    25: { name: tx('Fusil d\'assaut', 'Assault Rifle'), type: 'gun', kind: 'shoot', cls: 'rifle', cost: 1, dice: ['w', 'w'], uses: 6, ic: '🔫', codec: '05.10', tip: tx('1 munition : attaque une cible en LOS (2 dés). LOUD.', '1 ammo: attack a target in LOS (2 dice). LOUD.') },
+    26: { name: tx('Bombe à retardement', 'Time Bomb'), type: 'other', kind: 'plant', cost: 1, uses: 1, ic: '⏲️', codec: '02.06', tip: tx('Pose-la à côté. Au début de ton tour suivant : 3 dégâts à toutes les figurines à 2 cases en LOS ; gardes dans la zone et pas de ! → ton ! dessous.', 'Drop it in an adjacent space. At the start of your next turn: 3 damage to all figures within 2 spaces in LOS; Guards in your zone and your ! not on the map → place it under the bomb.') },
+    28: { name: tx('Lunettes de vision nocturne', 'Night Vision Goggles'), type: 'other', kind: 'scan', cost: 1, ic: '🥽', codec: '07.04', tip: tx('Ignore les capteurs laser. Repérage (1) : retourne tous les jetons ? face cachée à 5 cases.', 'Ignore Laser Sensor Traps. Scout (1): flip all facedown ? tokens within 5 spaces.') },
+    29: { name: tx('Lunettes thermiques', 'Thermal Goggles'), type: 'other', kind: 'scan', cost: 2, ic: '🥽', codec: '07.04', tip: tx('Ignore les capteurs laser. Scan (2) : retourne 1 jeton ? face cachée de ta zone, même derrière une porte.', 'Ignore Laser Sensor Traps. Scan (2): flip any 1 facedown ? token in your zone, even behind a door.') },
+    30: { name: tx('Camouflage optique', 'Stealth Camouflage'), type: 'other', kind: 'stealth', cost: 1, uses: 2, ic: '👻', codec: '07.02', tip: tx('1 charge : jusqu\'à la fin du tour, pas de ! quand tu es dans la LOS d\'un garde ou d\'une caméra, et les gardes sautés n\'attaquent pas. Le bruit compte toujours.', '1 charge: until the end of your turn, you don\'t place your ! when in LOS of a Guard or Camera, and leapfrogged Guards don\'t attack. Noise still counts.') },
+    31: { name: tx('Carte PAL', 'PAL Card Key'), type: 'other', kind: 'passive', ic: '🗝️', codec: '07.06', tip: tx('Relance 1 dé à chaque jet pour déverrouiller une porte.', 'Reroll 1 die each time you roll to unlock a door.') },
+    32: { name: tx('Silencieux de fusil', 'Rifle Suppressor'), type: 'other', kind: 'passive', sil: 'rifle', ic: '🔇', codec: '07.01', tip: tx('Le fusil n\'est plus LOUD.', 'Ignore LOUD on the Rifle.') },
   };
   const cardInfo = n => CARDS[n] || LS.get('mgsg.cards', {})[n] || null;
   const mkCard = (n, kn) => Object.assign(mkItem(kn.name, kn.type, n), { uses: kn.uses != null ? kn.uses : null }, kn.ic ? { ic: kn.ic } : {});
   const hasCard = (p, n) => !!(p && p.inv && p.inv.some(i => i.num === n));
   const icOf = i => i.ic || ITYPES[i.type][0];
+  const nameOf = i => (i.num && CARDS[i.num] ? CARDS[i.num].name : i.name);
   const mkItem = (name, type, num) => ({ id: 'i' + Math.random().toString(36).slice(2, 8), name, type, num: num || null, uses: ITYPES[type][2] });
   function startInv(m, name) {
     const inv = (START_GEAR[name] || []).map(([n, t]) => mkItem(n, t));
-    if (m && m.id === 5) inv.push(Object.assign(mkItem('Grenades (Special Action)', 'grenade'), { uses: 2 }));
+    if (m && m.id === 5) inv.push(Object.assign(mkItem(tx('Grenades (Special Action)', 'Grenades (Special Action)'), 'grenade'), { uses: 2 }));
     return inv;
   }
   const hasItem = (p, type) => !p.inv || p.inv.some(i => i.type === type && (i.uses == null || i.uses > 0));
@@ -110,11 +113,11 @@
     if (!p.inv) return;
     const it = p.inv.find(i => i.type === type && (i.uses == null || i.uses > 0)); if (!it || it.uses == null) return;
     it.uses--;
-    if (it.uses <= 0) { p.inv = p.inv.filter(x => x !== it); toast(`${ITYPES[type][0]} <b>${esc(it.name)}</b> épuisé : défausse la carte (elle reste dans la Memory Box).`, 3500); }
+    if (it.uses <= 0) { p.inv = p.inv.filter(x => x !== it); toast(`${ITYPES[type][0]} <b>${esc(nameOf(it))}</b> ${tx('épuisé : défausse la carte (elle reste dans la Memory Box).', 'used up: discard the card (it stays in the Memory Box).')}`, 3500); }
   }
   function invChips(p) {
-    if (!p.inv) return '<span style="opacity:.6">équipement non renseigné</span>';
-    return p.inv.length ? p.inv.map(i => `<span class="chip ${i.uses === 0 ? 'off' : ''}">${icOf(i)} ${esc(i.name)}${i.uses != null ? ' ×' + i.uses : ''}</span>`).join('') : '<span style="opacity:.6">aucun objet</span>';
+    if (!p.inv) return `<span style="opacity:.6">${tx('équipement non renseigné', 'equipment not set')}</span>`;
+    return p.inv.length ? p.inv.map(i => `<span class="chip ${i.uses === 0 ? 'off' : ''}">${icOf(i)} ${esc(nameOf(i))}${i.uses != null ? ' ×' + i.uses : ''}</span>`).join('') : `<span style="opacity:.6">${tx('aucun objet', 'no items')}</span>`;
   }
   function invEditor(m, g, only) {
     const box = Object.assign({}, LS.get('mgsg.cards', {}), CARDS), pend = ui.cardAsk, solo = only != null;
@@ -124,17 +127,17 @@
     const players = g.players.map((p, pi) => { if (solo && pi !== only) return '';
       p.inv = p.inv || [];
       const cards = p.inv.filter(i => i.num).length;
-      return `<div class="ma-inv"><div class="ma-inv-h">${CE[p.name] || ''} <b>${p.name}</b><span style="flex:1"></span><span class="${cards > EQUIP_LIMIT ? 'warn' : ''}" style="opacity:.8;font-size:.85rem">cartes Memory Box : ${cards} (limite : voir son dashboard)</span></div>
-        <div>${p.inv.map(i => `<span class="chip" title="${esc((i.num && CARDS[i.num] ? CARDS[i.num].tip + (CARDS[i.num].codec ? ' — Codec ' + CARDS[i.num].codec : '') : ''))}">${icOf(i)} ${esc(i.name)}${i.num ? ` <small>${num3(i.num)}</small>` : ''}${i.uses != null ? ` <button class="ma-mini" data-a="invUse" data-p="${pi}" data-i="${i.id}" data-v="-1">−</button><b>${i.uses}</b><button class="ma-mini" data-a="invUse" data-p="${pi}" data-i="${i.id}" data-v="1">＋</button>` : ''} <button class="ma-mini red" data-a="invRm" data-p="${pi}" data-i="${i.id}">✕</button></span>`).join('') || `<span style="opacity:.6">${p.name === 'Snake' ? 'aucun équipement de départ (On-Site Procurement)' : 'rien pour l\'instant'}</span>`}</div>
-        <div class="ma-inv-add"><span style="opacity:.75">＋ objet :</span>${Object.entries(ITYPES).map(([k, t]) => `<button class="ma-b sm" data-a="invAdd" data-p="${pi}" data-v="${k}">${t[0]} ${t[1]}</button>`).join('')}</div>
+      return `<div class="ma-inv"><div class="ma-inv-h">${CE[p.name] || ''} <b>${p.name}</b><span style="flex:1"></span><span class="${cards > EQUIP_LIMIT ? 'warn' : ''}" style="opacity:.8;font-size:.85rem">${tx('cartes Memory Box', 'Memory Box cards')} : ${cards} (${tx('limite : voir son dashboard', 'limit: see their dashboard')})</span></div>
+        <div>${p.inv.map(i => `<span class="chip" title="${esc((i.num && CARDS[i.num] ? CARDS[i.num].tip + (CARDS[i.num].codec ? ' — Codec ' + CARDS[i.num].codec : '') : ''))}">${icOf(i)} ${esc(nameOf(i))}${i.num ? ` <small>${num3(i.num)}</small>` : ''}${i.uses != null ? ` <button class="ma-mini" data-a="invUse" data-p="${pi}" data-i="${i.id}" data-v="-1">−</button><b>${i.uses}</b><button class="ma-mini" data-a="invUse" data-p="${pi}" data-i="${i.id}" data-v="1">＋</button>` : ''} <button class="ma-mini red" data-a="invRm" data-p="${pi}" data-i="${i.id}">✕</button></span>`).join('') || `<span style="opacity:.6">${p.name === 'Snake' ? tx('aucun équipement de départ (On-Site Procurement)', 'no starting equipment (On-Site Procurement)') : tx('rien pour l\'instant', 'nothing yet')}</span>`}</div>
+        <div class="ma-inv-add"><span style="opacity:.75">${tx('＋ objet :', '＋ item:')}</span>${Object.entries(ITYPES).map(([k, t]) => `<button class="ma-b sm" data-a="invAdd" data-p="${pi}" data-v="${k}">${t[0]} ${t[1]}</button>`).join('')}</div>
       </div>`;
     }).join('');
-    const who = !solo && g.players.length > 1 ? `<div class="ma-inv-add"><span style="opacity:.75">Donner à :</span>${g.players.map((q, i) => `<button class="ma-b sm ${i === to ? 'on' : ''}" data-a="boxTo" data-v="${i}">${CE[q.name] || ''} ${q.name}</button>`).join('')}</div>` : '';
+    const who = !solo && g.players.length > 1 ? `<div class="ma-inv-add"><span style="opacity:.75">${tx('Donner à :', 'Give to:')}</span>${g.players.map((q, i) => `<button class="ma-b sm ${i === to ? 'on' : ''}" data-a="boxTo" data-v="${i}">${CE[q.name] || ''} ${q.name}</button>`).join('')}</div>` : '';
     const nums = Array.from({ length: BOX_MAX }, (_, k) => { const n = k + 1, h = holder(n), kn = box[n], other = h >= 0 && h !== to;
       const banned = kn && kn.only && !kn.only.includes(g.players[to].name);
-      return `<button class="ma-b sm num ${h === to ? 'on' : ''} ${other ? 'other' : ''} ${kn ? 'known' : ''}" data-a="invCard" data-p="${to}" data-v="${n}" ${(solo && other) || banned ? 'disabled' : ''} title="${kn ? esc(kn.name + (kn.tip ? ' — ' + kn.tip : '')) : 'carte inconnue'}${h >= 0 ? ' — chez ' + g.players[h].name : ''}">${h >= 0 ? (CE[g.players[h].name] || '') : kn ? (kn.ic || ITYPES[kn.type][0]) : ''}${num3(n)}${kn ? `<small>${esc(kn.name)}</small>` : ''}</button>`; }).join('');
-    const ask = pend ? `<div class="ma-ask"><p>Carte <b>${num3(pend.n)}</b> : qu'est-ce que c'est ? (je m'en souviendrai pour les prochaines missions)</p>${Object.entries(ITYPES).map(([k, t]) => `<button class="ma-b sm" data-a="invCardType" data-v="${k}">${t[0]} ${t[1]}</button>`).join(' ')} <button class="ma-b sm red" data-a="invCardNo">Annuler</button></div>` : '';
-    return players + `<div class="ma-inv box"><div class="ma-inv-h">📦 <b>Memory Box</b> <span style="opacity:.75;font-size:.85rem">commune : le groupe se partage les cartes débloquées, chacune va à un seul personnage</span></div>${who}<div class="ma-inv-add">${nums}</div>${ask}</div>`;
+      return `<button class="ma-b sm num ${h === to ? 'on' : ''} ${other ? 'other' : ''} ${kn ? 'known' : ''}" data-a="invCard" data-p="${to}" data-v="${n}" ${(solo && other) || banned ? 'disabled' : ''} title="${kn ? esc(kn.name + (kn.tip ? ' — ' + kn.tip : '')) : tx('carte inconnue', 'unknown card')}${h >= 0 ? tx(' — chez ', ' — held by ') + g.players[h].name : ''}">${h >= 0 ? (CE[g.players[h].name] || '') : kn ? (kn.ic || ITYPES[kn.type][0]) : ''}${num3(n)}${kn ? `<small>${esc(kn.name)}</small>` : ''}</button>`; }).join('');
+    const ask = pend ? `<div class="ma-ask"><p>${tx('Carte', 'Card')} <b>${num3(pend.n)}</b> : ${tx('qu\'est-ce que c\'est ? (je m\'en souviendrai pour les prochaines missions)', 'what is it? (I\'ll remember it for the next missions)')}</p>${Object.entries(ITYPES).map(([k, t]) => `<button class="ma-b sm" data-a="invCardType" data-v="${k}">${t[0]} ${t[1]}</button>`).join(' ')} <button class="ma-b sm red" data-a="invCardNo">${tx('Annuler', 'Cancel')}</button></div>` : '';
+    return players + `<div class="ma-inv box"><div class="ma-inv-h">📦 <b>Memory Box</b> <span style="opacity:.75;font-size:.85rem">${tx('commune : le groupe se partage les cartes débloquées, chacune va à un seul personnage', 'shared: the group splits the unlocked cards, each one goes to a single character')}</span></div>${who}<div class="ma-inv-add">${nums}</div>${ask}</div>`;
   }
 
   function newGame(m, n) {
@@ -195,7 +198,7 @@
     const g = game(), m = mission(); if (!g || !st.auto) return;
     const alert = g.players.some(p => p.att === 2), al = ((SND().alert || [])[0] || [])[0];
     if (alert && al && A.mode !== 'alert') A.music(al, 'alert');
-    else if (!alert && A.mode === 'alert') { A.sfx(AU().clearAlarm); log('✅ Fin de l\'alerte', 'alert'); setTimeout(() => A.music(missionTrack(m), 'mission'), 900); }
+    else if (!alert && A.mode === 'alert') { A.sfx(AU().clearAlarm); log(tx('✅ Fin de l\'alerte', '✅ Alert over'), 'alert'); setTimeout(() => A.music(missionTrack(m), 'mission'), 900); }
   }
 
 
@@ -291,11 +294,11 @@
         hl.push(`<line class="gwall" x1="${ln[0]}" y1="${ln[1]}" x2="${ln[2]}" y2="${ln[3]}"/>`); });
       Object.keys(W.cells).forEach(k => { if (W.cells[k] !== '#') return; const [x, y] = k.split(',').map(Number); const px = GG().pix(W, x, y); hl.push(`<rect class="gobst" x="${px.x + 3}" y="${px.y + 3}" width="${px.cw - 6}" height="${px.ch - 6}"/>`); });
     }
-    const info = ui.edit ? (ui.edit === 'wall' ? '✏️ Touche près du BORD d\'une case pour ajouter / retirer un mur' : '✏️ Touche une case pour la passer obstacle ↔ sol') : ui.place ? '👆 Touche une case pour poser le pion' : pend.type === 'move' ? '👆 Touche une case verte' : pend.type === 'target' ? '👆 Touche la cible encadrée en rouge' : ui.sel ? '👆 Touche une case pour déplacer ce pion, ou ✕' : 'Touche un pion pour ses options';
+    const info = ui.edit ? (ui.edit === 'wall' ? tx('✏️ Touche près du BORD d\'une case pour ajouter / retirer un mur', '✏️ Tap near the EDGE of a space to add / remove a wall') : tx('✏️ Touche une case pour la passer obstacle ↔ sol', '✏️ Tap a space to toggle obstacle ↔ floor')) : ui.place ? tx('👆 Touche une case pour poser le pion', '👆 Tap a space to place the piece') : pend.type === 'move' ? tx('👆 Touche une case verte', '👆 Tap a green space') : pend.type === 'target' ? tx('👆 Touche la cible encadrée en rouge', '👆 Tap the target framed in red') : ui.sel ? tx('👆 Touche une case pour déplacer ce pion, ou ✕', '👆 Tap a space to move this piece, or ✕') : tx('Touche un pion pour ses options', 'Tap a piece for its options');
     return `<div class="ma-bd"><div class="ma-bdt"><button class="ma-b sm" data-a="zoom" data-v="-1">🔍−</button><button class="ma-b sm" data-a="zoom" data-v="1">🔍+</button>
-        <button class="ma-b sm ${st.showLOS ? 'on' : ''}" data-a="los" title="Montrer les cases vues par les gardes et caméras">👁️ Zones vues</button>
-        <button class="ma-b sm ${ui.edit ? 'on' : ''}" data-a="edit" title="Corriger les murs et obstacles du plan">✏️ Corriger</button>
-        ${ui.edit ? `<button class="ma-b sm ${ui.edit === 'wall' ? 'on' : ''}" data-a="editMode" data-v="wall">🧱 Mur</button><button class="ma-b sm ${ui.edit === 'cell' ? 'on' : ''}" data-a="editMode" data-v="cell">🟥 Obstacle</button><button class="ma-b sm" data-a="editExport">📤 Exporter</button><button class="ma-b sm red" data-a="editReset">↺</button>` : ''}
+        <button class="ma-b sm ${st.showLOS ? 'on' : ''}" data-a="los" title="${tx('Montrer les cases vues par les gardes et caméras', 'Show spaces seen by Guards and Cameras')}">👁️ ${tx('Zones vues', 'Line of sight')}</button>
+        <button class="ma-b sm ${ui.edit ? 'on' : ''}" data-a="edit" title="${tx('Corriger les murs et obstacles du plan', 'Fix the map\'s walls and obstacles')}">✏️ ${tx('Corriger', 'Fix map')}</button>
+        ${ui.edit ? `<button class="ma-b sm ${ui.edit === 'wall' ? 'on' : ''}" data-a="editMode" data-v="wall">🧱 ${tx('Mur', 'Wall')}</button><button class="ma-b sm ${ui.edit === 'cell' ? 'on' : ''}" data-a="editMode" data-v="cell">🟥 Obstacle</button><button class="ma-b sm" data-a="editExport">📤 ${tx('Exporter', 'Export')}</button><button class="ma-b sm red" data-a="editReset">↺</button>` : ''}
         <span style="flex:1;opacity:.85;font-size:.9rem">${info}</span></div>
       <div class="ma-bds grid"><svg class="ma-svg" id="maSvg" viewBox="0 0 ${d.w} ${d.h}" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%"><image href="${d.img}" width="${d.w}" height="${d.h}"/>
         <g>${cells.join('')}</g><g>${hl.join('')}</g><g>${pcs}</g></svg></div></div>`;
@@ -344,13 +347,13 @@
       if (!ui.pend || ui.pend.type !== 'move') armMove(m, g, cur, 'sneak');
       if (ui.pend && ui.pend.cells && ui.pend.cells[k]) return gridMove(c, ui.pend.cells[k]);
       if (ui.pend && ui.pend.type === 'move') { const dash = p.x != null && cur.left >= 1 && GG().reach(W, toS(g), toS(g).figs.find(f => f.id === p.id), 2)[k]; if (dash && ui.pend.act !== 'dash') { armMove(m, g, cur, 'dash'); if (ui.pend.cells[k]) return gridMove(c, ui.pend.cells[k]); } }
-      toast('Case hors de portée (cases vertes).'); return render();
+      toast(tx('Case hors de portée (cases vertes).', 'Out of reach (green spaces only).')); return render();
     }
     const tok = ['q', 'a', 'ko1', 'ko2', 'dead'].includes(p.k);
-    if (!tok && !GG().walkable(W, toS(g), c.x, c.y)) { toast('Pas de case ici.'); return render(); }
+    if (!tok && !GG().walkable(W, toS(g), c.x, c.y)) { toast(tx('Pas de case ici.', 'No space here.')); return render(); }
     if (p.x === c.x && p.y === c.y) return render();
     snap(); p.x = c.x; p.y = c.y;
-    if (g.started) log(`✋ Pion corrigé : ${p.k === 'player' ? p.owner : p.k} → ${k}`, 'sys');
+    if (g.started) log(`✋ ${tx('Pion corrigé', 'Piece corrected')} : ${p.k === 'player' ? p.owner : p.k} → ${k}`, 'sys');
     ui.sel = null; ui.place = null; save(); render();
   }
   function bindGrid() {
@@ -413,10 +416,10 @@
   }
   function gridTapPiece(p, c) {
     const g = game();
-    if (ui.pend && ui.pend.type === 'target') { if (ui.pend.ids.includes(p.id)) return chooseTarget(p); toast('Ce n\'est pas une cible valable (encadrées en rouge).'); return; }
+    if (ui.pend && ui.pend.type === 'target') { if (ui.pend.ids.includes(p.id)) return chooseTarget(p); toast(tx('Ce n\'est pas une cible valable (encadrées en rouge).', 'Not a valid target (framed in red).')); return; }
     if (ui.sel && ui.sel !== p.id && c) return gridTapCell(c);
     if (p.k === 'player' && st.screen === 'play' && g.phase === 1 && g.players[g.cur] && g.players[g.cur].name === p.owner && !ui.pad) {
-      if (ui.pend) ui.pend = null; else if (!armMove(mission(), g, g.players[g.cur], 'sneak')) toast('Plus de déplacement possible.');
+      if (ui.pend) ui.pend = null; else if (!armMove(mission(), g, g.players[g.cur], 'sneak')) toast(tx('Plus de déplacement possible.', 'No move possible.'));
       ui.sel = null; render(); return;
     }
     ui.sel = ui.sel === p.id ? null : p.id;
@@ -430,11 +433,11 @@
       if (ui.pend.cells && ui.pend.cells[k]) return gridMove(c, ui.pend.cells[k]);
       const me = playerPiece(g, g.players[g.cur].name);
       if (me && me.x === c.x && me.y === c.y) { ui.pend = null; render(); return; }
-      toast('Case hors de portée (cases vertes).'); return;
+      toast(tx('Case hors de portée (cases vertes).', 'Out of reach (green spaces only).')); return;
     }
     if (!ui.place && !ui.sel && !ui.pend && st.screen === 'play' && g.phase === 1 && g.players[g.cur]) { const me = playerPiece(g, g.players[g.cur].name); if (me && me.x === c.x && me.y === c.y) return gridTapPiece(me, c); }
     if (ui.place) { if (!GG().walkable(W, S, c.x, c.y)) return; snap(); const p = piece(ui.place); p.x = c.x; p.y = c.y; ui.place = null; save(); render(); return; }
-    if (ui.sel) { const p = piece(ui.sel); if (p && GG().walkable(W, S, c.x, c.y)) { snap(); p.x = c.x; p.y = c.y; if (p.k === 'player') followTokens(g, p.owner); log(`✋ Pion corrigé : ${p.k === 'player' ? p.owner : p.k} → ${k}`, 'sys'); save(); } ui.sel = null; render(); }
+    if (ui.sel) { const p = piece(ui.sel); if (p && GG().walkable(W, S, c.x, c.y)) { snap(); p.x = c.x; p.y = c.y; if (p.k === 'player') followTokens(g, p.owner); log(`✋ ${tx('Pion corrigé', 'Piece corrected')} : ${p.k === 'player' ? p.owner : p.k} → ${k}`, 'sys'); save(); } ui.sel = null; render(); }
   }
   function followTokens(g, name) { /* le jeton Attention reste là où il a été posé (règles) */ }
 
@@ -454,22 +457,22 @@
   }
   // une action est-elle jouable maintenant ? → null, sinon la raison (plateau quadrillé)
   function whyNot(m, g, p, a) {
-    if (a.c > p.left) return 'plus assez de points';
-    if (a.item) { const it = itemOf(p, a); if (!it) return 'carte défaussée'; if (a.eff === 'detonate') { if (!it.planted) return 'aucun C-4 posé'; } else if (it.uses != null && it.uses <= 0 && !(a.eff === 'shoot' && hasCard(p, 23))) return a.eff === 'shoot' || a.eff === 'missile' ? 'plus de munitions' : 'plus de jetons'; }
-    if (a.need && !hasItem(p, a.need)) return { ration: 'pas de ration', chaff: 'pas de chaff', grenade: 'pas de grenade', gun: 'pas d\'arme', sgun: 'pas d\'arme silencieuse' }[a.need];
+    if (a.c > p.left) return tx('plus assez de points', 'not enough actions');
+    if (a.item) { const it = itemOf(p, a); if (!it) return tx('carte défaussée', 'card discarded'); if (a.eff === 'detonate') { if (!it.planted) return tx('aucun C-4 posé', 'no C-4 planted'); } else if (it.uses != null && it.uses <= 0 && !(a.eff === 'shoot' && hasCard(p, 23))) return a.eff === 'shoot' || a.eff === 'missile' ? tx('plus de munitions', 'out of ammo') : tx('plus de jetons', 'no tokens left'); }
+    if (a.need && !hasItem(p, a.need)) return { ration: tx('pas de ration', 'no Rations'), chaff: tx('pas de chaff', 'no chaff'), grenade: tx('pas de grenade', 'no grenade'), gun: tx('pas d\'arme', 'no weapon'), sgun: tx('pas d\'arme silencieuse', 'no silenced weapon') }[a.need];
     if (!isGrid(m)) return null;
-    const pp = playerPiece(g, p.name); if (!pp || pp.x == null) return a.move || a.atk ? 'pion pas posé' : null;
+    const pp = playerPiece(g, p.name); if (!pp || pp.x == null) return a.move || a.atk ? tx('pion pas posé', 'piece not placed') : null;
     const W = world(m), S = toS(g), me = S.figs.find(f => f.id === pp.id), here = cellKey(pp.x, pp.y);
     const near = ks => g.pieces.some(x => ks.includes(x.k) && x.x != null && Math.abs(x.x - pp.x) + Math.abs(x.y - pp.y) <= 1 && !GG().wallBetween(W, x, pp));
     if (a.gun && W.noFire.has(here)) return 'No Fire Zone';
-    if (a.id === 'sneak' || a.id === 'dash') return Object.keys(GG().reach(W, S, me, a.move)).length ? null : 'bloqué';
-    if (a.id === 'drag' || a.id === 'disguise') return near(['ko1', 'ko2', 'dead']) ? null : 'aucun corps à côté';
-    if (a.id === 'h2h' || a.id === 'combo') return GG().adjacentTargets(W, S, me).length ? null : 'aucun garde à côté';
-    if (a.id === 'silent') return GG().behindTargets(W, S, me).length ? null : 'pas dans le dos d\'un garde';
-    if (a.id === 'shoot' || a.id === 'shootS' || a.eff === 'shoot') return GG().losTargets(W, S, me).length ? null : 'aucune cible en vue';
-    if (a.eff === 'rope') return near(['ko1', 'ko2']) ? null : 'aucun garde KO à côté';
-    if (a.eff === 'box') return GG().watchers(W, S, { x: pp.x, y: pp.y }).length ? 'tu es dans une LOS' : null;
-    if (a.id === 'elev') return W.shaftOf[here] || GG().shaftAdjacent(W, pp.x, pp.y).length ? null : 'pas d\'ascenseur ici';
+    if (a.id === 'sneak' || a.id === 'dash') return Object.keys(GG().reach(W, S, me, a.move)).length ? null : tx('bloqué', 'blocked');
+    if (a.id === 'drag' || a.id === 'disguise') return near(['ko1', 'ko2', 'dead']) ? null : tx('aucun corps à côté', 'no body adjacent');
+    if (a.id === 'h2h' || a.id === 'combo') return GG().adjacentTargets(W, S, me).length ? null : tx('aucun garde à côté', 'no adjacent Guard');
+    if (a.id === 'silent') return GG().behindTargets(W, S, me).length ? null : tx('pas dans le dos d\'un garde', 'not behind a Guard');
+    if (a.id === 'shoot' || a.id === 'shootS' || a.eff === 'shoot') return GG().losTargets(W, S, me).length ? null : tx('aucune cible en vue', 'no target in LOS');
+    if (a.eff === 'rope') return near(['ko1', 'ko2']) ? null : tx('aucun garde KO à côté', 'no KO\'d Guard adjacent');
+    if (a.eff === 'box') return GG().watchers(W, S, { x: pp.x, y: pp.y }).length ? tx('tu es dans une LOS', 'you are in a LOS') : null;
+    if (a.id === 'elev') return W.shaftOf[here] || GG().shaftAdjacent(W, pp.x, pp.y).length ? null : tx('pas d\'ascenseur ici', 'no elevator here');
     return null;
   }
   async function gridMove(dest, info) {
@@ -492,26 +495,26 @@
       Object.entries(d.events || {}).forEach(([k, e]) => { if (!g.ev[k] && e.x === node.x && e.y === node.y) triggerEvent(m, g, k); });
     }
     ui.busy = false;
-    log(`${a.i} ${p.name} : ${a.n} → case ${dest.x},${dest.y}`, '', p.name);
-    if (seenBy.size && p.stealth) { toast('👻 Camouflage optique : le garde ne te voit pas.', 2500); seenBy.clear(); }
+    log(`${a.i} ${p.name} : ${a.n} → ${tx('case', 'space')} ${dest.x},${dest.y}`, '', p.name);
+    if (seenBy.size && p.stealth) { toast(tx('👻 Camouflage optique : le garde ne te voit pas.', '👻 Stealth Camouflage: the Guard doesn\'t see you.'), 2500); seenBy.clear(); }
     if (seenBy.size) {
       const list = [...seenBy.values()]; const cam = list.some(w => w.cam);
       if (cam) A.sfx(AU().camSpot);
-      setTimeout(() => { setAtt(g, p, 2, cam && list.length === 1 ? 'vu par une caméra' : 'vu par un garde'); save(); render(); }, cam ? 650 : 0);
-      toast(`👁️ <b>${p.name} est repéré</b> par ${list.map(w => w.cam ? 'une caméra' : 'un garde').join(', ')} !`, 3500);
+      setTimeout(() => { setAtt(g, p, 2, cam && list.length === 1 ? tx('vu par une caméra', 'spotted by a Camera') : tx('vu par un garde', 'spotted by a Guard')); save(); render(); }, cam ? 650 : 0);
+      toast(`👁️ <b>${p.name} ${tx('est repéré', 'is spotted')}</b> ${tx('par', 'by')} ${list.map(w => w.cam ? tx('une caméra', 'a Camera') : tx('un garde', 'a Guard')).join(', ')} !`, 3500);
     }
     if (leaps.length && p.stealth) leaps.length = 0;
     if (leaps.length) {
-      setAtt(g, p, 2, 'saut par-dessus un garde');
-      ui.queue = leaps.map(() => ({ kind: 'guardAtk', victim: p.name, def: defOf(p.name), fixed: ['b', 'b'], title: `🤸 Le garde sauté attaque ${p.name} : 2 dés noirs`, defLabel: `de ${p.name}` }));
+      setAtt(g, p, 2, tx('saut par-dessus un garde', 'leapfrogged a Guard'));
+      ui.queue = leaps.map(() => ({ kind: 'guardAtk', victim: p.name, def: defOf(p.name), fixed: ['b', 'b'], title: tx(`🤸 Le garde sauté attaque ${p.name} : 2 dés noirs`, `🤸 The leapfrogged Guard attacks ${p.name}: 2 black dice`), defLabel: tx(`de ${p.name}`, `of ${p.name}`) }));
       openPad(ui.queue.shift());
     }
-    if ((d.exits || []).some(e => e[0] === dest.x && e[1] === dest.y)) setTimeout(() => toast('🚪 <b>Sur la sortie !</b> Termine ton tour ici pour valider l\'objectif (si les conditions sont remplies).', 5000), 600);
+    if ((d.exits || []).some(e => e[0] === dest.x && e[1] === dest.y)) setTimeout(() => toast(tx('🚪 <b>Sur la sortie !</b> Termine ton tour ici pour valider l\'objectif (si les conditions sont remplies).', '🚪 <b>On the exit!</b> End your turn here to complete the objective (if its conditions are met).'), 5000), 600);
     // fin de course contre un mur / obstacle → « on the wall »
     const last = info.path[info.path.length - 1], prev = info.path.length > 1 ? info.path[info.path.length - 2] : { x: pp0.x, y: pp0.y };
     const [ddx, ddy] = GG().DIRS[GG().dirOf(prev, last)], nx = { x: last.x + ddx, y: last.y + ddy };
     if (!GG().walkable(W, toS(g), nx.x, nx.y) || GG().wallBetween(W, last, nx)) setTimeout(() => A.sfx(AU().wall), 120);
-    if (a.noisy && !leaps.length && p.noisy === a.c) toast(`${a.i} <b>${a.n}</b> : 🔊 bruyant → noise check à la fin de ton tour.`);
+    if (a.noisy && !leaps.length && p.noisy === a.c) toast(`${a.i} <b>${a.n}</b> : ${tx('🔊 bruyant → noise check à la fin de ton tour.', '🔊 Noisy → noise check at the end of your turn.')}`);
     ui.lastMove = a.id;
     if (!ui.pad && !g.over && (a.id === 'sneak' || a.id === 'dash')) armMove(m, g, p, a.id);
     save(); render();
@@ -519,7 +522,7 @@
   function triggerEvent(m, g, k) {
     const e = (GRID(m).events || {})[k], ev = (m.events || []).find(x => x.k === k);
     g.ev[k] = true; A.sfx(AU()[(stageSnd(m).events || {})[k] || 'pop'] || AU().pop);
-    log(`🅰️ Event ${k} atteint`, 'sys');
+    log(`🅰️ Event ${k} ${tx('atteint', 'reached')}`, 'sys');
     if (e && e.fx) {
       if (e.fx.elev) g.elev = true;
       (e.fx.spawn || []).forEach((s, i) => g.pieces.push({ id: 'gs' + k + i + (Date.now() % 1000), k: 'guard', x: s[0], y: s[1], f: s[2] || 'down' }));
@@ -538,42 +541,42 @@
   }
 
   /* ---------- phase ennemie : activation guidée des gardes ---------- */
-  const MODE = { alert: '🚨 ALERTE (chiffre rouge)', investigate: '❓ ENQUÊTE (chiffre bleu)', patrol: '🚶 PATROUILLE (chiffre bleu)' };
+  const MODE = { alert: tx('🚨 ALERTE (chiffre rouge)', '🚨 ALERT (red number)'), investigate: tx('❓ ENQUÊTE (chiffre bleu)', '❓ INVESTIGATE (blue number)'), patrol: tx('🚶 PATROUILLE (chiffre bleu)', '🚶 PATROL (blue number)') };
   function gridEnemyHtml(m, g) {
     if (ui.pad) return padHtml(m, g);
     const s = g.step, cls = k => s === k ? 'cur' : s > k ? 'ok' : '';
     const hasCam = g.pieces.some(p => p.k === 'cam');
     const card = g.card || (g.card = { red: 6, blue: 4, arrow: 'right' });
-    const num = (key, col) => `<div class="ma-att"><span style="min-width:96px">${col === 'r' ? '🔴 Chiffre rouge' : '🔵 Chiffre bleu'}</span>${[1, 2, 3, 4, 5, 6, 7, 8].map(n => `<button class="ma-b sm ${card[key] === n ? 'on' : ''}" data-a="card" data-k="${key}" data-v="${n}">${n}</button>`).join('')}</div>`;
-    let h = `<div class="ma-card"><h4>🃏 Carte Guard Order</h4>
-      <div class="ma-step ${cls(0)}"><span class="k">0</span><div class="bd">Pioche la carte du dessus. <b>GAME OVER</b> ? → perdu.<br><button class="ma-b pri" data-a="draw" ${s > 0 ? 'disabled' : ''}>🃏 Carte piochée</button> <button class="ma-b red" data-a="gameover" ${s > 0 ? 'disabled' : ''}>💀 GAME OVER</button></div></div>
-      <div class="ma-step ${cls(1)}"><span class="k">I</span><div class="bd"><b>Section I</b> : quelle icône ?<br>
-        <button class="ma-b sm" data-a="s1" data-v="waken" ${s !== 1 ? 'disabled' : ''}>✨ Réveil</button> <button class="ma-b sm" data-a="s1" data-v="radio" ${s !== 1 ? 'disabled' : ''}>📻 Radio-In</button> <button class="ma-b sm" data-a="s1" data-v="lost" ${s !== 1 ? 'disabled' : ''}>☠ Lost Contact</button> <button class="ma-b sm" data-a="s1" data-v="stay" ${s !== 1 ? 'disabled' : ''}>❓ Stay Alert</button></div></div>
-      <div class="ma-step ${cls(2)}"><span class="k">II</span><div class="bd"><b>Section II — caméras</b>${hasCam ? ` (face ${g.cam === 'vert' ? '🟩 verte' : '🟧 orange'})<br><button class="ma-b sm" data-a="cam" data-v="flip" ${s !== 2 ? 'disabled' : ''}>🔄 La carte fait pivoter</button> <button class="ma-b sm" data-a="cam" data-v="keep" ${s !== 2 ? 'disabled' : ''}>Pas de pivot</button>` : ` : aucune caméra. <button class="ma-b sm" data-a="cam" data-v="keep" ${s !== 2 ? 'disabled' : ''}>OK</button>`}</div></div>
-      <div class="ma-step ${cls(3)}"><span class="k">III</span><div class="bd"><b>Section III</b> : recopie la carte puis active les gardes.${num('red', 'r')}${num('blue', 'b')}
-        <div class="ma-att"><span style="min-width:96px">↪ Flèche</span><button class="ma-b sm ${card.arrow === 'left' ? 'on' : ''}" data-a="card" data-k="arrow" data-v="left">⟲ gauche</button><button class="ma-b sm ${card.arrow === 'right' ? 'on' : ''}" data-a="card" data-k="arrow" data-v="right">⟳ droite</button></div>
+    const num = (key, col) => `<div class="ma-att"><span style="min-width:96px">${col === 'r' ? tx('🔴 Chiffre rouge', '🔴 Red number') : tx('🔵 Chiffre bleu', '🔵 Blue number')}</span>${[1, 2, 3, 4, 5, 6, 7, 8].map(n => `<button class="ma-b sm ${card[key] === n ? 'on' : ''}" data-a="card" data-k="${key}" data-v="${n}">${n}</button>`).join('')}</div>`;
+    let h = `<div class="ma-card"><h4>🃏 ${tx('Carte Guard Order', 'Guard Order card')}</h4>
+      <div class="ma-step ${cls(0)}"><span class="k">0</span><div class="bd">${tx('Pioche la carte du dessus. <b>GAME OVER</b> ? → perdu.', 'Draw the top card. <b>GAME OVER</b>? → you lose.')}<br><button class="ma-b pri" data-a="draw" ${s > 0 ? 'disabled' : ''}>🃏 ${tx('Carte piochée', 'Card drawn')}</button> <button class="ma-b red" data-a="gameover" ${s > 0 ? 'disabled' : ''}>💀 GAME OVER</button></div></div>
+      <div class="ma-step ${cls(1)}"><span class="k">I</span><div class="bd"><b>Section I</b> : ${tx('quelle icône ?', 'which icon?')}<br>
+        <button class="ma-b sm" data-a="s1" data-v="waken" ${s !== 1 ? 'disabled' : ''}>✨ ${tx('Réveil', 'Waken')}</button> <button class="ma-b sm" data-a="s1" data-v="radio" ${s !== 1 ? 'disabled' : ''}>📻 Radio-In</button> <button class="ma-b sm" data-a="s1" data-v="lost" ${s !== 1 ? 'disabled' : ''}>☠ Lost Contact</button> <button class="ma-b sm" data-a="s1" data-v="stay" ${s !== 1 ? 'disabled' : ''}>❓ Stay Alert</button></div></div>
+      <div class="ma-step ${cls(2)}"><span class="k">II</span><div class="bd"><b>${tx('Section II — caméras', 'Section II — Cameras')}</b>${hasCam ? ` (${tx('face', 'side')} ${g.cam === 'vert' ? tx('🟩 verte', '🟩 green') : '🟧 orange'})<br><button class="ma-b sm" data-a="cam" data-v="flip" ${s !== 2 ? 'disabled' : ''}>🔄 ${tx('La carte fait pivoter', 'The card flips them')}</button> <button class="ma-b sm" data-a="cam" data-v="keep" ${s !== 2 ? 'disabled' : ''}>${tx('Pas de pivot', 'No flip')}</button>` : ` : ${tx('aucune caméra.', 'no Cameras.')} <button class="ma-b sm" data-a="cam" data-v="keep" ${s !== 2 ? 'disabled' : ''}>OK</button>`}</div></div>
+      <div class="ma-step ${cls(3)}"><span class="k">III</span><div class="bd"><b>Section III</b> : ${tx('recopie la carte puis active les gardes.', 'copy the card, then activate the Guards.')}${num('red', 'r')}${num('blue', 'b')}
+        <div class="ma-att"><span style="min-width:96px">↪ ${tx('Flèche', 'Arrow')}</span><button class="ma-b sm ${card.arrow === 'left' ? 'on' : ''}" data-a="card" data-k="arrow" data-v="left">⟲ ${tx('gauche', 'left')}</button><button class="ma-b sm ${card.arrow === 'right' ? 'on' : ''}" data-a="card" data-k="arrow" data-v="right">⟳ ${tx('droite', 'right')}</button></div>
         ${s === 3 ? seqHtml(m, g) : ''}</div></div></div>`;
     return h;
   }
   function seqHtml(m, g) {
     const sq = ui.seq;
-    if (!sq) return `<button class="ma-b pri big" data-a="seqStart">▶ Activer les gardes</button>`;
-    if (ui.react) return `<div class="ma-ask warn"><p>🃏 <b>Guard Reaction</b> : le garde est sur ${ui.react.tokens.map(t => t.kind === '?' || t.kind === '!' ? `le jeton ${t.kind} de ${t.owner}` : t.kind === 'dead' ? 'un corps' : 'un garde KO').join(', ')}. Pioche une carte Guard Reaction et lis-la : que dit-elle ?</p>
-      ${ui.react.tokens.map(t => `<div style="margin:4px 0"><b>${t.kind}</b> ${t.owner || ''} : <button class="ma-b sm" data-a="react" data-v="rm" data-t="${t.id}">Retirer</button> ${t.kind === '?' ? `<button class="ma-b sm" data-a="react" data-v="up" data-t="${t.id}">? → !</button>` : ''}${t.kind === 'ko2' || t.kind === 'ko1' ? `<button class="ma-b sm" data-a="react" data-v="wake" data-t="${t.id}">Il le réveille</button>` : ''} <button class="ma-b sm" data-a="react" data-v="keep" data-t="${t.id}">Rien</button></div>`).join('')}
-      <button class="ma-b" data-a="reactDone">✔ Fait</button></div>`;
-    if (sq.i >= sq.ids.length) return `<div class="ma-res">✅ Tous les gardes ont joué.</div><button class="ma-b pri big" data-a="nextRound">▶ Round ${g.round + 1}</button>`;
+    if (!sq) return `<button class="ma-b pri big" data-a="seqStart">▶ ${tx('Activer les gardes', 'Activate the Guards')}</button>`;
+    if (ui.react) return `<div class="ma-ask warn"><p>🃏 <b>Guard Reaction</b> : ${tx('le garde est sur', 'the Guard is on')} ${ui.react.tokens.map(t => t.kind === '?' || t.kind === '!' ? tx(`le jeton ${t.kind} de ${t.owner}`, `${t.owner}'s ${t.kind} token`) : t.kind === 'dead' ? tx('un corps', 'a body') : tx('un garde KO', 'a KO\'d Guard')).join(', ')}. ${tx('Pioche une carte Guard Reaction et lis-la : que dit-elle ?', 'Draw a Guard Reaction card and read it: what does it say?')}</p>
+      ${ui.react.tokens.map(t => `<div style="margin:4px 0"><b>${t.kind}</b> ${t.owner || ''} : <button class="ma-b sm" data-a="react" data-v="rm" data-t="${t.id}">${tx('Retirer', 'Remove')}</button> ${t.kind === '?' ? `<button class="ma-b sm" data-a="react" data-v="up" data-t="${t.id}">? → !</button>` : ''}${t.kind === 'ko2' || t.kind === 'ko1' ? `<button class="ma-b sm" data-a="react" data-v="wake" data-t="${t.id}">${tx('Il le réveille', 'Wakes it up')}</button>` : ''} <button class="ma-b sm" data-a="react" data-v="keep" data-t="${t.id}">${tx('Rien', 'Nothing')}</button></div>`).join('')}
+      <button class="ma-b" data-a="reactDone">✔ ${tx('Fait', 'Done')}</button></div>`;
+    if (sq.i >= sq.ids.length) return `<div class="ma-res">${tx('✅ Tous les gardes ont joué.', '✅ All Guards have activated.')}</div><button class="ma-b pri big" data-a="nextRound">▶ Round ${g.round + 1}</button>`;
     const id = sq.ids[sq.i], gp = piece(id);
-    return `<div class="ma-ask"><p><b>Garde ${sq.i + 1}/${sq.ids.length}</b>${sq.last ? `<br>${sq.last}` : ''}</p>
-      <button class="ma-b pri big" data-a="seqGo" ${ui.busy ? 'disabled' : ''}>▶ Activer ${sq.i ? 'le suivant' : 'le premier'}</button> <button class="ma-b sm" data-a="seqSkip">Passer</button></div>`;
+    return `<div class="ma-ask"><p><b>${tx('Garde', 'Guard')} ${sq.i + 1}/${sq.ids.length}</b>${sq.last ? `<br>${sq.last}` : ''}</p>
+      <button class="ma-b pri big" data-a="seqGo" ${ui.busy ? 'disabled' : ''}>▶ ${sq.i ? tx('Activer le suivant', 'Activate the next one') : tx('Activer le premier', 'Activate the first one')}</button> <button class="ma-b sm" data-a="seqSkip">${tx('Passer', 'Skip')}</button></div>`;
   }
   async function runGuard(m, g) {
     const sq = ui.seq, id = sq.ids[sq.i], W = world(m);
     const gp = piece(id); if (!gp || gp.k !== 'guard') { sq.i++; save(); render(); return; }
     ui.sel = id; ui.busy = true; render();
     const r = GG().activate(W, toS(g), id, g.card);
-    const tgt = r.target ? ` → vers le ${r.target.kind} ${r.target.owner ? 'de ' + r.target.owner : ''}` : '';
+    const tgt = r.target ? tx(` → vers le ${r.target.kind} ${r.target.owner ? 'de ' + r.target.owner : ''}`, ` → toward ${r.target.owner ? r.target.owner + '\'s ' : 'the '}${r.target.kind}`) : '';
     sq.last = `${MODE[r.mode]}${tgt}`;
-    toast(`💂 Garde ${sq.i + 1} : <b>${MODE[r.mode]}</b>${tgt}`, 2500);
+    toast(`💂 ${tx('Garde', 'Guard')} ${sq.i + 1} : <b>${MODE[r.mode]}</b>${tgt}`, 2500);
     let seen = null, react = null;
     for (const s of r.steps) {
       if (s.t === 'move') { focusOn(s.x, s.y); await animTo(m, id, s.x, s.y, s.f, 380); gp.x = s.x; gp.y = s.y; gp.f = s.f; }
@@ -582,14 +585,14 @@
     }
     gp.x = r.g.x; gp.y = r.g.y; gp.f = r.g.f;
     const moves = r.steps.filter(s => s.t === 'move').length;
-    log(`💂 Garde ${sq.i + 1} : ${MODE[r.mode]}, ${moves} case(s)${seen ? ', voit ' + seen.player : ''}${react ? ', Guard Reaction' : ''}`, seen ? 'alert' : 'sys');
+    log(`💂 ${tx('Garde', 'Guard')} ${sq.i + 1} : ${MODE[r.mode]}, ${moves} ${tx('case(s)', 'space(s)')}${seen ? tx(', voit ', ', sees ') + seen.player : ''}${react ? ', Guard Reaction' : ''}`, seen ? 'alert' : 'sys');
     ui.busy = false; ui.sel = null; sq.i++;
-    sq.last += ` — ${moves} case(s)${seen ? ` — 👁️ voit ${seen.player} !` : react ? ' — arrive sur un jeton' : ''}. Réplique sur le plateau.`;
+    sq.last += ` — ${moves} ${tx('case(s)', 'space(s)')}${seen ? ` — 👁️ ${tx('voit', 'sees')} ${seen.player} !` : react ? tx(' — arrive sur un jeton', ' — lands on a token') : ''}. ${tx('Réplique sur le plateau.', 'Mirror it on the board.')}`;
     if (seen) {
       const q = g.players.find(p => p.name === seen.player);
-      A.sfx('guard-there-he-is_JHZ7rPO.mp3'); setAtt(g, q, 2, 'vu par un garde');
+      A.sfx('guard-there-he-is_JHZ7rPO.mp3'); setAtt(g, q, 2, tx('vu par un garde', 'spotted by a Guard'));
       const pp = playerPiece(g, q.name), ps = pp && GG().pix(W, pp.x, pp.y);
-      openPad({ kind: 'guardAtk', victim: q.name, def: defOf(q.name), fixed: ['b', 'b'], title: `👁️ Le garde attaque ${q.name} : lance 2 dés noirs`, hint: 'Focus possible : modifie la valeur avant de la taper.', defLabel: `de ${q.name}` });
+      openPad({ kind: 'guardAtk', victim: q.name, def: defOf(q.name), fixed: ['b', 'b'], title: tx(`👁️ Le garde attaque ${q.name} : lance 2 dés noirs`, `👁️ The Guard attacks ${q.name}: roll 2 black dice`), hint: tx('Focus possible : modifie la valeur avant de la taper.', 'Focus allowed: adjust the value before entering it.'), defLabel: tx(`de ${q.name}`, `of ${q.name}`) });
     } else if (react) { A.sfx('guard-what-was-that-noise_IVtXtq7.mp3'); ui.react = react; }
     save(); render();
   }
@@ -599,8 +602,8 @@
     if (v === 'waken') {
       const az = GG().activeZones(W, toS(g)); let up = 0, down = 0;
       g.pieces.forEach(p => { if (!az.has(GG().zoneOf(W, p.x, p.y))) return; if (p.k === 'ko1') { p.k = 'guard'; p.f = p.f || 'down'; up++; } else if (p.k === 'ko2') { p.k = 'ko1'; down++; } });
-      A.sfx('guard-whered-he-go_zHLpH97.mp3'); log(`✨ Réveil : ${up} garde(s) debout, ${down} KO ★★ → ★`, 'sys');
-      toast(`✨ Réveil : ${up} garde(s) se relèvent (oriente-les : touche-les puis ⟲⟳), ${down} KO passent à ★.`, 5000);
+      A.sfx('guard-whered-he-go_zHLpH97.mp3'); log(tx(`✨ Réveil : ${up} garde(s) debout, ${down} KO ★★ → ★`, `✨ Waken: ${up} Guard(s) back up, ${down} KO ★★ → ★`), 'sys');
+      toast(tx(`✨ Réveil : ${up} garde(s) se relèvent (oriente-les : touche-les puis ⟲⟳), ${down} KO passent à ★.`, `✨ Waken: ${up} Guard(s) get up (face them: tap, then ⟲⟳), ${down} KO flip to ★.`), 5000);
     }
     if (v === 'radio') {
       const S = toS(g), az = GG().activeZones(W, S); let n = 0;
@@ -609,15 +612,15 @@
         const have = g.pieces.filter(p => p.k === 'guard' && GG().zoneOf(W, p.x, p.y) === z).length;
         for (let i = have; i < b.count; i++) { g.pieces.push({ id: 'gr' + Date.now() % 100000 + i, k: 'guard', x: b.x, y: b.y, f: b.f || 'down' }); n++; }
       });
-      A.sfx('guard-return-to-your-positions_9aocsFp.mp3'); log(`📻 Radio-In : ${n} renfort(s)`, 'sys');
-      toast(n ? `📻 ${n} garde(s) en renfort sur l'icône radio du Barracks.` : '📻 Radio-In : pas de renfort (Guard Count atteint ou pas de Barracks).', 4500);
+      A.sfx('guard-return-to-your-positions_9aocsFp.mp3'); log(tx(`📻 Radio-In : ${n} renfort(s)`, `📻 Radio-In: ${n} reinforcement(s)`), 'sys');
+      toast(n ? tx(`📻 ${n} garde(s) en renfort sur l'icône radio du Barracks.`, `📻 ${n} Guard(s) spawn on the Barracks radio icon.`) : tx('📻 Radio-In : pas de renfort (Guard Count atteint ou pas de Barracks).', '📻 Radio-In: no reinforcements (Guard Count reached or no Barracks).'), 4500);
     }
-    if (v === 'lost') { const dead = g.pieces.filter(p => p.k === 'dead').length, n = Math.floor(dead / 3); if (g.deck) { g.deck.drawn += n; g.deck.burned += n; } log(`☠ Lost Contact : ${n} carte(s) brûlée(s)`, 'sys'); toast(n ? `☠ ${n} carte(s) brûlée(s) (révélées, mises dessous). GAME OVER parmi elles ? → perdu.` : '☠ Lost Contact : moins de 3 morts, rien.', 4500); }
-    if (v === 'stay') { const names = GG().stayAlert(W, toS(g)); names.forEach(nm => { const p = g.players.find(x => x.name === nm); if (p && p.att === 0) setAtt(g, p, 1, 'Stay Alert'); else if (p && p.att === 1) placeAtt(g, p); /* ? posé ou déplacé sous la figurine ; si ! déjà posé, rien */ }); log(`❓ Stay Alert : ${names.join(', ') || 'personne'}`, 'sys'); if (!names.length) toast('❓ Stay Alert : personne à 2 cases d\'un garde.'); }
+    if (v === 'lost') { const dead = g.pieces.filter(p => p.k === 'dead').length, n = Math.floor(dead / 3); if (g.deck) { g.deck.drawn += n; g.deck.burned += n; } log(tx(`☠ Lost Contact : ${n} carte(s) brûlée(s)`, `☠ Lost Contact: ${n} card(s) burned`), 'sys'); toast(n ? tx(`☠ ${n} carte(s) brûlée(s) (révélées, mises dessous). GAME OVER parmi elles ? → perdu.`, `☠ ${n} card(s) burned (revealed, put on the bottom). GAME OVER among them? → you lose.`) : tx('☠ Lost Contact : moins de 3 morts, rien.', '☠ Lost Contact: fewer than 3 bodies, nothing happens.'), 4500); }
+    if (v === 'stay') { const names = GG().stayAlert(W, toS(g)); names.forEach(nm => { const p = g.players.find(x => x.name === nm); if (p && p.att === 0) setAtt(g, p, 1, 'Stay Alert'); else if (p && p.att === 1) placeAtt(g, p); /* ? posé ou déplacé sous la figurine ; si ! déjà posé, rien */ }); log(`❓ Stay Alert : ${names.join(', ') || tx('personne', 'nobody')}`, 'sys'); if (!names.length) toast(tx('❓ Stay Alert : personne à 2 cases d\'un garde.', '❓ Stay Alert: nobody within 2 spaces of a Guard.')); }
   }
   function camCheck(m, g) {
     const W = world(m), S = toS(g);
-    g.players.forEach(p => { const pp = S.figs.find(f => f.kind === 'player' && f.name === p.name); if (!pp) return; const cams = (S.cams || []).filter(c => !(c.x === pp.x && c.y === pp.y) && GG().los(W, S, c, pp, GG().camFacing(S, c)).ok); if (cams.length && p.att !== 2) { A.sfx(AU().camSpot); setTimeout(() => { setAtt(g, p, 2, 'vu par une caméra'); save(); render(); }, 700); } });
+    g.players.forEach(p => { const pp = S.figs.find(f => f.kind === 'player' && f.name === p.name); if (!pp) return; const cams = (S.cams || []).filter(c => !(c.x === pp.x && c.y === pp.y) && GG().los(W, S, c, pp, GG().camFacing(S, c)).ok); if (cams.length && p.att !== 2) { A.sfx(AU().camSpot); setTimeout(() => { setAtt(g, p, 2, tx('vu par une caméra', 'spotted by a Camera')); save(); render(); }, 700); } });
   }
 
   /* ======================= CSS ======================= */
@@ -810,10 +813,10 @@
     const s = document.createElement('style'); s.textContent = css; document.head.appendChild(s);
     root = document.createElement('div'); root.id = 'mgsA';
     root.innerHTML = `<div class="ma-h"><span class="lg">◤ MGS</span><button class="ma-b sm" id="maHome" title="Missions">🗂️</button><span class="ttl" id="maTtl"></span>
-        <button class="ma-b sm" id="maLog" title="Journal de la partie">📜</button><button class="ma-b sm" id="maSnd" title="Sons (manuel)">🔊</button><button class="ma-b sm" id="maHelp" title="Aide animée">❓</button><button class="ma-b sm red" id="maX" title="Fermer">✕</button></div>
+        <button class="ma-b sm" id="maLang" title="Français / English">${EN ? '🇫🇷 FR' : '🇬🇧 EN'}</button><button class="ma-b sm" id="maLog" title="${tx('Journal de la partie', 'Game log')}">📜</button><button class="ma-b sm" id="maSnd" title="${tx('Sons (manuel)', 'Sounds (manual)')}">🔊</button><button class="ma-b sm" id="maHelp" title="${tx('Aide animée', 'Animated help')}">❓</button><button class="ma-b sm red" id="maX" title="${tx('Fermer', 'Close')}">✕</button></div>
       <div class="ma-steps" id="maSteps"></div><div class="ma-c" id="maBody"></div>
-      <div class="ma-rot"><div>📱↻<br><b>Tourne la tablette en paysage</b><br><span>le plateau tient alors en entier à l'écran</span></div></div>
-      <div class="ma-bar"><span class="np" id="maNp">♪ —</span><button class="ma-b sm" id="maAuto">🎬 Auto</button><button class="ma-b sm" id="maStop" title="Stop musique">⏹</button></div>`;
+      <div class="ma-rot"><div>📱↻<br><b>${tx('Tourne la tablette en paysage', 'Turn your tablet to landscape')}</b><br><span>${tx('le plateau tient alors en entier à l\'écran', 'the whole board then fits on screen')}</span></div></div>
+      <div class="ma-bar"><span class="np" id="maNp">♪ —</span><button class="ma-b sm" id="maAuto">🎬 Auto</button><button class="ma-b sm" id="maStop" title="${tx('Stop musique', 'Stop music')}">⏹</button></div>`;
     document.body.appendChild(root);
     body = $('#maBody', root);
     $('#maX', root).onclick = close;
@@ -822,7 +825,8 @@
     $('#maSnd', root).onclick = () => { if (mission()) go('snd'); };
     $('#maHelp', root).onclick = () => window.MGSHelp && window.MGSHelp.open();
     $('#maStop', root).onclick = () => A.stop();
-    $('#maAuto', root).onclick = () => { st.auto = !st.auto; save(); bar(); toast(st.auto ? '🎬 Sons et musique automatiques' : 'Sons automatiques coupés'); };
+    $('#maLang', root).onclick = () => { save(); (window.MGS_setLang || (() => {}))(EN ? 'fr' : 'en'); };
+    $('#maAuto', root).onclick = () => { st.auto = !st.auto; save(); bar(); toast(st.auto ? tx('🎬 Sons et musique automatiques', '🎬 Automatic sounds and music') : tx('Sons automatiques coupés', 'Automatic sounds off')); };
     $('#maSteps', root).addEventListener('click', e => { const b = e.target.closest('[data-go]'); if (b) go(b.dataset.go); });
     root.addEventListener('click', onClick);
     root.addEventListener('change', onChange);
@@ -848,10 +852,10 @@
   function render() {
     const m = mission();
     if (!m && st.screen !== 'home') st.screen = 'home';
-    const SCR = [['brief', '📡 Briefing'], ['rules', '📜 Règles'], ['setup', '🗺️ Plateau & setup'], ['play', '🎲 Partie'], ['debrief', '🏁 Débrief']];
+    const SCR = [['brief', '📡 Briefing'], ['rules', tx('📜 Règles', '📜 Rules')], ['setup', tx('🗺️ Plateau & setup', '🗺️ Board & setup')], ['play', tx('🎲 Partie', '🎲 Play')], ['debrief', tx('🏁 Débrief', '🏁 Debrief')]];
     $('#maSteps', root).style.display = m && st.screen !== 'home' ? '' : 'none';
     $('#maSteps', root).innerHTML = SCR.map(([k, t]) => `<button class="ma-b ${st.screen === k ? 'on' : ''}" data-go="${k}">${t}</button>`).join('');
-    $('#maTtl', root).textContent = m && st.screen !== 'home' ? `${typeof m.id === 'number' ? 'Stage ' + m.id : m.id} · ${m.name}` : 'Assistant de partie';
+    $('#maTtl', root).textContent = m && st.screen !== 'home' ? `${typeof m.id === 'number' ? 'Stage ' + m.id : m.id} · ${m.name}` : tx('Assistant de partie', 'Game assistant');
     const fit = (st.screen === 'play' || st.screen === 'setup') && m && isGrid(m);
     body.classList.toggle('fit', !!fit); root.dataset.screen = st.screen;
     // garde la position de défilement (page, plateau, panneau) : un tap ne doit jamais faire « remonter » l'écran
@@ -866,10 +870,10 @@
   /* ======================= 🗂️ Missions ======================= */
   function vHome() {
     const cl = LS.get('mgsg.cleared', {});
-    body.innerHTML = `<h2 style="margin:4px 0 10px">Choisis ta mission</h2><div class="ma-mis">${MIS().map(m => {
+    body.innerHTML = `<h2 style="margin:4px 0 10px">${tx('Choisis ta mission', 'Choose your mission')}</h2><div class="ma-mis">${MIS().map(m => {
       const g = st.games[m.id], live = g && g.started && !g.over;
       return `<button class="ma-mt ${cl[m.id] ? 'ok' : ''} ${live ? 'live' : ''}" data-a="pick" data-v="${m.id}"><span class="nb">${typeof m.id === 'number' ? String(m.id).padStart(2, '0') : 'VR'}</span>
-        <div class="nm">${esc(m.name)}</div><small>${m.type === 'sneak' ? '🕵️ Infiltration' : '👾 Boss'} · ⏱ ${esc(m.time || '?')}</small>${live ? `<br><small style="color:#9ec0ff">▶ Partie en cours (round ${g.round})</small>` : ''}</button>`;
+        <div class="nm">${esc(m.name)}</div><small>${m.type === 'sneak' ? tx('🕵️ Infiltration', '🕵️ Sneaking') : '👾 Boss'} · ⏱ ${esc(m.time || '?')}</small>${live ? `<br><small style="color:#9ec0ff">▶ ${tx('Partie en cours', 'Game in progress')} (round ${g.round})</small>` : ''}</button>`;
     }).join('')}</div>`;
   }
 
@@ -878,10 +882,10 @@
     const n = pcounts(m);
     body.innerHTML = `<div class="ma-codec"><div><div class="face">📡</div><div class="fq" style="font-size:1rem;margin-top:6px">140.85</div></div>
         <div><div class="fq">${esc(m.name)}${m.subtitle ? ` <span style="font-size:1rem;opacity:.7">— ${esc(m.subtitle)}</span>` : ''}</div><div class="txt" id="maTxt"></div></div></div>
-      <div class="ma-card"><h4>👥 Combien de joueurs ?</h4><div style="display:flex;gap:6px;flex-wrap:wrap">${n.map(k => `<button class="ma-b ${+k === st.n ? 'on' : ''}" data-a="n" data-v="${k}">${k} joueur${k > 1 ? 's' : ''} : ${pchars(m, +k).map(c => CE[c] + ' ' + c).join(', ')}</button>`).join('')}</div>
+      <div class="ma-card"><h4>👥 ${tx('Combien de joueurs ?', 'How many players?')}</h4><div style="display:flex;gap:6px;flex-wrap:wrap">${n.map(k => `<button class="ma-b ${+k === st.n ? 'on' : ''}" data-a="n" data-v="${k}">${k} ${tx('joueur', 'player')}${k > 1 ? 's' : ''} : ${pchars(m, +k).map(c => CE[c] + ' ' + c).join(', ')}</button>`).join('')}</div>
         ${(m.players || {}).note ? `<p style="opacity:.75">${(m.players.note || []).join(' ')}</p>` : ''}</div>
-      <div class="ma-two"><div class="ma-card"><h4>🎯 Objectif</h4>${list(m.objective)}</div><div class="ma-card warn"><h4>💀 Échec si…</h4>${list(m.failure)}</div></div>
-      <div class="ma-next"><button class="ma-b" data-a="read">📡 Relire</button><button class="ma-b pri big" data-go="rules">Continuer ▶</button></div>`;
+      <div class="ma-two"><div class="ma-card"><h4>🎯 ${tx('Objectif', 'Objective')}</h4>${list(m.objective)}</div><div class="ma-card warn"><h4>💀 ${tx('Échec si…', 'You fail if…')}</h4>${list(m.failure)}</div></div>
+      <div class="ma-next"><button class="ma-b" data-a="read">📡 ${tx('Relire', 'Replay')}</button><button class="ma-b pri big" data-go="rules">${tx('Continuer ▶', 'Continue ▶')}</button></div>`;
     typeBriefing(m);
   }
   function typeBriefing(m) {
@@ -897,14 +901,14 @@
     const special = (m.special || []).map(s => typeof s === 'string' ? `<li>${s}</li>` : `<li><b>${s.t}</b> — ${s.d}</li>`).join('');
     const events = (m.events || []).map(e => `<li><span class="ma-ev">${e.k}</span>${e.d}</li>`).join('');
     const errs = m.errata || [], faq = faqFor(m);
-    body.innerHTML = `${errs.length || faq.length ? `<div class="ma-card err"><h4>⚠️ Errata & précisions officielles</h4>${list(errs)}${faq.map(q => `<p><b>${q.q}</b><br>${q.a}</p>`).join('')}</div>` : ''}
-      ${special ? `<div class="ma-card"><h4>📜 Règles spéciales</h4><ul>${special}</ul></div>` : ''}
-      ${events ? `<div class="ma-card"><h4>🅰️ Events (dès qu'une figurine entre dessus)</h4><ul style="list-style:none;padding:0">${events}</ul></div>` : ''}
-      ${m.boss ? `<div class="ma-card boss"><h4>👾 ${esc(m.boss.name)}</h4>${m.boss.health ? `<p><b>Santé :</b> ${m.boss.health}</p>` : ''}${m.boss.defense ? `<p><b>Défense :</b> ${m.boss.defense}</p>` : ''}${list(m.boss.notes)}</div>` : ''}
-      <div class="ma-card"><h4>🏆 Si réussi</h4>${list(m.cleared)}</div>
-      ${m.tips && m.tips.length ? `<div class="ma-card"><h4>💡 Conseils</h4>${list(m.tips)}</div>` : ''}
-      <div class="ma-card"><h4>📞 Le Codec, c'est quand ?</h4><p>Quand tu veux, gratuitement : dès qu'un composant porte un <b>numéro Codec</b>, cherche-le dans le Codec Book (détails, astuces, secrets).${m.id === 8 ? ' <b>Errata Mantis :</b> Codec 3.14 → lire 3.11.' : ''}</p></div>
-      <div class="ma-next"><button class="ma-b pri big" data-go="setup">Continuer ▶</button></div>`;
+    body.innerHTML = `${errs.length || faq.length ? `<div class="ma-card err"><h4>⚠️ ${tx('Errata & précisions officielles', 'Official errata & clarifications')}</h4>${list(errs)}${faq.map(q => `<p><b>${q.q}</b><br>${q.a}</p>`).join('')}</div>` : ''}
+      ${special ? `<div class="ma-card"><h4>📜 ${tx('Règles spéciales', 'Special rules')}</h4><ul>${special}</ul></div>` : ''}
+      ${events ? `<div class="ma-card"><h4>🅰️ ${tx('Events (dès qu\'une figurine entre dessus)', 'Events (as soon as a figure enters them)')}</h4><ul style="list-style:none;padding:0">${events}</ul></div>` : ''}
+      ${m.boss ? `<div class="ma-card boss"><h4>👾 ${esc(m.boss.name)}</h4>${m.boss.health ? `<p><b>${tx('Santé', 'Health')} :</b> ${m.boss.health}</p>` : ''}${m.boss.defense ? `<p><b>${tx('Défense', 'Defense')} :</b> ${m.boss.defense}</p>` : ''}${list(m.boss.notes)}</div>` : ''}
+      <div class="ma-card"><h4>🏆 ${tx('Si réussi', 'Stage cleared')}</h4>${list(m.cleared)}</div>
+      ${m.tips && m.tips.length ? `<div class="ma-card"><h4>💡 ${tx('Conseils', 'Tips')}</h4>${list(m.tips)}</div>` : ''}
+      <div class="ma-card"><h4>📞 ${tx('Le Codec, c\'est quand ?', 'When do I use the Codec?')}</h4><p>${tx('Numéro <b>imprimé sur le plateau</b> : quand ta figurine passe dessus, 1 seul appel par stage (par le joueur sur la case, jamais en VR Missions). Numéro <b>sur un composant</b> (carte, dashboard…) : quand tu veux, autant de fois que tu veux. Action 📞 Codec de la partie pour lire le résumé.', 'Number <b>printed on the board</b>: when your figure moves over it, one call per Stage (by the player on that space, never in VR Missions). Number <b>on a component</b> (card, dashboard…): any time, as often as you like. Use the 📞 Codec action in play to read the summary.')}${m.id === 8 ? tx(' <b>Errata Mantis :</b> Codec 3.14 → lire 3.11.', ' <b>Mantis errata:</b> Codec 3.14 → read 3.11.') : ''}</p></div>
+      <div class="ma-next"><button class="ma-b pri big" data-go="setup">${tx('Continuer ▶', 'Continue ▶')}</button></div>`;
   }
 
   /* ======================= Plateau (commun setup / partie) ======================= */
@@ -923,12 +927,12 @@
     }).join('');
     const pick = ui.pend && (ui.pend.type === 'move' || ui.pend.type === 'target') || ui.place;
     const unplaced = g.pieces.filter(p => p.x == null && ['player', 'guard', 'cam', 'boss'].includes(p.k));
-    const label = p => p.k === 'player' ? `${CE[p.owner] || ''} ${p.owner}` : p.k === 'guard' ? '💂 Garde' : p.k === 'cam' ? '📹 Caméra' : '👾 Boss';
+    const label = p => p.k === 'player' ? `${CE[p.owner] || ''} ${p.owner}` : p.k === 'guard' ? tx('💂 Garde', '💂 Guard') : p.k === 'cam' ? tx('📹 Caméra', '📹 Camera') : '👾 Boss';
     return `<div class="ma-bd"><div class="ma-bdt"><button class="ma-b sm" data-a="zoom" data-v="-1">🔍−</button><button class="ma-b sm" data-a="zoom" data-v="1">🔍+</button>
-        <span style="flex:1;opacity:.85;font-size:.9rem">${ui.place ? '👆 Touche le plan pour poser le pion' : ui.pend && ui.pend.type === 'move' ? '👆 Touche la case où tu vas' : ui.pend && ui.pend.type === 'target' ? '👆 Touche la cible' : 'Glisse un pion pour le corriger · touche-le pour ses options'}</span>
-        <button class="ma-b sm" data-a="add" data-v="guard" title="Ajouter un garde">＋💂</button><button class="ma-b sm" data-a="add" data-v="cam" title="Ajouter une caméra">＋📹</button></div>
-      <div class="ma-bds"><div class="ma-map ${pick ? 'pick' : ''}" id="maMap" style="width:${Math.round(100 * (st.zoom || 1))}%">${src ? `<img src="${src}" alt="Plan">` : '<p style="padding:40px;color:#333">Pas de plan</p>'}${pcs}</div></div>
-      ${unplaced.length ? `<div class="ma-tray"><span style="opacity:.75;align-self:center">À poser :</span>${unplaced.map(p => `<button class="ma-b sm ${ui.place === p.id ? 'wait' : ''}" data-a="place" data-v="${p.id}">${label(p)}</button>`).join('')}</div>` : ''}</div>`;
+        <span style="flex:1;opacity:.85;font-size:.9rem">${ui.place ? tx('👆 Touche le plan pour poser le pion', '👆 Tap the map to place the piece') : ui.pend && ui.pend.type === 'move' ? tx('👆 Touche la case où tu vas', '👆 Tap where you move') : ui.pend && ui.pend.type === 'target' ? tx('👆 Touche la cible', '👆 Tap the target') : tx('Glisse un pion pour le corriger · touche-le pour ses options', 'Drag a piece to correct it · tap it for options')}</span>
+        <button class="ma-b sm" data-a="add" data-v="guard" title="${tx('Ajouter un garde', 'Add a Guard')}">＋💂</button><button class="ma-b sm" data-a="add" data-v="cam" title="${tx('Ajouter une caméra', 'Add a Camera')}">＋📹</button></div>
+      <div class="ma-bds"><div class="ma-map ${pick ? 'pick' : ''}" id="maMap" style="width:${Math.round(100 * (st.zoom || 1))}%">${src ? `<img src="${src}" alt="Plan">` : `<p style="padding:40px;color:#333">${tx('Pas de plan', 'No map')}</p>`}${pcs}</div></div>
+      ${unplaced.length ? `<div class="ma-tray"><span style="opacity:.75;align-self:center">${tx('À poser :', 'To place:')}</span>${unplaced.map(p => `<button class="ma-b sm ${ui.place === p.id ? 'wait' : ''}" data-a="place" data-v="${p.id}">${label(p)}</button>`).join('')}</div>` : ''}</div>`;
   }
   function bindBoard() {
     if (isGrid(mission())) return bindGrid();
@@ -966,7 +970,7 @@
 
   function tapMap(x, y) {
     const g = game();
-    if (ui.place) { snap(); const p = piece(ui.place); if (p) { p.x = x; p.y = y; log(`Pion posé : ${p.k === 'player' ? p.owner : p.k}`, 'sys'); } ui.place = null; nextUnplaced(g); save(); render(); return; }
+    if (ui.place) { snap(); const p = piece(ui.place); if (p) { p.x = x; p.y = y; log(`${tx('Pion posé', 'Piece placed')} : ${p.k === 'player' ? p.owner : p.k}`, 'sys'); } ui.place = null; nextUnplaced(g); save(); render(); return; }
     if (ui.pend && ui.pend.type === 'move') return doMove(x, y);
     if (ui.sel) { ui.sel = null; render(); }
   }
@@ -989,18 +993,18 @@
     const chars = pchars(m, st.n);
     const deck = m.guardDeck ? (typeof m.guardDeck === 'string' ? m.guardDeck : Object.entries(m.guardDeck).map(([k, v]) => `${k} : ${v}`).join(' · ')) : null;
     const stepsL = [...(m.setup || []),
-      ...(isSneak(m) ? ['Guard dashboard : deck Guard Order (bleues mélangées SUR les rouges) + deck Guard Reaction (6) mélangé.'] : []),
-      `Chaque joueur (${chars.map(c => CE[c] + ' ' + c).join(', ')}) : dashboard, 4 jetons Action, 4 Focus, jeton Attention, équipement (≤ limite) + munitions.`,
-      'Dés et jetons (dégâts, KO, Mort…) en réserve.'];
-    const errs = (m.errata || []).filter(e => /setup|mise en place|carte|barracks|tuile|plan|icône|placer/i.test(e));
+      ...(isSneak(m) ? [tx('Guard dashboard : deck Guard Order (bleues mélangées SUR les rouges) + deck Guard Reaction (6) mélangé.', 'Guard dashboard: Guard Order deck (shuffled blue cards ON TOP of the red ones) + shuffled Guard Reaction deck (6).')] : []),
+      tx(`Chaque joueur (${chars.map(c => CE[c] + ' ' + c).join(', ')}) : dashboard, 4 jetons Action, 4 Focus, jeton Attention, équipement (≤ limite) + munitions.`, `Each player (${chars.map(c => CE[c] + ' ' + c).join(', ')}): dashboard, 4 Action tokens, 4 Focus tokens, Attention token, equipment (≤ limit) + ammo.`),
+      tx('Dés et jetons (dégâts, KO, Mort…) en réserve.', 'Dice and tokens (damage, KO, Dead…) in a supply.')];
+    const errs = (m.errata || []).filter(e => /setup|mise en place|carte|barracks|tuile|plan|icône|placer|card|tile|map|icon|place/i.test(e));
     if (!ui.place && !g.started && !ui.sel) nextUnplaced(g);
-    body.innerHTML = `${errs.length ? `<div class="ma-card err"><h4>⚠️ Errata pour la mise en place</h4>${list(errs)}</div>` : ''}
-      <div class="ma-play"><div>${boardHtml(m, g, 'setup')}<p style="opacity:.7;font-size:.9rem;margin:6px 2px">${g.grid ? 'Les pions sont placés comme sur le livret. Pour corriger : fais glisser un pion du doigt (ou touche-le puis une case ; ⟲⟳ pour le regard). <button class="ma-b sm" data-a="resetPos">↺ Replacer selon le livret</button>' : 'Pose les pions comme sur le vrai plateau (zone de départ, gardes et leur regard avec ⟲⟳). Facultatif : tu peux jouer sans poser les gardes.'}</p></div>
-      <div><div class="ma-card" style="margin-top:0"><h4>🧰 Matériel</h4><p>${chars.map(c => `<span class="chip">${CE[c] || ''} ${c}</span>`).join('')}</p>${m.tiles && m.tiles.length ? `<p><b>Tuiles :</b> ${m.tiles.join(', ')}</p>` : ''}${deck ? `<p><b>Guard Order :</b> ${deck}</p>` : ''}</div>
+    body.innerHTML = `${errs.length ? `<div class="ma-card err"><h4>⚠️ ${tx('Errata pour la mise en place', 'Setup errata')}</h4>${list(errs)}</div>` : ''}
+      <div class="ma-play"><div>${boardHtml(m, g, 'setup')}<p style="opacity:.7;font-size:.9rem;margin:6px 2px">${g.grid ? tx('Les pions sont placés comme sur le livret. Pour corriger : fais glisser un pion du doigt (ou touche-le puis une case ; ⟲⟳ pour le regard).', 'Pieces are placed as in the book. To correct: drag a piece with your finger (or tap it, then a space; ⟲⟳ to turn it).') + ` <button class="ma-b sm" data-a="resetPos">${tx('↺ Replacer selon le livret', '↺ Reset to the book layout')}</button>` : tx('Pose les pions comme sur le vrai plateau (zone de départ, gardes et leur regard avec ⟲⟳). Facultatif : tu peux jouer sans poser les gardes.', 'Place the pieces as on the real board (starting area, Guards and their facing with ⟲⟳). Optional: you can play without placing the Guards.')}</p></div>
+      <div><div class="ma-card" style="margin-top:0"><h4>🧰 ${tx('Matériel', 'Components')}</h4><p>${chars.map(c => `<span class="chip">${CE[c] || ''} ${c}</span>`).join('')}</p>${m.tiles && m.tiles.length ? `<p><b>${tx('Tuiles', 'Tiles')} :</b> ${m.tiles.join(', ')}</p>` : ''}${deck ? `<p><b>Guard Order :</b> ${deck}</p>` : ''}</div>
         ${selPanel(m, g)}
-        <div class="ma-card"><h4>🎒 Équipement de départ</h4><p style="opacity:.8;margin:2px 0 6px">Ajoute les cartes que chacun prend (limite ${EQUIP_LIMIT} cartes de la Memory Box, les cartes de départ du personnage en plus). Sans ration, pas d'action Ration ; sans arme, pas de tir, etc.</p>${invEditor(m, g)}</div>
+        <div class="ma-card"><h4>🎒 ${tx('Équipement de départ', 'Starting equipment')}</h4><p style="opacity:.8;margin:2px 0 6px">${tx('Ajoute les cartes que chacun prend (dans la limite d\'équipement de son dashboard). Sans ration, pas d\'action Ration ; sans arme, pas de tir, etc.', 'Add the cards each character takes (within their dashboard\'s equipment limit). No Rations, no Ration action; no weapon, no shooting, etc.')}</p>${invEditor(m, g)}</div>
         <div class="ma-card"><h4>✅ Checklist</h4><ul class="ma-chk">${stepsL.map((s, i) => `<li class="${chk[i] ? 'ok' : ''}" data-chk="${i}"><span class="bx">${chk[i] ? '✓' : ''}</span><span class="tx">${s}</span></li>`).join('')}</ul></div>
-        <div class="ma-next">${g.started ? `<button class="ma-b pri big" data-go="play">▶ Retour à la partie</button>` : `<button class="ma-b pri big" data-a="start">🎬 Continuer : commencer la partie</button>`}</div></div></div>`;
+        <div class="ma-next">${g.started ? `<button class="ma-b pri big" data-go="play">▶ ${tx('Retour à la partie', 'Back to the game')}</button>` : `<button class="ma-b pri big" data-a="start">🎬 ${tx('Continuer : commencer la partie', 'Continue: start the game')}</button>`}</div></div></div>`;
     bindBoard();
   }
 
@@ -1009,41 +1013,41 @@
     const rot = `<button class="ma-b sm" data-a="rot" data-v="-1">⟲</button><button class="ma-b sm" data-a="rot" data-v="1">⟳</button>`;
     const play = st.screen === 'play';
     let h = '';
-    if (p.k === 'guard') h = `💂 <b>Garde</b> ${p.hurt ? '<b style="color:#ff8a96">(blessé)</b>' : ''}<br>${rot} <button class="ma-b sm" data-a="pko">⭐ KO</button> <button class="ma-b sm" data-a="pdead">☠ Mort</button> <button class="ma-b sm" data-a="phurt">🩸 Blessé</button>${play ? g.players.map((q, i) => ` <button class="ma-b sm" data-a="seen" data-v="${i}">👁️ Voit ${q.name}</button>`).join('') : ''} <button class="ma-b sm red" data-a="prm">🗑</button>`;
-    else if (p.k === 'cam') h = `📹 <b>Caméra</b><br>${rot}${play ? g.players.map((q, i) => ` <button class="ma-b sm" data-a="camSeen" data-v="${i}">📹 Voit ${q.name}</button>`).join('') : ''} <button class="ma-b sm red" data-a="prm">🗑</button>`;
+    if (p.k === 'guard') h = `💂 <b>${tx('Garde', 'Guard')}</b> ${p.hurt ? `<b style="color:#ff8a96">(${tx('blessé', 'wounded')})</b>` : ''}<br>${rot} <button class="ma-b sm" data-a="pko">⭐ KO</button> <button class="ma-b sm" data-a="pdead">☠ ${tx('Mort', 'Dead')}</button> <button class="ma-b sm" data-a="phurt">🩸 ${tx('Blessé', 'Wounded')}</button>${play ? g.players.map((q, i) => ` <button class="ma-b sm" data-a="seen" data-v="${i}">👁️ ${tx('Voit', 'Sees')} ${q.name}</button>`).join('') : ''} <button class="ma-b sm red" data-a="prm">🗑</button>`;
+    else if (p.k === 'cam') h = `📹 <b>${tx('Caméra', 'Camera')}</b><br>${rot}${play ? g.players.map((q, i) => ` <button class="ma-b sm" data-a="camSeen" data-v="${i}">📹 ${tx('Voit', 'Sees')} ${q.name}</button>`).join('') : ''} <button class="ma-b sm red" data-a="prm">🗑</button>`;
     else if (p.k === 'boss') h = `👾 <b>${esc((m.boss || {}).name || 'Boss')}</b><br>${rot}`;
-    else if (p.k === 'ko2' || p.k === 'ko1') h = `⭐ <b>Garde KO</b> (${p.k === 'ko2' ? '★★' : '★'})<br><button class="ma-b sm" data-a="pwake">💂 Se relève</button> <button class="ma-b sm red" data-a="prm">🗑</button>`;
-    else if (p.k === 'dead') h = `☠ <b>Garde mort</b> (glisse-le pour le cacher)<br><button class="ma-b sm red" data-a="prm">🗑</button>`;
-    else if (p.k === 'q' || p.k === 'a') h = `Jeton Attention de <b>${p.owner}</b> (${p.k === 'q' ? '?' : '!'})<br><button class="ma-b sm" data-a="pflip">🔄 Retourner</button> <button class="ma-b sm red" data-a="prmatt">🗑 Retirer (Guard Reaction)</button>`;
+    else if (p.k === 'ko2' || p.k === 'ko1') h = `⭐ <b>${tx('Garde KO', 'KO\'d Guard')}</b> (${p.k === 'ko2' ? '★★' : '★'})<br><button class="ma-b sm" data-a="pwake">💂 ${tx('Se relève', 'Wakes up')}</button> <button class="ma-b sm red" data-a="prm">🗑</button>`;
+    else if (p.k === 'dead') h = `☠ <b>${tx('Garde mort', 'Dead Guard')}</b> (${tx('glisse-le pour le cacher', 'drag it to hide the body')})<br><button class="ma-b sm red" data-a="prm">🗑</button>`;
+    else if (p.k === 'q' || p.k === 'a') h = `${tx('Jeton Attention de', 'Attention token of')} <b>${p.owner}</b> (${p.k === 'q' ? '?' : '!'})<br><button class="ma-b sm" data-a="pflip">🔄 ${tx('Retourner', 'Flip')}</button> <button class="ma-b sm red" data-a="prmatt">🗑 ${tx('Retirer (Guard Reaction)', 'Remove (Guard Reaction)')}</button>`;
     else if (p.k === 'player') h = `${CE[p.owner] || ''} <b>${p.owner}</b>`;
     return `<div class="ma-ask" style="margin-top:0">${h} <button class="ma-b sm" data-a="unsel">✕</button></div>`;
   }
 
   /* ======================= 🎲 Partie ======================= */
   const ACTS = [
-    { id: 'sneak', i: '🚶', n: 'Sneak', c: 1, move: 1, tip: '1 case, jamais en diagonale.' },
-    { id: 'dash', i: '🏃', n: 'Dash', c: 1, move: 2, noisy: 1, tip: '2 cases. 🔊 Bruyant : noise check en fin de tour.' },
-    { id: 'h2h', i: '👊', n: 'Corps-à-corps', c: 1, atk: 'ko', dice: ['w'], sfx: 'punch-guard-kox1.mp3', tip: 'Cible adjacente, 1 dé blanc, dégâts KO.' },
-    { id: 'combo', i: '🥊', n: 'Combo', c: 2, atk: 'ko', dice: ['w', 'w', 'b'], sfx: 'knock-out-guard-kox2.mp3', tip: 'Cible adjacente, 2 blancs + 1 noir, dégâts KO.' },
-    { id: 'silent', i: '🤫', n: 'Élim. silencieuse', c: 2, only: 'Snake', atk: 'silent', sfx: 'mgs-silent-takedown.mp3', tip: 'DANS LE DOS d\'un garde adjacent → jeton Mort, sans bruit.' },
-    { id: 'shoot', i: '🔫', n: 'Tir', c: 1, need: 'gun', atk: 'kill', dice: null, loud: 1, gun: 1, sfx: 'mgs-socom.mp3', tip: 'LOUD (sauf si la carte dit silencieux). Lance les dés de la carte.' },
-    { id: 'shootS', i: '🔇', n: 'Tir silencieux', c: 1, need: 'sgun', atk: 'kill', dice: null, gun: 1, sfx: 'mgs-socom-silenced.mp3', tip: 'Silencieux : vérifie sur la carte.' },
-    { id: 'gren', i: '💣', n: 'Grenade', c: 1, need: 'grenade', loud: 1, gun: 1, sfx: 'mgs-grenade.mp3', then: 'mgs-explosion.mp3', tip: 'LOUD → ! sous toi. Effet : voir la carte.' },
-    { id: 'chaff', i: '✨', n: 'Chaff', c: 1, need: 'chaff', gun: 1, auto: 'chaff', thenAuto: 'chaffJam', tip: 'Voir la carte Équipement.' },
-    { id: 'knock', i: '✊', n: 'Toquer', c: 1, sfx: 'mgs-knock-a.mp3', att: 1, tip: 'Ton jeton ? sur ta case : le garde le plus proche viendra.' },
-    { id: 'drag', i: '🫳', n: 'Traîner corps', c: 1, noisy: 1, move: 1, tip: 'Prends un KO/Mort à côté, bouge d\'1, pose-le à côté. 🔊' },
-    { id: 'interact', i: '🚪', n: 'Porte / objet', c: 1, auto: 'door', tip: 'Porte verrouillée : dés du dashboard, relance en recommençant, tout dans le même tour.' },
-    { id: 'elev', i: '🛗', n: 'Ascenseur', c: 1, auto: 'elevCall', thenAuto: 'elevator', tip: 'L\'ascenseur part avec toutes les figurines dedans (le jeton Attention suit).' },
-    { id: 'disguise', i: '🥸', n: 'Déguisement', c: 2, only: 'Meryl', tip: 'À côté d\'un KO/Mort, jeton Attention pas sur la carte.' },
-    { id: 'hack', i: '💻', n: 'Hack', c: 1, only: 'Otacon', tip: '4 dés noirs (+bonus), relance ; combinaison du Terminal dans le même tour.' },
-    { id: 'search', i: '🔎', n: 'System Search', c: 1, only: 'Otacon', tip: 'Terminal piraté : pioche 1 carte System (max 3).' },
-    { id: 'access', i: '⚙️', n: 'Access', c: 1, only: 'Otacon', tip: 'Jusqu\'à 4 dés noirs sur les cartes System.' },
-    { id: 'focus', i: '🎯', n: 'Focus', c: 1, tip: 'Coût sur la face grise (ajoute un point si 2).' },
-    { id: 'ration', i: '🍴', n: 'Ration', c: 1, need: 'ration', auto: 'ration', tip: 'Voir la carte.' },
-    { id: 'leap', i: '🤸', n: 'Saute un garde', c: 0, leap: 1, tip: 'Chaque garde sauté t\'attaque (2 dés noirs) et ton jeton passe sur !.' },
-    { id: 'item', i: '🎒', n: 'Objet trouvé', c: 0, auto: 'pop', thenAuto: 'pickup', tip: 'Un objet apparaît / ramassé.' },
-    { id: 'wall', i: '🧱', n: 'Dos au mur', c: 0, auto: 'wall', tip: 'Ambiance.' },
-    { id: 'codec', i: '📞', n: 'Codec', c: 0, auto: 'codec', tip: 'Numéro Codec → Codec Book (gratuit).' },
+    { id: 'sneak', i: '🚶', n: 'Sneak', c: 1, move: 1, tip: tx('1 case, jamais en diagonale.', '1 space, never diagonally.') },
+    { id: 'dash', i: '🏃', n: 'Dash', c: 1, move: 2, noisy: 1, tip: tx('2 cases. 🔊 Bruyant : noise check en fin de tour.', '2 spaces. 🔊 Noisy: noise check at the end of your turn.') },
+    { id: 'h2h', i: '👊', n: tx('Corps-à-corps', 'Hand-to-hand'), c: 1, atk: 'ko', dice: ['w'], sfx: 'punch-guard-kox1.mp3', tip: tx('Cible adjacente, 1 dé blanc, dégâts KO.', 'Adjacent target, 1 white die, KO damage.') },
+    { id: 'combo', i: '🥊', n: 'Combo', c: 2, atk: 'ko', dice: ['w', 'w', 'b'], sfx: 'knock-out-guard-kox2.mp3', tip: tx('Cible adjacente, 2 blancs + 1 noir, dégâts KO.', 'Adjacent target, 2 white + 1 black, KO damage.') },
+    { id: 'silent', i: '🤫', n: tx('Élim. silencieuse', 'Silent Takedown'), c: 2, only: 'Snake', atk: 'silent', sfx: 'mgs-silent-takedown.mp3', tip: tx('DANS LE DOS d\'un garde adjacent → jeton Mort, sans bruit.', 'BEHIND an adjacent Guard → replace it with a Dead token, silently.') },
+    { id: 'shoot', i: '🔫', n: tx('Tir', 'Shoot'), c: 1, need: 'gun', atk: 'kill', dice: null, loud: 1, gun: 1, sfx: 'mgs-socom.mp3', tip: tx('LOUD (sauf si la carte dit silencieux). Lance les dés de la carte.', 'LOUD (unless the card says suppressed). Roll the card\'s dice.') },
+    { id: 'shootS', i: '🔇', n: tx('Tir silencieux', 'Suppressed shot'), c: 1, need: 'sgun', atk: 'kill', dice: null, gun: 1, sfx: 'mgs-socom-silenced.mp3', tip: tx('Silencieux : vérifie sur la carte.', 'Suppressed: check the card.') },
+    { id: 'gren', i: '💣', n: 'Grenade', c: 1, need: 'grenade', loud: 1, gun: 1, sfx: 'mgs-grenade.mp3', then: 'mgs-explosion.mp3', tip: tx('LOUD → ! sous toi. Effet : voir la carte.', 'LOUD → ! under you. Effect: see the card.') },
+    { id: 'chaff', i: '✨', n: 'Chaff', c: 1, need: 'chaff', gun: 1, auto: 'chaff', thenAuto: 'chaffJam', tip: tx('Voir la carte Équipement.', 'See the Equipment card.') },
+    { id: 'knock', i: '✊', n: tx('Toquer', 'Knock'), c: 1, sfx: 'mgs-knock-a.mp3', att: 1, tip: tx('Ton jeton ? sur ta case : le garde le plus proche viendra.', 'Your ? token on your space: the nearest Guard will come.') },
+    { id: 'drag', i: '🫳', n: tx('Traîner corps', 'Drag body'), c: 1, noisy: 1, move: 1, tip: tx('Prends un KO/Mort à côté, bouge d\'1, pose-le à côté. 🔊', 'Take an adjacent KO/Dead, move 1, drop it adjacent. 🔊') },
+    { id: 'interact', i: '🚪', n: tx('Porte / objet', 'Interact'), c: 1, auto: 'door', tip: tx('Porte verrouillée : dés du dashboard, relance en recommençant, tout dans le même tour.', 'Locked door: roll the dice shown, reroll by interacting again, all in the same turn.') },
+    { id: 'elev', i: '🛗', n: tx('Ascenseur', 'Elevator'), c: 1, auto: 'elevCall', thenAuto: 'elevator', tip: tx('L\'ascenseur part avec toutes les figurines dedans (le jeton Attention suit).', 'The elevator moves with every figure inside (the Attention token follows).') },
+    { id: 'disguise', i: '🥸', n: tx('Déguisement', 'Disguise'), c: 2, only: 'Meryl', tip: tx('À côté d\'un KO/Mort, jeton Attention pas sur la carte.', 'Next to a KO/Dead, with your Attention token off the map.') },
+    { id: 'hack', i: '💻', n: 'Hack', c: 1, only: 'Otacon', tip: tx('4 dés noirs (+bonus), relance ; combinaison du Terminal dans le même tour.', '4 black dice (+bonus), reroll; complete the Terminal combo in the same turn.') },
+    { id: 'search', i: '🔎', n: 'System Search', c: 1, only: 'Otacon', tip: tx('Terminal piraté : pioche 1 carte System (max 3).', 'Hacked Terminal: draw 1 System card (max 3).') },
+    { id: 'access', i: '⚙️', n: 'Access', c: 1, only: 'Otacon', tip: tx('Jusqu\'à 4 dés noirs sur les cartes System.', 'Up to 4 black dice on System cards.') },
+    { id: 'focus', i: '🎯', n: 'Focus', c: 1, tip: tx('Coût sur la face grise (ajoute un point si 2).', 'Cost shown on the gray side (add one if it says 2).') },
+    { id: 'ration', i: '🍴', n: 'Ration', c: 1, need: 'ration', auto: 'ration', tip: tx('Voir la carte.', 'See the card.') },
+    { id: 'leap', i: '🤸', n: tx('Saute un garde', 'Leapfrog'), c: 0, leap: 1, tip: tx('Chaque garde sauté t\'attaque (2 dés noirs) et ton jeton passe sur !.', 'Each leapfrogged Guard attacks you (2 black dice) and your token flips to !.') },
+    { id: 'item', i: '🎒', n: tx('Objet trouvé', 'Item found'), c: 0, auto: 'pop', thenAuto: 'pickup', tip: tx('Un objet apparaît / ramassé.', 'An item appears / is picked up.') },
+    { id: 'wall', i: '🧱', n: tx('Dos au mur', 'Back to the wall'), c: 0, auto: 'wall', tip: tx('Ambiance.', 'Atmosphere.') },
+    { id: 'codec', i: '📞', n: 'Codec', c: 0, auto: 'codec', tip: tx('Numéro Codec → Codec Book (gratuit).', 'Codec number → Codec Book (free).') },
   ];
   const GENERIC = ['shoot', 'shootS', 'gren', 'chaff', 'ration'];   // remplacées par les cartes quand l'inventaire est renseigné
   const actsFor = p => ACTS.filter(a => (!a.only || a.only === p.name) && !(a.gun && p.name === 'Otacon') && !(p.inv && GENERIC.includes(a.id))).concat(itemActs(p));
@@ -1054,19 +1058,19 @@
     p.inv.forEach(it => {
       const cd = it.num ? CARDS[it.num] : null, kind = cd ? cd.kind : it.type === 'gun' || it.type === 'sgun' ? 'shoot' : it.type === 'ration' ? 'heal' : it.type === 'grenade' ? 'frag' : it.type === 'chaff' ? 'chaff' : null;
       if (!kind || kind === 'passive') return;
-      const b = { id: 'it-' + it.id, item: it.id, i: icOf(it), n: it.name, c: cd ? cd.cost : 1, tip: (cd && cd.tip) || '', eff: kind };
+      const b = { id: 'it-' + it.id, item: it.id, i: icOf(it), n: nameOf(it), c: cd ? cd.cost : 1, tip: (cd && cd.tip) || '', eff: kind };
       if (kind === 'shoot') {
         const cls = cd ? cd.cls : /fusil|rifle/i.test(it.name) ? 'rifle' : 'pistol';
         const sil = it.type === 'sgun' || p.inv.some(x => x.num && CARDS[x.num] && CARDS[x.num].sil === cls);
-        out.push(Object.assign(b, { atk: 'kill', dice: cd ? cd.dice : null, loud: sil ? 0 : 1, gun: 1, ammo: it.uses != null, sfx: sil ? 'mgs-socom-silenced.mp3' : cls === 'rifle' ? 'mgs-fa-mas.mp3' : 'mgs-socom.mp3', n: it.name + (sil ? ' 🔇' : '') }));
+        out.push(Object.assign(b, { atk: 'kill', dice: cd ? cd.dice : null, loud: sil ? 0 : 1, gun: 1, ammo: it.uses != null, sfx: sil ? 'mgs-socom-silenced.mp3' : cls === 'rifle' ? 'mgs-fa-mas.mp3' : 'mgs-socom.mp3', n: nameOf(it) + (sil ? ' 🔇' : '') }));
       } else if (kind === 'heal') out.push(Object.assign(b, { n: 'Ration', auto: 'ration' }));
       else if (kind === 'chaff') out.push(Object.assign(b, { gun: 1, auto: 'chaff', thenAuto: 'chaffJam' }));
       else if (kind === 'stun' || kind === 'frag') out.push(Object.assign(b, { gun: 1, loud: 1, sfx: 'mgs-grenade.mp3', then: 'mgs-explosion.mp3' }));
-      else if (kind === 'c4') { out.push(Object.assign(b, { n: 'Poser C-4', gun: 1, sfx: 'mgs-pick-up-item.mp3' })); out.push(Object.assign({}, b, { id: 'it-' + it.id + '-x', n: 'Faire sauter C-4', i: '💥', eff: 'detonate', gun: 1, sfx: 'mgs-explosion.mp3' })); }
-      else if (kind === 'plant') out.push(Object.assign(b, { n: 'Poser : ' + it.name, gun: 1, sfx: 'mgs-pick-up-item.mp3' }));
+      else if (kind === 'c4') { out.push(Object.assign(b, { n: tx('Poser C-4', 'Plant C-4'), gun: 1, sfx: 'mgs-pick-up-item.mp3' })); out.push(Object.assign({}, b, { id: 'it-' + it.id + '-x', n: tx('Faire sauter C-4', 'Detonate C-4'), i: '💥', eff: 'detonate', gun: 1, sfx: 'mgs-explosion.mp3' })); }
+      else if (kind === 'plant') out.push(Object.assign(b, { n: tx('Poser : ', 'Plant: ') + nameOf(it), gun: 1, sfx: 'mgs-pick-up-item.mp3' }));
       else if (kind === 'missile') out.push(Object.assign(b, { gun: 1, loud: 1, sfx: 'mgs-grenade.mp3', then: 'mgs-explosion.mp3' }));
-      else if (kind === 'box') out.push(Object.assign(b, { n: 'Se cacher (carton)' }));
-      else if (kind === 'stealth') out.push(Object.assign(b, { n: 'Camouflage optique' }));
+      else if (kind === 'box') out.push(Object.assign(b, { n: tx('Se cacher (carton)', 'Hide (box)') }));
+      else if (kind === 'stealth') out.push(Object.assign(b, { n: tx('Camouflage optique', 'Stealth Camouflage') }));
       else out.push(Object.assign(b, kind === 'key' ? { sfx: 'mgs-door-open.mp3' } : {}));
     });
     return out;
@@ -1081,17 +1085,17 @@
     if (a.eff === 'c4' || a.eff === 'plant') it.planted = (it.planted || 0) + 1;
     if (it.uses == null) return;
     it.uses = Math.max(0, it.uses - 1);
-    if (it.uses === 0 && !(a.eff === 'c4' && it.planted)) { p.inv = p.inv.filter(x => x !== it); toast(`${icOf(it)} <b>${esc(it.name)}</b> épuisé : défausse la carte (elle revient dans la Memory Box au prochain stage).`, 3800); }
+    if (it.uses === 0 && !(a.eff === 'c4' && it.planted)) { p.inv = p.inv.filter(x => x !== it); toast(`${icOf(it)} <b>${esc(nameOf(it))}</b> ${tx('épuisé : défausse la carte (elle revient dans la Memory Box au prochain stage).', 'used up: discard the card (it returns to the Memory Box next Stage).')}`, 3800); }
   }
 
   function setAtt(g, p, v, why, manual) {
     const before = p.att;
-    if (v === 1 && before === 2 && !manual) { toast('Ton jeton est déjà sur <b>!</b> : il se déplace sur ta case et reste sur !'); placeAtt(g, p); return; }
+    if (v === 1 && before === 2 && !manual) { toast(tx('Ton jeton est déjà sur <b>!</b> : il se déplace sur ta case et reste sur !', 'Your token is already on <b>!</b>: it moves to your space and stays on !')); placeAtt(g, p); return; }
     p.att = v;
     if (v === 0) { const t = attPiece(g, p.name); if (t) g.pieces = g.pieces.filter(x => x !== t); }
     else placeAtt(g, p);
-    if (v === 2 && before !== 2) { A.sfx(AU().alert); g.alerts++; p.s.alerts++; log(`🚨 ${p.name} repéré${why ? ' (' + why + ')' : ''} : jeton ! → ALERTE`, 'alert', p.name); toast(`🚨 <b>${p.name}</b> : jeton <b>!</b> sous sa figurine${why ? ' (' + why + ')' : ''}. Les gardes de sa zone passent en ALERTE.`, 3500); }
-    if (v === 1 && before === 0) { A.sfx(AU().investigate); log(`❓ ${p.name} : jeton ? posé${why ? ' (' + why + ')' : ''}`, 'alert', p.name); toast(`❓ Jeton <b>?</b> de ${p.name} posé : le garde le plus proche viendra voir.`); }
+    if (v === 2 && before !== 2) { A.sfx(AU().alert); g.alerts++; p.s.alerts++; log(tx(`🚨 ${p.name} repéré${why ? ' (' + why + ')' : ''} : jeton ! → ALERTE`, `🚨 ${p.name} spotted${why ? ' (' + why + ')' : ''}: ! token → ALERT`), 'alert', p.name); toast(tx(`🚨 <b>${p.name}</b> : jeton <b>!</b> sous sa figurine${why ? ' (' + why + ')' : ''}. Les gardes de sa zone passent en ALERTE.`, `🚨 <b>${p.name}</b>: <b>!</b> token under the figure${why ? ' (' + why + ')' : ''}. Guards in that zone go into ALERT mode.`), 3500); }
+    if (v === 1 && before === 0) { A.sfx(AU().investigate); log(tx(`❓ ${p.name} : jeton ? posé${why ? ' (' + why + ')' : ''}`, `❓ ${p.name}: ? token placed${why ? ' (' + why + ')' : ''}`), 'alert', p.name); toast(tx(`❓ Jeton <b>?</b> de ${p.name} posé : le garde le plus proche viendra voir.`, `❓ ${p.name}'s <b>?</b> token placed: the nearest Guard will investigate.`)); }
     syncAlert();
   }
   function placeAtt(g, p) {
@@ -1103,7 +1107,7 @@
 
   function vPlay(m) {
     const g = game();
-    if (!g.started) { body.innerHTML = `<div class="ma-card"><h4>La partie n'a pas commencé</h4><p>Termine la mise en place puis appuie sur Continuer.</p><button class="ma-b pri big" data-go="setup">🗺️ Plateau & setup</button></div>`; return; }
+    if (!g.started) { body.innerHTML = `<div class="ma-card"><h4>${tx('La partie n\'a pas commencé', 'The game hasn\'t started')}</h4><p>${tx('Termine la mise en place puis appuie sur Continuer.', 'Finish the setup, then press Continue.')}</p><button class="ma-b pri big" data-go="setup">${tx('🗺️ Plateau & setup', '🗺️ Board & setup')}</button></div>`; return; }
     body.innerHTML = `<div class="ma-play"><div>${boardHtml(m, g, 'play')}</div><div>${panelHtml(m, g)}</div></div>`;
     bindBoard(); tick();
     // phase ennemie : on montre le garde qui va jouer (une seule fois par garde, pour laisser l'utilisateur déplacer la vue)
@@ -1115,77 +1119,77 @@
     const total = g.deck ? g.deck.red + g.deck.blue : 0, left = g.deck ? Math.max(0, total - g.deck.drawn) : 0;
     const alert = g.players.some(p => p.att === 2);
     return `<div class="ma-hud"><span class="pill">ROUND ${g.round}</span><span class="pill" id="maClock">⏱ ${fmtT((g.t1 || now()) - g.t0)}</span>
-      ${g.deck ? `<span class="pill" title="Paquet Guard Order">🃏 ${left}${g.deck.drawn >= g.deck.blue ? ' 🔴' : ''}</span>` : ''}${isBoss(m) ? `<span class="pill">👾 💥${g.boss.dmg}</span>` : ''}
-      ${alert ? '<span class="pill al">🚨 ALERTE</span>' : ''}<span style="flex:1"></span><button class="ma-b sm" data-a="undo" ${undo.length ? '' : 'disabled'} title="Annuler">↶</button></div>
+      ${g.deck ? `<span class="pill" title="${tx('Paquet Guard Order', 'Guard Order deck')}">🃏 ${left}${g.deck.drawn >= g.deck.blue ? ' 🔴' : ''}</span>` : ''}${isBoss(m) ? `<span class="pill">👾 💥${g.boss.dmg}</span>` : ''}
+      ${alert ? `<span class="pill al">🚨 ${tx('ALERTE', 'ALERT')}</span>` : ''}<span style="flex:1"></span><button class="ma-b sm" data-a="undo" ${undo.length ? '' : 'disabled'} title="${tx('Annuler', 'Undo')}">↶</button></div>
       ${g.deck ? `<div class="ma-deck">${Array.from({ length: total }, (_, i) => `<i class="${i < g.deck.drawn ? 'x' : (i < g.deck.blue ? 'b' : 'r')}"></i>`).join('')}</div>` : ''}
-      <div class="ma-ph">${['1 · Début', '2 · Joueurs', '3 · Ennemis'].map((t, i) => `<button class="ma-b sm ${g.phase === i ? 'on' : ''}" data-a="phase" data-v="${i}">${t}</button>`).join('')}</div>`;
+      <div class="ma-ph">${[tx('1 · Début', '1 · Start'), tx('2 · Joueurs', '2 · Players'), tx('3 · Ennemis', '3 · Enemies')].map((t, i) => `<button class="ma-b sm ${g.phase === i ? 'on' : ''}" data-a="phase" data-v="${i}">${t}</button>`).join('')}</div>`;
   }
   function panelHtml(m, g) {
     let h = hudHtml(m, g) + selPanel(m, g);
-    if (g.over) h += `<div class="ma-ban ${g.over === 'win' ? 'win' : 'go'}">${g.over === 'win' ? '🏆 MISSION RÉUSSIE' : '💀 MISSION ÉCHOUÉE'}${g.why ? `<div style="font-size:1rem;font-weight:600">${esc(g.why)}</div>` : ''}</div><button class="ma-b pri big" data-go="debrief">🏁 Voir le débrief</button>`;
-    if (g.phase === 0) h += `<div class="ma-card"><h4>🔄 Début du round ${g.round}</h4><p>Chacun reprend ses <b>4 jetons Action</b>.</p><button class="ma-b pri big" data-a="toPlayers">▶ Phase Joueurs</button></div>`;
+    if (g.over) h += `<div class="ma-ban ${g.over === 'win' ? 'win' : 'go'}">${g.over === 'win' ? tx('🏆 MISSION RÉUSSIE', '🏆 MISSION COMPLETE') : tx('💀 MISSION ÉCHOUÉE', '💀 MISSION FAILED')}${g.why ? `<div style="font-size:1rem;font-weight:600">${esc(g.why)}</div>` : ''}</div><button class="ma-b pri big" data-go="debrief">🏁 ${tx('Voir le débrief', 'See the debrief')}</button>`;
+    if (g.phase === 0) h += `<div class="ma-card"><h4>🔄 ${tx('Début du round', 'Start of round')} ${g.round}</h4><p>${tx('Chacun reprend ses <b>4 jetons Action</b>.', 'Everyone takes back their <b>4 Action tokens</b>.')}</p><button class="ma-b pri big" data-a="toPlayers">▶ ${tx('Phase Joueurs', 'Player phase')}</button></div>`;
     else if (g.phase === 1) h += playersHtml(m, g);
     else h += enemyHtml(m, g);
-    h += `<div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap"><button class="ma-b sm" data-a="win">🏆 Mission réussie</button><button class="ma-b sm red" data-a="lose">💀 Échec</button></div>`;
+    h += `<div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap"><button class="ma-b sm" data-a="win">🏆 ${tx('Mission réussie', 'Mission complete')}</button><button class="ma-b sm red" data-a="lose">💀 ${tx('Échec', 'Failed')}</button><span style="flex:1"></span><button class="ma-b sm" data-a="restart">↺ ${tx('Recommencer', 'Restart')}</button></div>`;
     return h;
   }
 
   function playersHtml(m, g) {
     const cur = g.players[g.cur] && !g.players[g.cur].done ? g.cur : g.players.findIndex(x => !x.done);
-    if (cur < 0) return `<div class="ma-card"><h4>✅ Tout le monde a joué</h4><button class="ma-b pri big" data-a="toEnemy">▶ Phase Ennemie</button></div>`;
+    if (cur < 0) return `<div class="ma-card"><h4>✅ ${tx('Tout le monde a joué', 'Everyone has played')}</h4><button class="ma-b pri big" data-a="toEnemy">▶ ${tx('Phase Ennemie', 'Enemy phase')}</button></div>`;
     g.cur = cur;
     const p = g.players[cur], hp = hpOf(p.name);
     const evs = m.events || [], cq = stageSnd(m).cues || [];
     let h = `${g.players.length > 1 ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">${g.players.map((x, i) => `<button class="ma-b sm ${i === cur ? 'on' : ''}" data-a="who" data-v="${i}">${x.done ? '✔ ' : ''}${CE[x.name] || ''} ${x.name}</button>`).join('')}</div>` : ''}
-      <div class="ma-p" style="--c:${CC[p.name] || '#2a3474'}"><h5>${CE[p.name] || ''} Au tour de ${p.name}<span style="flex:1"></span><span class="ma-hp">${hp ? Array.from({ length: hp }, (_, k) => `<i class="${k < p.dmg ? 'd' : ''}"></i>`).join('') : '💔' + p.dmg}</span></h5>
-      <div class="ma-tok">${[0, 1, 2, 3].map(k => `<i class="${k < p.left ? '' : 'u'}"></i>`).join('')}<span style="opacity:.8">${p.left} point${p.left > 1 ? 's' : ''} d'action${p.noisy ? ` · 🔊×${p.noisy}` : ''}</span><button class="ma-b sm" data-a="undo" ${undo.length ? '' : 'disabled'} title="Annuler la dernière action">↶ Annuler</button><span style="flex:1"></span><button class="ma-b sm ${p.water ? 'on' : ''}" data-a="water" title="Dans l'eau">💧</button>${!ui.pad && !p.ask && !(ui.pend && !(ui.pend.type === 'move' && isGrid(m))) ? `<button class="ma-b sm pri" data-a="end">🏁 Fin du tour</button>` : ''}</div>
+      <div class="ma-p" style="--c:${CC[p.name] || '#2a3474'}"><h5>${CE[p.name] || ''} ${tx('Au tour de', 'Your turn,')} ${p.name}<span style="flex:1"></span><span class="ma-hp">${hp ? Array.from({ length: hp }, (_, k) => `<i class="${k < p.dmg ? 'd' : ''}"></i>`).join('') : '💔' + p.dmg}</span></h5>
+      <div class="ma-tok">${[0, 1, 2, 3].map(k => `<i class="${k < p.left ? '' : 'u'}"></i>`).join('')}<span style="opacity:.8">${p.left} ${tx(`point${p.left > 1 ? 's' : ''} d'action`, `action${p.left > 1 ? 's' : ''} left`)}${p.noisy ? ` · 🔊×${p.noisy}` : ''}</span><button class="ma-b sm" data-a="undo" ${undo.length ? '' : 'disabled'} title="${tx('Annuler la dernière action', 'Undo the last action')}">↶ ${tx('Annuler', 'Undo')}</button><span style="flex:1"></span><button class="ma-b sm ${p.water ? 'on' : ''}" data-a="water" title="${tx('Dans l\'eau', 'In water')}">💧</button>${!ui.pad && !p.ask && !(ui.pend && !(ui.pend.type === 'move' && isGrid(m))) ? `<button class="ma-b sm pri" data-a="end">🏁 ${tx('Fin du tour', 'End turn')}</button>` : ''}</div>
       <div class="ma-invl">🎒 ${invChips(p)}<button class="ma-mini ${ui.inv ? 'on' : ''}" data-a="invToggle">✏️</button></div>
       ${ui.inv ? `<div class="ma-card" style="margin:4px 0">${invEditor(m, g, cur)}</div>` : ''}
-      <div class="ma-att"><span style="opacity:.75">Attention</span><button class="ma-b sm ${p.att === 0 ? 'on' : ''}" data-a="att" data-v="0">—</button><button class="ma-b sm q ${p.att === 1 ? 'on' : ''}" data-a="att" data-v="1">?</button><button class="ma-b sm a ${p.att === 2 ? 'on' : ''}" data-a="att" data-v="2">!</button><span style="flex:1"></span><button class="ma-b sm" data-a="dmg" data-v="-1">−</button><button class="ma-b sm red" data-a="dmg" data-v="1">💥 Dégât</button></div>`;
+      <div class="ma-att"><span style="opacity:.75">Attention</span><button class="ma-b sm ${p.att === 0 ? 'on' : ''}" data-a="att" data-v="0">—</button><button class="ma-b sm q ${p.att === 1 ? 'on' : ''}" data-a="att" data-v="1">?</button><button class="ma-b sm a ${p.att === 2 ? 'on' : ''}" data-a="att" data-v="2">!</button><span style="flex:1"></span><button class="ma-b sm" data-a="dmg" data-v="-1">−</button><button class="ma-b sm red" data-a="dmg" data-v="1">💥 ${tx('Dégât', 'Damage')}</button></div>`;
     const moving = ui.pend && ui.pend.type === 'move' && isGrid(m);
     if (ui.pad) h += padHtml(m, g);
     else if (ui.pend && !moving) h += pendHtml(m, g, p);
     else if (p.ask) h += askHtml(p);
     else {
       const ma = moving && actById(ui.pend.act, p);
-      h += moving ? `<div class="ma-mv">${ma.i} <b>${ma.n}</b> : 👆 touche une case verte (ou fais glisser ton pion) <span style="flex:1"></span><button class="ma-b sm red" data-a="cancel">✕</button></div>`
-        : `<p style="opacity:.8;margin:6px 0">Choisis une action (ou touche ton pion pour marcher).</p>`;
+      h += moving ? `<div class="ma-mv">${ma.i} <b>${ma.n}</b> : ${tx('👆 touche une case verte (ou fais glisser ton pion)', '👆 tap a green space (or drag your piece)')} <span style="flex:1"></span><button class="ma-b sm red" data-a="cancel">✕</button></div>`
+        : `<p style="opacity:.8;margin:6px 0">${tx('Choisis une action (ou touche ton pion pour marcher).', 'Choose an action (or tap your piece to move).')}</p>`;
       const grid = isGrid(m);
       h += `<div class="ma-acts">${actsFor(p).filter(a => !(grid && (a.id === 'leap' || a.id === 'wall'))).map(a => { const why = whyNot(m, g, p, a), on = moving && ui.pend.act === a.id;
-        return `<button class="ma-act ${a.loud ? 'loud' : a.noisy ? 'noisy' : ''} ${on ? 'on' : ''}" data-a="act" data-v="${a.id}" ${why ? 'disabled' : ''} title="${esc(why || a.tip)}"><span class="i">${a.i}</span>${a.n}<small>${why ? '⛔ ' + why : (a.c ? a.c + ' pt' + (a.c > 1 ? 's' : '') : 'gratuit') + (a.loud ? ' · LOUD' : a.noisy ? ' · 🔊' : '')}</small></button>`; }).join('')}</div>
+        return `<button class="ma-act ${a.loud ? 'loud' : a.noisy ? 'noisy' : ''} ${on ? 'on' : ''}" data-a="act" data-v="${a.id}" ${why ? 'disabled' : ''} title="${esc(why || a.tip)}"><span class="i">${a.i}</span>${a.n}<small>${why ? '⛔ ' + why : (a.c ? a.c + ' ' + tx('pt', 'act') + (a.c > 1 ? 's' : '') : tx('gratuit', 'free')) + (a.loud ? ' · LOUD' : a.noisy ? ' · 🔊' : '')}</small></button>`; }).join('')}</div>
 `;
     }
     h += `</div>`;
-    if (evs.length || cq.length) h += `<div class="ma-card"><h4>🅰️ Sur le plateau</h4><div style="display:flex;gap:6px;flex-wrap:wrap">${evs.map(e => `<button class="ma-b sm ${g.ev[e.k] ? 'on' : ''}" data-a="event" data-v="${e.k}"><span class="ma-ev">${e.k}</span>${g.ev[e.k] ? 'atteint ✔' : 'atteint ?'}</button>`).join('')}${cq.map(([f, t]) => `<button class="ma-b sm" data-a="cue" data-v="${esc(f)}">${esc(t)}</button>`).join('')}</div></div>`;
+    if (evs.length || cq.length) h += `<div class="ma-card"><h4>🅰️ ${tx('Sur le plateau', 'On the board')}</h4><div style="display:flex;gap:6px;flex-wrap:wrap">${evs.map(e => `<button class="ma-b sm ${g.ev[e.k] ? 'on' : ''}" data-a="event" data-v="${e.k}"><span class="ma-ev">${e.k}</span>${g.ev[e.k] ? tx('atteint ✔', 'reached ✔') : tx('atteint ?', 'reached?')}</button>`).join('')}${cq.map(([f, t]) => `<button class="ma-b sm" data-a="cue" data-v="${esc(f)}">${esc(t)}</button>`).join('')}</div></div>`;
     return h;
   }
   function pendHtml(m, g, p) {
     const pd = ui.pend, a = actById(pd.act, p);
     const pp = playerPiece(g, p.name);
-    if (pd.type === 'move') return `<div class="ma-ask"><p>${a.i} <b>${a.n}</b> : ${a.tip}<br>👆 <b>Touche sur le plan la case où ${p.name} va.</b></p>
-      ${pp && pp.x != null ? '' : '<p style="opacity:.8">Ton pion n\'est pas sur le plan : pose-le (« À poser »), ou valide sans le plan.</p>'}
-      <button class="ma-b" data-a="moveNo">✔ Fait (sans le plan)</button> <button class="ma-b red" data-a="cancel">Annuler</button></div>`;
+    if (pd.type === 'move') return `<div class="ma-ask"><p>${a.i} <b>${a.n}</b> : ${a.tip}<br>👆 <b>${tx(`Touche sur le plan la case où ${p.name} va.`, `Tap the space ${p.name} moves to.`)}</b></p>
+      ${pp && pp.x != null ? '' : `<p style="opacity:.8">${tx('Ton pion n\'est pas sur le plan : pose-le (« À poser »), ou valide sans le plan.', 'Your piece isn\'t on the map: place it (“To place”), or confirm without the map.')}</p>`}
+      <button class="ma-b" data-a="moveNo">✔ ${tx('Fait (sans le plan)', 'Done (without the map)')}</button> <button class="ma-b red" data-a="cancel">${tx('Annuler', 'Cancel')}</button></div>`;
     if (pd.type === 'elev') {
-      const W6 = world(m), names = { B2: 'Sous-sol B2', B1: 'Sous-sol B1', L1: 'Rez-de-chaussée L1', main: 'Ascenseur' };
-      if (pd.mode === 'call') return `<div class="ma-ask"><p>🛗 Appeler l'ascenseur à la cage <b>${names[pd.to] || pd.to}</b> ? (il est actuellement en ${names[g.elev] || g.elev})</p><button class="ma-b pri" data-a="elevGo" data-v="${pd.to}">🛗 Appeler (1 action)</button> <button class="ma-b red" data-a="cancel">Annuler</button></div>`;
-      return `<div class="ma-ask"><p>🛗 Où va l'ascenseur ? (tout ce qui est dedans voyage avec)</p>${Object.keys(W6.shafts).filter(k => k !== g.elev).map(k => `<button class="ma-b pri" data-a="elevGo" data-v="${k}">${names[k] || k}</button>`).join(' ')} <button class="ma-b red" data-a="cancel">Annuler</button></div>`;
+      const W6 = world(m), names = { B2: tx('Sous-sol B2', 'Basement B2'), B1: tx('Sous-sol B1', 'Basement B1'), L1: tx('Rez-de-chaussée L1', 'Ground floor L1'), main: tx('Ascenseur', 'Elevator') };
+      if (pd.mode === 'call') return `<div class="ma-ask"><p>🛗 ${tx('Appeler l\'ascenseur à la cage', 'Call the elevator to shaft')} <b>${names[pd.to] || pd.to}</b> ? (${tx('il est actuellement en', 'it is currently at')} ${names[g.elev] || g.elev})</p><button class="ma-b pri" data-a="elevGo" data-v="${pd.to}">🛗 ${tx('Appeler (1 action)', 'Call (1 action)')}</button> <button class="ma-b red" data-a="cancel">${tx('Annuler', 'Cancel')}</button></div>`;
+      return `<div class="ma-ask"><p>🛗 ${tx('Où va l\'ascenseur ? (tout ce qui est dedans voyage avec)', 'Where does the elevator go? (everything inside rides along)')}</p>${Object.keys(W6.shafts).filter(k => k !== g.elev).map(k => `<button class="ma-b pri" data-a="elevGo" data-v="${k}">${names[k] || k}</button>`).join(' ')} <button class="ma-b red" data-a="cancel">${tx('Annuler', 'Cancel')}</button></div>`;
     }
     if (pd.type === 'codec') {
       const q = pd.q || '', key = q.length === 4 ? q.slice(0, 2) + '.' + q.slice(2) : null, txt = key && (window.MGS_CODEC || {})[key];
       const shown = (q + '____').slice(0, 4).replace(/^(..)(..)$/, '$1.$2');
-      return `<div class="ma-ask ma-codec2"><p>📞 <b>Codec</b> : tape le numéro (sur le plateau, une carte, un dashboard…)</p>
+      return `<div class="ma-ask ma-codec2"><p>📞 <b>Codec</b> : ${tx('tape le numéro (sur le plateau, une carte, un dashboard…)', 'enter the number (from the board, a card, a dashboard…)')}</p>
         <div class="ma-cd">${shown}</div>
         <div class="ma-kp">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map(n => `<button class="ma-b" data-a="cdk" data-v="${n}">${n}</button>`).join('')}<button class="ma-b" data-a="cdd">⌫</button></div>
-        ${key ? `<div class="ma-res">${txt ? `<b>${key}</b> — ${esc(txt)}` : `<b>${key}</b> : pas dans mes résumés. Lis la fiche dans le Codec Book.`}<div style="opacity:.7;font-size:.85rem;margin-top:4px">Numéro imprimé sur le plateau : 1 seul appel par stage, par le joueur sur la case. Numéro sur un composant : quand tu veux.</div></div>` : ''}
-        <button class="ma-b red" data-a="cancel">Fermer</button></div>`;
+        ${key ? `<div class="ma-res">${txt ? `<b>${key}</b> — ${esc(txt)}` : `<b>${key}</b> : ${tx('pas dans mes résumés. Lis la fiche dans le Codec Book.', 'not in my summaries. Read the entry in the Codec Book.')}`}<div style="opacity:.7;font-size:.85rem;margin-top:4px">${tx('Numéro imprimé sur le plateau : 1 seul appel par stage, par le joueur sur la case. Numéro sur un composant : quand tu veux.', 'Number printed on the board: one call per Stage, by the player on that space. Number on a component: any time.')}</div></div>` : ''}
+        <button class="ma-b red" data-a="cancel">${tx('Fermer', 'Close')}</button></div>`;
     }
-    if (pd.type === 'target') return `<div class="ma-ask"><p>${a.i} <b>${a.n}</b> : ${a.tip}<br>👆 <b>Touche le garde visé sur le plan.</b></p>
-      <button class="ma-b" data-a="targetNo">Cible hors plan</button> <button class="ma-b red" data-a="cancel">Annuler</button></div>`;
+    if (pd.type === 'target') return `<div class="ma-ask"><p>${a.i} <b>${a.n}</b> : ${a.tip}<br>👆 <b>${tx('Touche le garde visé sur le plan.', 'Tap the targeted Guard on the map.')}</b></p>
+      <button class="ma-b" data-a="targetNo">${tx('Cible hors plan', 'Target not on the map')}</button> <button class="ma-b red" data-a="cancel">${tx('Annuler', 'Cancel')}</button></div>`;
     return '';
   }
   function askHtml(p) {
-    if (p.ask === 'hurt') return `<div class="ma-ask warn"><p>⚠️ Le garde blessé est-il <b>toujours debout</b> (ni KO ni mort) ?</p><button class="ma-b red" data-a="hurt" data-v="up">Oui → mon jeton passe sur !</button> <button class="ma-b" data-a="hurt" data-v="down">Non</button></div>`;
-    if (p.ask === 'noise') return `<div class="ma-ask warn"><p>🔊 <b>Noise check</b> : un garde dans ta zone ?</p><button class="ma-b pri" data-a="noisePad">Oui → je lance ${p.noisy} dé(s) blanc(s)</button> <button class="ma-b" data-a="noise">Pas de garde dans la zone</button></div>`;
+    if (p.ask === 'hurt') return `<div class="ma-ask warn"><p>⚠️ ${tx('Le garde blessé est-il <b>toujours debout</b> (ni KO ni mort) ?', 'Is the wounded Guard <b>still standing</b> (neither KO nor dead)?')}</p><button class="ma-b red" data-a="hurt" data-v="up">${tx('Oui → mon jeton passe sur !', 'Yes → my token flips to !')}</button> <button class="ma-b" data-a="hurt" data-v="down">${tx('Non', 'No')}</button></div>`;
+    if (p.ask === 'noise') return `<div class="ma-ask warn"><p>🔊 <b>Noise check</b> : ${tx('un garde dans ta zone ?', 'any Guard in your zone?')}</p><button class="ma-b pri" data-a="noisePad">${tx(`Oui → je lance ${p.noisy} dé(s) blanc(s)`, `Yes → I roll ${p.noisy} white ${p.noisy > 1 ? 'dice' : 'die'}`)}</button> <button class="ma-b" data-a="noise">${tx('Pas de garde dans la zone', 'No Guard in the zone')}</button></div>`;
     return '';
   }
 
@@ -1196,13 +1200,13 @@
     const colorAt = i => pd.fixed ? pd.fixed[i] : (pd.color || 'b');
     const nextCol = pd.fixed ? pd.fixed[pd.vals.length] : pd.color;
     const res = padResult();
-    return `<div class="ma-ask"><p><b>${pd.title}</b><br><span style="opacity:.85">${pd.hint || 'Lance les dés réels, puis tape les résultats.'}</span></p>
-      ${pd.showDef !== false ? `<div class="ma-att"><span>Défense ${pd.defLabel || 'de la cible'} :</span><button class="ma-b sm" data-a="pdef" data-v="-1">−</button><b style="font-size:1.3rem;min-width:1.5ch;text-align:center">${pd.def}</b><button class="ma-b sm" data-a="pdef" data-v="1">＋</button></div>` : ''}
-      ${pd.back ? `<label style="display:flex;gap:8px;align-items:center;margin:4px 0"><input type="checkbox" data-a="pback" ${pd.backOn ? 'checked' : ''} style="width:22px;height:22px"> Dans le dos de la cible (Snake : +1 dégât, 1×/round)</label>` : ''}
+    return `<div class="ma-ask"><p><b>${pd.title}</b><br><span style="opacity:.85">${pd.hint || tx('Lance les dés réels, puis tape les résultats.', 'Roll the real dice, then enter the results.')}</span></p>
+      ${pd.showDef !== false ? `<div class="ma-att"><span>${tx('Défense', 'Defense')} ${pd.defLabel || tx('de la cible', 'of the target')} :</span><button class="ma-b sm" data-a="pdef" data-v="-1">−</button><b style="font-size:1.3rem;min-width:1.5ch;text-align:center">${pd.def}</b><button class="ma-b sm" data-a="pdef" data-v="1">＋</button></div>` : ''}
+      ${pd.back ? `<label style="display:flex;gap:8px;align-items:center;margin:4px 0"><input type="checkbox" data-a="pback" ${pd.backOn ? 'checked' : ''} style="width:22px;height:22px"> ${tx('Dans le dos de la cible (Snake : +1 dégât, 1×/round)', 'Behind the target (Snake: +1 damage, once per round)')}</label>` : ''}
       <div class="ma-dice">${Array.from({ length: slots }, (_, i) => { const v = pd.vals[i]; const c = colorAt(i); const hit = v != null && v !== '!' && pd.showDef !== false && v >= pd.def; return `<div class="ma-die ${c} ${v == null ? 'e' : ''} ${hit ? 'hit' : ''} ${v === '!' ? 'bang' : ''}">${v == null ? '·' : v}</div>`; }).join('')}</div>
       <div class="ma-kp">${[1, 2, 3, 4, 5, 6].map(n => `<button class="ma-b" data-a="pk" data-v="${n}">${n}</button>`).join('')}<button class="ma-b" data-a="pk" data-v="!" ${nextCol === 'w' ? '' : 'disabled'} style="color:#ff6b7a">!</button></div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="ma-b sm" data-a="pdel">⌫</button>${pd.fixed ? '' : `<button class="ma-b sm" data-a="pcol">${pd.color === 'w' ? '⚪ dé blanc' : '⚫ dé noir'}</button>`}<span style="flex:1"></span><button class="ma-b red sm" data-a="pcancel">Annuler</button></div>
-      ${res ? `<div class="ma-res ${res.bad ? 'bad' : ''}">${res.txt}${res.do ? `<div class="do">🎲 Sur le vrai plateau : ${res.do}</div>` : ''}</div><button class="ma-b pri big" data-a="pok" ${res.ready ? '' : 'disabled'}>✔ Valider</button>` : ''}</div>`;
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="ma-b sm" data-a="pdel">⌫</button>${pd.fixed ? '' : `<button class="ma-b sm" data-a="pcol">${pd.color === 'w' ? tx('⚪ dé blanc', '⚪ white die') : tx('⚫ dé noir', '⚫ black die')}</button>`}<span style="flex:1"></span><button class="ma-b red sm" data-a="pcancel">${tx('Annuler', 'Cancel')}</button></div>
+      ${res ? `<div class="ma-res ${res.bad ? 'bad' : ''}">${res.txt}${res.do ? `<div class="do">🎲 ${tx('Sur le vrai plateau', 'On the real board')} : ${res.do}</div>` : ''}</div><button class="ma-b pri big" data-a="pok" ${res.ready ? '' : 'disabled'}>✔ ${tx('Valider', 'Confirm')}</button>` : ''}</div>`;
   }
   function padHits(pd) {
     const vals = pd.vals.filter(v => v != null);
@@ -1215,16 +1219,16 @@
     const need = pd.fixed ? pd.fixed.length : (pd.min || 1);
     const ready = vals.length >= need;
     const hits = padHits(pd), bang = vals.includes('!');
-    if (pd.kind === 'noise') return { ready, bad: bang, txt: bang ? '❗ Un « ! » → tu attires l\'attention : jeton ? sur ta case.' : '🤫 Aucun « ! » : personne n\'a rien entendu.', do: bang ? 'pose ton jeton Attention face ? sous ta figurine (ou déplace-le, sans changer sa face).' : '' };
+    if (pd.kind === 'noise') return { ready, bad: bang, txt: bang ? tx('❗ Un « ! » → tu attires l\'attention : jeton ? sur ta case.', '❗ A “!” → you draw attention: ? token on your space.') : tx('🤫 Aucun « ! » : personne n\'a rien entendu.', '🤫 No “!”: nobody heard a thing.'), do: bang ? tx('pose ton jeton Attention face ? sous ta figurine (ou déplace-le, sans changer sa face).', 'place your Attention token ?-side up under your figure (or move it, without flipping it).') : '' };
     if (pd.kind === 'ko' || pd.kind === 'kill') {
       const r = hits >= 2 ? (pd.kind === 'ko' ? 'ko' : 'dead') : hits === 1 ? 'hurt' : 'miss';
       pd.out = r;
-      const t = { ko: '⭐ 2 dégâts KO : le garde est <b>assommé</b>.', dead: '☠ Garde <b>éliminé</b>.', hurt: '🩸 1 dégât : le garde est blessé mais <b>debout</b>. Achève-le avant la fin du tour, sinon ton jeton passe sur !', miss: '💨 Raté.' }[r];
-      const d = { ko: 'remplace la figurine par un jeton KO face ★★.', dead: 'remplace la figurine par un jeton Mort.', hurt: 'pose 1 jeton dégât à côté du garde.', miss: '' }[r];
-      return { ready, bad: r === 'miss', txt: `${hits} réussite(s) (dé ≥ ${pd.def})${pd.backOn && hits ? ' dont +1 dans le dos' : ''}. ${t}${bang ? '<br>❗ Un « ! » sur un dé blanc : tu attires l\'attention (jeton ?).' : ''}`, do: d + (bang ? ' Et ton jeton Attention sur ta case.' : '') };
+      const t = { ko: tx('⭐ 2 dégâts KO : le garde est <b>assommé</b>.', '⭐ 2 KO damage: the Guard is <b>knocked out</b>.'), dead: tx('☠ Garde <b>éliminé</b>.', '☠ Guard <b>eliminated</b>.'), hurt: tx('🩸 1 dégât : le garde est blessé mais <b>debout</b>. Achève-le avant la fin du tour, sinon ton jeton passe sur !', '🩸 1 damage: the Guard is wounded but <b>still standing</b>. Finish it before the end of your turn, or your token flips to !'), miss: tx('💨 Raté.', '💨 Miss.') }[r];
+      const d = { ko: tx('remplace la figurine par un jeton KO face ★★.', 'replace the figure with a KO token, ★★ side up.'), dead: tx('remplace la figurine par un jeton Mort.', 'replace the figure with a Dead token.'), hurt: tx('pose 1 jeton dégât à côté du garde.', 'place 1 damage token next to the Guard.'), miss: '' }[r];
+      return { ready, bad: r === 'miss', txt: `${hits} ${tx('réussite(s)', 'hit(s)')} (${tx('dé', 'die')} ≥ ${pd.def})${pd.backOn && hits ? tx(' dont +1 dans le dos', ' incl. +1 from behind') : ''}. ${t}${bang ? tx('<br>❗ Un « ! » sur un dé blanc : tu attires l\'attention (jeton ?).', '<br>❗ A “!” on a white die: you draw attention (? token).') : ''}`, do: d + (bang ? tx(' Et ton jeton Attention sur ta case.', ' And your Attention token on your space.') : '') };
     }
-    if (pd.kind === 'boss') return { ready, txt: `💥 ${hits} dégât(s) au boss (dé ≥ ${pd.def}).${bang ? ' ❗ « ! » : attention attirée.' : ''}`, do: hits ? `place ${hits} dégât(s) sur le dashboard du boss.` : '' };
-    if (pd.kind === 'guardAtk' || pd.kind === 'bossAtk') return { ready, bad: hits > 0, txt: hits ? `💥 ${pd.victim} subit <b>${hits}</b> dégât(s) (dé ≥ sa Défense ${pd.def}). Un Focus peut encore modifier un dé avant de valider.` : `🛡️ ${pd.victim} ne subit aucun dégât.`, do: hits ? `pose ${hits} jeton(s) dégât sur le dashboard de ${pd.victim}.` : '' };
+    if (pd.kind === 'boss') return { ready, txt: tx(`💥 ${hits} dégât(s) au boss (dé ≥ ${pd.def}).${bang ? ' ❗ « ! » : attention attirée.' : ''}`, `💥 ${hits} damage to the boss (die ≥ ${pd.def}).${bang ? ' ❗ “!”: attention drawn.' : ''}`), do: hits ? tx(`place ${hits} dégât(s) sur le dashboard du boss.`, `place ${hits} damage on the boss dashboard.`) : '' };
+    if (pd.kind === 'guardAtk' || pd.kind === 'bossAtk') return { ready, bad: hits > 0, txt: hits ? tx(`💥 ${pd.victim} subit <b>${hits}</b> dégât(s) (dé ≥ sa Défense ${pd.def}). Un Focus peut encore modifier un dé avant de valider.`, `💥 ${pd.victim} takes <b>${hits}</b> damage (die ≥ their Defense ${pd.def}). A Focus token can still modify a die before you confirm.`) : tx(`🛡️ ${pd.victim} ne subit aucun dégât.`, `🛡️ ${pd.victim} takes no damage.`), do: hits ? tx(`pose ${hits} jeton(s) dégât sur le dashboard de ${pd.victim}.`, `place ${hits} damage token(s) on ${pd.victim}'s dashboard.`) : '' };
     return null;
   }
   function applyPad(m, g) {
@@ -1233,8 +1237,8 @@
     const p = g.players.find(x => x.name === pd.actor);
     ui.pad = null;
     if (pd.kind === 'noise') {
-      if (bang) { p.s.noise++; if (p.att === 0) setAtt(g, p, 1, 'noise check'); else { placeAtt(g, p); toast('Ton jeton Attention se déplace sur ta case (sans changer de face).'); } }
-      log(`🔊 Noise check de ${p.name} (${vals.join(' ')}) : ${bang ? '« ! » → attention' : 'rien'}`, bang ? 'alert' : '', p.name);
+      if (bang) { p.s.noise++; if (p.att === 0) setAtt(g, p, 1, 'noise check'); else { placeAtt(g, p); toast(tx('Ton jeton Attention se déplace sur ta case (sans changer de face).', 'Your Attention token moves to your space (same side up).')); } }
+      log(`🔊 Noise check ${tx('de', '—')} ${p.name} (${vals.join(' ')}) : ${bang ? tx('« ! » → attention', '“!” → attention') : tx('rien', 'nothing')}`, bang ? 'alert' : '', p.name);
       p.ask = null; p.done = true; return endTurnFollow(g);
     }
     if (pd.kind === 'ko' || pd.kind === 'kill') {
@@ -1244,39 +1248,39 @@
       if (r === 'ko') { g.ko2++; p.s.ko++; if (tg) { tg.k = 'ko2'; tg.hurt = false; } }
       if (r === 'dead') { g.dead++; p.s.kill++; if (tg) { tg.k = 'dead'; tg.hurt = false; } }
       if (r === 'hurt') { p.hurt = true; if (tg) tg.hurt = true; }
-      log(`${pd.icon || '⚔️'} ${p.name} attaque (${vals.join(' ')}, Déf ${pd.def}) → ${{ ko: 'garde KO', dead: 'garde éliminé', hurt: 'garde blessé', miss: 'raté' }[r]}`, '', p.name);
-      if (bang) setAtt(g, p, 1, '« ! » au dé');
+      log(`${pd.icon || '⚔️'} ${p.name} ${tx('attaque', 'attacks')} (${vals.join(' ')}, ${tx('Déf', 'Def')} ${pd.def}) → ${{ ko: tx('garde KO', 'Guard KO'), dead: tx('garde éliminé', 'Guard eliminated'), hurt: tx('garde blessé', 'Guard wounded'), miss: tx('raté', 'miss') }[r]}`, '', p.name);
+      if (bang) setAtt(g, p, 1, tx('« ! » au dé', '“!” on a die'));
     }
-    if (pd.kind === 'boss') { p.s.atk++; p.s.hit += hits; if (pd.backOn) p.sneakUsed = true; g.boss.dmg += hits; const vo = (stageSnd(m).voices || []).filter(x => /^(hind-hurt|tank hurt)/i.test(x[0])); if (hits && vo.length) A.sfx(vo[Math.floor(Math.random() * vo.length)][0]); log(`💥 ${p.name} touche le boss : ${hits} dégât(s) (total ${g.boss.dmg})`, '', p.name); if (bang) setAtt(g, p, 1, '« ! » au dé'); }
+    if (pd.kind === 'boss') { p.s.atk++; p.s.hit += hits; if (pd.backOn) p.sneakUsed = true; g.boss.dmg += hits; const vo = (stageSnd(m).voices || []).filter(x => /^(hind-hurt|tank hurt)/i.test(x[0])); if (hits && vo.length) A.sfx(vo[Math.floor(Math.random() * vo.length)][0]); log(tx(`💥 ${p.name} touche le boss : ${hits} dégât(s) (total ${g.boss.dmg})`, `💥 ${p.name} hits the boss: ${hits} damage (total ${g.boss.dmg})`), '', p.name); if (bang) setAtt(g, p, 1, tx('« ! » au dé', '“!” on a die')); }
     if (pd.kind === 'guardAtk' || pd.kind === 'bossAtk') {
       const v = g.players.find(x => x.name === pd.victim);
-      if (hits) damage(m, g, v, hits, pd.kind === 'bossAtk' ? 'le boss' : 'un garde');
-      else log(`🛡️ ${v.name} encaisse sans dégât (${vals.join(' ')})`, '', v.name);
+      if (hits) damage(m, g, v, hits, pd.kind === 'bossAtk' ? tx('le boss', 'the boss') : tx('un garde', 'a Guard'));
+      else log(tx(`🛡️ ${v.name} encaisse sans dégât (${vals.join(' ')})`, `🛡️ ${v.name} takes no damage (${vals.join(' ')})`), '', v.name);
     }
   }
   function damage(m, g, v, n, by) {
     v.dmg += n; v.s.dmgIn += n; A.sfx((AU().damage || {})[v.name]);
-    log(`💥 ${v.name} subit ${n} dégât(s)${by ? ' (' + by + ')' : ''} → ${v.dmg}${hpOf(v.name) ? '/' + hpOf(v.name) : ''}`, 'go', v.name);
+    log(`💥 ${v.name} ${tx('subit', 'takes')} ${n} ${tx('dégât(s)', 'damage')}${by ? ' (' + by + ')' : ''} → ${v.dmg}${hpOf(v.name) ? '/' + hpOf(v.name) : ''}`, 'go', v.name);
     const hp = hpOf(v.name);
-    if (hp && v.dmg >= hp) gameOver(m, g, `${v.name} est KIA (tué au combat).`);
+    if (hp && v.dmg >= hp) gameOver(m, g, tx(`${v.name} est KIA (tué au combat).`, `${v.name} is KIA (killed in action).`));
   }
   function gameOver(m, g, why) {
     if (g.over) return; g.over = 'go'; g.why = why; g.t1 = now(); A.sfx(AU().gameover);
     if (st.auto) { const f = stageSnd(m).fail; if (f) A.music(f, 'end'); else setTimeout(() => A.stop(), 1200); }
-    log('💀 MISSION ÉCHOUÉE : ' + why, 'go'); toast('💀 ' + esc(why), 4500);
+    log(tx('💀 MISSION ÉCHOUÉE : ', '💀 MISSION FAILED: ') + why, 'go'); toast('💀 ' + esc(why), 4500);
   }
   function win(m, g, why) {
     if (g.over) return; g.over = 'win'; g.why = why; g.t1 = now();
     setTimeout(() => A.sfx(AU().win), 900);
     if (st.auto) { const e = stageSnd(m).end; if (e) A.music(e, 'end'); else setTimeout(() => A.stop(), 1500); }
     const cl = LS.get('mgsg.cleared', {}); cl[m.id] = true; LS.set('mgsg.cleared', cl);
-    log('🏆 MISSION RÉUSSIE : ' + why, 'win');
+    log(tx('🏆 MISSION RÉUSSIE : ', '🏆 MISSION COMPLETE: ') + why, 'win');
   }
   function endTurnFollow(g) {
     ui.pend = null; ui.lastMove = null; g.players.forEach(x => { if (x.done) x.stealth = false; });
     const i = g.players.findIndex(x => !x.done);
-    if (i >= 0) { g.cur = i; setTimeout(() => { A.sfx(AU().codec); turnBanner(`${CE[g.players[i].name] || ''} Au tour de ${g.players[i].name}`); }, 250); }
-    else toast('✅ Tout le monde a joué → <b>Phase Ennemie</b>');
+    if (i >= 0) { g.cur = i; setTimeout(() => { A.sfx(AU().codec); turnBanner(`${CE[g.players[i].name] || ''} ${tx('Au tour de', 'Your turn,')} ${g.players[i].name}`); }, 250); }
+    else toast(tx('✅ Tout le monde a joué → <b>Phase Ennemie</b>', '✅ Everyone has played → <b>Enemy phase</b>'));
   }
   function camWidget(g) {
     const right = g.cam === 'orange'; const cells = [];
@@ -1288,26 +1292,26 @@
     let h = '';
     const anyAlert = g.players.some(p => p.att === 2), anyQ = g.players.some(p => p.att === 1);
     if (isBoss(m)) {
-      h += `<div class="ma-card boss"><h4>👾 Tour du boss${m.boss ? ' : ' + esc(m.boss.name) : ''}</h4>
-        <div class="ma-step cur"><span class="k">1</span><div class="bd">Retourne la carte du <b>dessus</b> du deck Boss et résous-la. Puis remets-la <b>dessous</b> (jamais mélangé).<br><button class="ma-b pri" data-a="bossCard" style="margin-top:6px">🃏 Carte jouée</button> <span style="opacity:.7">${g.boss.cards} carte(s)</span></div></div>
-        <div class="ma-step"><span class="k">2</span><div class="bd">Le boss attaque ? Le joueur visé lance les dés (stat Attaque si non précisé) contre <b>sa</b> Défense :<br>${g.players.map((p, i) => `<button class="ma-b sm" data-a="bossAtk" data-v="${i}">⚔️ ${CE[p.name] || ''} ${p.name}</button>`).join(' ')}</div></div>
-        <div class="ma-att"><span>💥 Dégâts au boss</span><button class="ma-b sm" data-a="bd" data-v="-1">−</button><b style="font-size:1.2rem">${g.boss.dmg}</b><button class="ma-b sm" data-a="bd" data-v="1">＋1</button><span style="margin-left:8px">📈 Menace</span><button class="ma-b sm" data-a="bt" data-v="-1">−</button><b>${g.boss.threat}</b><button class="ma-b sm" data-a="bt" data-v="1">＋</button></div>
-        ${m.boss && m.boss.health ? `<p style="opacity:.75">Santé : ${m.boss.health}. Ses réactions se déclenchent à CHAQUE fois.</p>` : ''}<button class="ma-b" data-a="bossDown">💀 Boss vaincu</button></div>`;
+      h += `<div class="ma-card boss"><h4>👾 ${tx('Tour du boss', 'Boss turn')}${m.boss ? ' : ' + esc(m.boss.name) : ''}</h4>
+        <div class="ma-step cur"><span class="k">1</span><div class="bd">${tx('Retourne la carte du <b>dessus</b> du deck Boss et résous-la. Puis remets-la <b>dessous</b> (jamais mélangé).', 'Flip the <b>top</b> card of the Boss deck and resolve it. Then put it on the <b>bottom</b> (never shuffled).')}<br><button class="ma-b pri" data-a="bossCard" style="margin-top:6px">🃏 ${tx('Carte jouée', 'Card played')}</button> <span style="opacity:.7">${g.boss.cards} ${tx('carte(s)', 'card(s)')}</span></div></div>
+        <div class="ma-step"><span class="k">2</span><div class="bd">${tx('Le boss attaque ? Le joueur visé lance les dés (stat Attaque si non précisé) contre <b>sa</b> Défense :', 'Boss attacks? The targeted player rolls the dice (Attack stat unless stated) against <b>their</b> Defense:')}<br>${g.players.map((p, i) => `<button class="ma-b sm" data-a="bossAtk" data-v="${i}">⚔️ ${CE[p.name] || ''} ${p.name}</button>`).join(' ')}</div></div>
+        <div class="ma-att"><span>💥 ${tx('Dégâts au boss', 'Boss damage')}</span><button class="ma-b sm" data-a="bd" data-v="-1">−</button><b style="font-size:1.2rem">${g.boss.dmg}</b><button class="ma-b sm" data-a="bd" data-v="1">＋1</button><span style="margin-left:8px">📈 ${tx('Menace', 'Threat')}</span><button class="ma-b sm" data-a="bt" data-v="-1">−</button><b>${g.boss.threat}</b><button class="ma-b sm" data-a="bt" data-v="1">＋</button></div>
+        ${m.boss && m.boss.health ? `<p style="opacity:.75">${tx('Santé', 'Health')} : ${m.boss.health}. ${tx('Ses réactions se déclenchent à CHAQUE fois.', 'Its reactions trigger EVERY time.')}</p>` : ''}<button class="ma-b" data-a="bossDown">💀 ${tx('Boss vaincu', 'Boss defeated')}</button></div>`;
     }
     if (isSneak(m) && isGrid(m)) return h + gridEnemyHtml(m, g);
     if (isSneak(m)) {
       const s = g.step, cls = k => s === k ? 'cur' : s > k ? 'ok' : '', hasCam = (m.legend && m.legend.cameras) || g.pieces.some(p => p.k === 'cam');
-      h += `<div class="ma-card"><h4>🃏 Carte Guard Order — étape par étape</h4>
-        <div class="ma-step ${cls(0)}"><span class="k">0</span><div class="bd">Pioche la carte du dessus. <b>GAME OVER</b> ? → perdu.<br><button class="ma-b pri" data-a="draw" ${s > 0 ? 'disabled' : ''}>🃏 Carte piochée</button> <button class="ma-b red" data-a="gameover" ${s > 0 ? 'disabled' : ''}>💀 GAME OVER</button></div></div>
-        <div class="ma-step ${cls(1)}"><span class="k">I</span><div class="bd"><b>Action des gardes</b> (icône de la section I) :<br>
-          <button class="ma-b sm" data-a="s1" data-v="waken" ${s !== 1 ? 'disabled' : ''}>✨ Réveil</button> <button class="ma-b sm" data-a="s1" data-v="radio" ${s !== 1 ? 'disabled' : ''}>📻 Radio-In</button> <button class="ma-b sm" data-a="s1" data-v="lost" ${s !== 1 ? 'disabled' : ''}>☠ Lost Contact</button> <button class="ma-b sm" data-a="s1" data-v="stay" ${s !== 1 ? 'disabled' : ''}>❓ Stay Alert</button></div></div>
-        <div class="ma-step ${cls(2)}"><span class="k">II</span><div class="bd"><b>Caméras</b>${hasCam ? ` (jeton ${g.cam === 'vert' ? '🟩 vert' : '🟧 orange'})${camWidget(g)}<button class="ma-b sm" data-a="cam" data-v="flip" ${s !== 2 ? 'disabled' : ''}>🔄 Pivoter</button> <button class="ma-b sm" data-a="cam" data-v="keep" ${s !== 2 ? 'disabled' : ''}>Pas de pivot</button><br><span style="opacity:.75">Puis vérifie la LOS de chaque caméra (pas sa propre case) :</span> ${g.players.map((p, i) => `<button class="ma-b sm" data-a="camSeen" data-v="${i}">📹 Voit ${p.name}</button>`).join(' ')}` : ` : aucune → <button class="ma-b sm" data-a="cam" data-v="keep" ${s !== 2 ? 'disabled' : ''}>OK</button>`}</div></div>
-        <div class="ma-step ${cls(3)}"><span class="k">III</span><div class="bd"><b>Activer les gardes</b> (zone la plus proche du Guard Priority, haut→bas, gauche→droite). Mode au <b>début</b> de chaque activation :
-          ${anyAlert ? `<div class="ma-mode al">🚨 ! posé : gardes de SA zone en ALERTE → chiffre <b style="color:#ff6b7a">ROUGE</b>, vers le ! le plus proche.</div>` : ''}
-          ${anyQ ? `<div class="ma-mode iv">❓ ? posé : le garde le plus proche enquête → chiffre <b style="color:#6fb0ff">BLEU</b>.</div>` : ''}
-          <div class="ma-mode" style="border:1px solid #39407a">Sinon : voit un KO/Mort → enquête (bleu) ; sinon PATROUILLE (bleu), tout droit.</div>
-          <p style="margin:6px 0">Il s'arrête s'il <b>te voit</b> (→ ! + attaque), s'il <b>entre sur un jeton</b> (→ Guard Reaction) ou s'il est bloqué. Déplace aussi les gardes sur le plan à l'écran.</p>
-          <div style="display:flex;gap:6px;flex-wrap:wrap">${g.players.map((p, i) => `<button class="ma-b sm" data-a="seen" data-v="${i}">👁️ Un garde voit ${p.name}</button>`).join('')}<button class="ma-b sm" data-a="react">🃏 Guard Reaction</button></div></div></div></div>`;
+      h += `<div class="ma-card"><h4>🃏 ${tx('Carte Guard Order — étape par étape', 'Guard Order card — step by step')}</h4>
+        <div class="ma-step ${cls(0)}"><span class="k">0</span><div class="bd">${tx('Pioche la carte du dessus. <b>GAME OVER</b> ? → perdu.', 'Draw the top card. <b>GAME OVER</b>? → you lose.')}<br><button class="ma-b pri" data-a="draw" ${s > 0 ? 'disabled' : ''}>🃏 ${tx('Carte piochée', 'Card drawn')}</button> <button class="ma-b red" data-a="gameover" ${s > 0 ? 'disabled' : ''}>💀 GAME OVER</button></div></div>
+        <div class="ma-step ${cls(1)}"><span class="k">I</span><div class="bd"><b>${tx('Action des gardes', 'Guard action')}</b> (${tx('icône de la section I', 'Section I icon')}) :<br>
+          <button class="ma-b sm" data-a="s1" data-v="waken" ${s !== 1 ? 'disabled' : ''}>✨ ${tx('Réveil', 'Waken')}</button> <button class="ma-b sm" data-a="s1" data-v="radio" ${s !== 1 ? 'disabled' : ''}>📻 Radio-In</button> <button class="ma-b sm" data-a="s1" data-v="lost" ${s !== 1 ? 'disabled' : ''}>☠ Lost Contact</button> <button class="ma-b sm" data-a="s1" data-v="stay" ${s !== 1 ? 'disabled' : ''}>❓ Stay Alert</button></div></div>
+        <div class="ma-step ${cls(2)}"><span class="k">II</span><div class="bd"><b>${tx('Caméras', 'Cameras')}</b>${hasCam ? ` (${tx('jeton', 'token')} ${g.cam === 'vert' ? tx('🟩 vert', '🟩 green') : '🟧 orange'})${camWidget(g)}<button class="ma-b sm" data-a="cam" data-v="flip" ${s !== 2 ? 'disabled' : ''}>🔄 ${tx('Pivoter', 'Flip')}</button> <button class="ma-b sm" data-a="cam" data-v="keep" ${s !== 2 ? 'disabled' : ''}>${tx('Pas de pivot', 'No flip')}</button><br><span style="opacity:.75">${tx('Puis vérifie la LOS de chaque caméra (pas sa propre case) :', 'Then check each Camera\'s LOS (not its own space):')}</span> ${g.players.map((p, i) => `<button class="ma-b sm" data-a="camSeen" data-v="${i}">📹 ${tx('Voit', 'Sees')} ${p.name}</button>`).join(' ')}` : ` : ${tx('aucune', 'none')} → <button class="ma-b sm" data-a="cam" data-v="keep" ${s !== 2 ? 'disabled' : ''}>OK</button>`}</div></div>
+        <div class="ma-step ${cls(3)}"><span class="k">III</span><div class="bd"><b>${tx('Activer les gardes', 'Activate the Guards')}</b> (${tx('zone la plus proche du Guard Priority, haut→bas, gauche→droite). Mode au <b>début</b> de chaque activation :', 'zone closest to the Guard Priority token, top→bottom, left→right). Mode is set at the <b>start</b> of each activation:')}
+          ${anyAlert ? `<div class="ma-mode al">${tx('🚨 ! posé : gardes de SA zone en ALERTE → chiffre <b style="color:#ff6b7a">ROUGE</b>, vers le ! le plus proche.', '🚨 ! on the map: Guards in THAT zone are in ALERT → <b style="color:#ff6b7a">RED</b> number, toward the nearest !.')}</div>` : ''}
+          ${anyQ ? `<div class="ma-mode iv">${tx('❓ ? posé : le garde le plus proche enquête → chiffre <b style="color:#6fb0ff">BLEU</b>.', '❓ ? on the map: the nearest Guard investigates → <b style="color:#6fb0ff">BLUE</b> number.')}</div>` : ''}
+          <div class="ma-mode" style="border:1px solid #39407a">${tx('Sinon : voit un KO/Mort → enquête (bleu) ; sinon PATROUILLE (bleu), tout droit.', 'Otherwise: sees a KO/Dead → investigate (blue); else PATROL (blue), straight ahead.')}</div>
+          <p style="margin:6px 0">${tx('Il s\'arrête s\'il <b>te voit</b> (→ ! + attaque), s\'il <b>entre sur un jeton</b> (→ Guard Reaction) ou s\'il est bloqué. Déplace aussi les gardes sur le plan à l\'écran.', 'It stops if it <b>sees you</b> (→ ! + attack), <b>moves onto a token</b> (→ Guard Reaction) or is blocked. Move the Guards on the on-screen map too.')}</p>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">${g.players.map((p, i) => `<button class="ma-b sm" data-a="seen" data-v="${i}">👁️ ${tx('Un garde voit', 'A Guard sees')} ${p.name}</button>`).join('')}<button class="ma-b sm" data-a="react">🃏 Guard Reaction</button></div></div></div></div>`;
     }
     return h + `<button class="ma-b pri big" data-a="nextRound">▶ Round ${g.round + 1}</button>`;
   }
@@ -1325,27 +1329,27 @@
       const goal = GRID(m).goal || {};
       if ((a.id === 'elev' || a.id === 'interact') && goal.interact && pp && GG().code(world(m), pp.x, pp.y) === goal.interact) {
         spend(g, p, a); afterSimple(g, p, a);
-        if (goal.noAlert && g.pieces.some(x => x.k === 'a')) toast('⚠️ Un jeton <b>!</b> est sur le plateau : l\'objectif n\'est pas rempli (il faut l\'activer sans alerte).', 4500);
-        else setTimeout(() => { win(m, g, 'Objectif atteint (ascenseur activé)'); save(); render(); }, 1200);
+        if (goal.noAlert && g.pieces.some(x => x.k === 'a')) toast(tx('⚠️ Un jeton <b>!</b> est sur le plateau : l\'objectif n\'est pas rempli (il faut l\'activer sans alerte).', '⚠️ A <b>!</b> token is on the map: the objective isn\'t met (it must be activated with no alert).'), 4500);
+        else setTimeout(() => { win(m, g, tx('Objectif atteint (ascenseur activé)', 'Objective complete (elevator activated)')); save(); render(); }, 1200);
         return true;
       }
       const W6 = world(m);
-      if (a.gun && pp && W6.noFire.has(cellKey(pp.x, pp.y))) { toast('🚫 <b>No Fire Zone</b> : pas d\'arme à distance ni d\'explosif ici (les gardes, eux, peuvent tirer).', 4500); return false; }
+      if (a.gun && pp && W6.noFire.has(cellKey(pp.x, pp.y))) { toast(tx('🚫 <b>No Fire Zone</b> : pas d\'arme à distance ni d\'explosif ici (les gardes, eux, peuvent tirer).', '🚫 <b>No Fire Zone</b>: no ranged weapons or explosives here (Guards can still shoot).'), 4500); return false; }
       if (a.id === 'elev' && Object.keys(W6.shafts).length > 1 && pp) {
         const here = W6.shaftOf[cellKey(pp.x, pp.y)];
         if (here && here === g.elev) { ui.pend = { type: 'elev', act: a.id, mode: 'ride' }; return false; }
         const adj = GG().shaftAdjacent(W6, pp.x, pp.y);
         if (adj.length) { ui.pend = { type: 'elev', act: a.id, mode: 'call', to: adj[0] }; return false; }
-        toast('🛗 Tu dois être <b>dans l\'ascenseur</b> ou <b>à côté d\'une cage</b>.'); return false;
+        toast(tx('🛗 Tu dois être <b>dans l\'ascenseur</b> ou <b>à côté d\'une cage</b>.', '🛗 You must be <b>in the elevator</b> or <b>next to a shaft</b>.')); return false;
       }
       if (a.move) {
-        if (!pp || pp.x == null) { toast('Pose d\'abord ton pion sur le plan.'); return false; }
-        if (!armMove(m, g, p, a.id)) toast('Aucune case accessible.');
+        if (!pp || pp.x == null) { toast(tx('Pose d\'abord ton pion sur le plan.', 'Place your piece on the map first.')); return false; }
+        if (!armMove(m, g, p, a.id)) toast(tx('Aucune case accessible.', 'No reachable space.'));
         return false;
       }
       if (a.atk && !(isBoss(m) && !isSneak(m))) {
         const ids = gridTargets(m, g, p, a);
-        if (!ids.length) { toast(a.atk === 'silent' ? '🤫 Il faut être <b>dans le dos</b> d\'un garde adjacent.' : a.dice ? '👊 Aucun garde adjacent.' : '🔫 Aucune cible en ligne de vue.', 3500); return false; }
+        if (!ids.length) { toast(a.atk === 'silent' ? tx('🤫 Il faut être <b>dans le dos</b> d\'un garde adjacent.', '🤫 You must be <b>behind</b> an adjacent Guard.') : a.dice ? tx('👊 Aucun garde adjacent.', '👊 No adjacent Guard.') : tx('🔫 Aucune cible en ligne de vue.', '🔫 No target in line of sight.'), 3500); return false; }
         ui.pend = { type: 'target', act: a.id, ids }; return false;
       }
     }
@@ -1353,7 +1357,7 @@
     if (a.atk) {
       if (isBoss(m) && !isSneak(m) && a.atk !== 'silent') {
         spend(g, p, a); consume(p, a); if (a.sfx) A.sfx(a.sfx); if (a.loud) setAtt(g, p, 2, 'action LOUD');
-        openPad({ kind: 'boss', actor: p.name, def: bossDef(m), title: `${a.i} ${a.n} sur ${esc((m.boss || {}).name || 'le boss')}`, fixed: a.dice || null, color: 'b', defLabel: 'du boss', back: p.name === 'Snake' && !p.sneakUsed, icon: a.i });
+        openPad({ kind: 'boss', actor: p.name, def: bossDef(m), title: `${a.i} ${a.n} ${tx('sur', 'on')} ${esc((m.boss || {}).name || tx('le boss', 'the boss'))}`, fixed: a.dice || null, color: 'b', defLabel: tx('du boss', 'of the boss'), back: p.name === 'Snake' && !p.sneakUsed, icon: a.i });
         return true;
       }
       ui.pend = { type: 'target', act: a.id }; return false;
@@ -1362,19 +1366,19 @@
   }
   function afterSimple(g, p, a) {
     consume(p, a);
-    if (a.eff === 'heal') { const d = Math.min(2, p.dmg); p.dmg -= d; log(`🍴 ${p.name} : Ration, −${d} dégât(s)`, '', p.name); }
-    if (a.eff === 'chaff') { const m = mission(); g.chaff = g.round; if (g.grid) { const S = toS(g), me = S.figs.find(f => f.kind === 'player' && f.name === p.name); if (me && GG().guardInZone(world(m), S, me)) setTimeout(() => { setAtt(g, p, 1, 'chaff (garde dans la zone)'); save(); render(); }, 900); } }
+    if (a.eff === 'heal') { const d = Math.min(2, p.dmg); p.dmg -= d; log(`🍴 ${p.name} : Ration, −${d} ${tx('dégât(s)', 'damage')}`, '', p.name); }
+    if (a.eff === 'chaff') { const m = mission(); g.chaff = g.round; if (g.grid) { const S = toS(g), me = S.figs.find(f => f.kind === 'player' && f.name === p.name); if (me && GG().guardInZone(world(m), S, me)) setTimeout(() => { setAtt(g, p, 1, tx('chaff (garde dans la zone)', 'chaff (Guard in the zone)')); save(); render(); }, 900); } }
     if (a.eff === 'stealth') p.stealth = true;
     if (a.eff === 'box') p.boxed = true;
-    if (a.eff === 'detonate' && g.grid && !g.players.some(x => x.att === 2)) { const S = toS(g), me = S.figs.find(f => f.kind === 'player' && f.name === p.name); if (me && GG().guardInZone(world(mission()), S, me)) setAtt(g, p, 2, 'explosion du C-4'); }
+    if (a.eff === 'detonate' && g.grid && !g.players.some(x => x.att === 2)) { const S = toS(g), me = S.figs.find(f => f.kind === 'player' && f.name === p.name); if (me && GG().guardInZone(world(mission()), S, me)) setAtt(g, p, 2, tx('explosion du C-4', 'C-4 explosion')); }
     if (a.id === 'item') ui.inv = true;
     if (a.sfx) A.sfx(a.sfx); if (a.auto) A.sfx(AU()[a.auto]);
     if (a.then) setTimeout(() => A.sfx(a.then), 900); if (a.thenAuto) setTimeout(() => A.sfx(AU()[a.thenAuto]), 900);
     log(`${a.i} ${p.name} : ${a.n}`, '', p.name);
     toast(`${a.i} <b>${a.n}</b> — ${a.tip}`, 3000);
-    if (a.loud) setAtt(g, p, 2, 'action LOUD');
+    if (a.loud) setAtt(g, p, 2, tx('action LOUD', 'LOUD action'));
     if (a.att) setAtt(g, p, 1, a.n);
-    if (a.leap) setAtt(g, p, 2, 'saut par-dessus un garde');
+    if (a.leap) setAtt(g, p, 2, tx('saut par-dessus un garde', 'leapfrogged a Guard'));
   }
   function doMove(x, y) {
     const g = game(), p = g.players[g.cur], a = actById(ui.pend.act, p); snap();
@@ -1383,17 +1387,17 @@
     spend(g, p, a); p.s.move++;
     steps(a.id === 'dash' ? 'dash' : 'sneak', a.move, p.water);
     log(`${a.i} ${p.name} : ${a.n}`, '', p.name);
-    if (a.noisy) toast(`${a.i} <b>${a.n}</b> : 🔊 bruyant → noise check à la fin de ton tour.`);
+    if (a.noisy) toast(`${a.i} <b>${a.n}</b> : ${tx('🔊 bruyant → noise check à la fin de ton tour.', '🔊 Noisy → noise check at the end of your turn.')}`);
     ui.pend = null; save(); render();
   }
   function chooseTarget(tg) {
     const g = game(), m = mission(), p = g.players[g.cur], a = actById(ui.pend.act, p); snap();
     ui.pend = null; spend(g, p, a); consume(p, a);
     if (a.sfx) A.sfx(a.sfx);
-    if (a.loud) setAtt(g, p, 2, 'action LOUD');
-    if (a.atk === 'silent') { g.dead++; p.s.kill++; p.s.atk++; if (tg) { tg.k = 'dead'; tg.hurt = false; } log(`🤫 ${p.name} : élimination silencieuse`, '', p.name); toast('🤫 Garde éliminé sans bruit : remplace-le par un jeton Mort.'); save(); render(); return; }
-    if (tg && tg.k === 'boss') openPad({ kind: 'boss', actor: p.name, def: bossDef(m), title: `${a.i} ${a.n} sur le boss`, fixed: a.dice || null, color: 'b', defLabel: 'du boss', icon: a.i });
-    else openPad({ kind: a.atk, actor: p.name, target: tg ? tg.id : null, def: 3, title: `${a.i} ${a.n} : ${a.dice ? 'lance ' + a.dice.map(c => c === 'w' ? '⚪' : '⚫').join('') : 'lance les dés indiqués sur la carte'}`, fixed: a.dice || null, color: 'b', min: 1, defLabel: 'du garde', back: p.name === 'Snake' && !p.sneakUsed, icon: a.i });
+    if (a.loud) setAtt(g, p, 2, tx('action LOUD', 'LOUD action'));
+    if (a.atk === 'silent') { g.dead++; p.s.kill++; p.s.atk++; if (tg) { tg.k = 'dead'; tg.hurt = false; } log(`🤫 ${p.name} : ${tx('élimination silencieuse', 'silent takedown')}`, '', p.name); toast(tx('🤫 Garde éliminé sans bruit : remplace-le par un jeton Mort.', '🤫 Guard taken down silently: replace it with a Dead token.')); save(); render(); return; }
+    if (tg && tg.k === 'boss') openPad({ kind: 'boss', actor: p.name, def: bossDef(m), title: `${a.i} ${a.n} ${tx('sur le boss', 'on the boss')}`, fixed: a.dice || null, color: 'b', defLabel: tx('du boss', 'of the boss'), icon: a.i });
+    else openPad({ kind: a.atk, actor: p.name, target: tg ? tg.id : null, def: 3, title: `${a.i} ${a.n} : ${a.dice ? tx('lance ', 'roll ') + a.dice.map(c => c === 'w' ? '⚪' : '⚫').join('') : tx('lance les dés indiqués sur la carte', 'roll the dice shown on the card')}`, fixed: a.dice || null, color: 'b', min: 1, defLabel: tx('du garde', 'of the Guard'), back: p.name === 'Snake' && !p.sneakUsed, icon: a.i });
     save(); render();
   }
 
@@ -1421,6 +1425,7 @@
         save(); syncAlert(); render(); } return; }
       case 'pk': { const pd = ui.pad; const lim = pd.fixed ? pd.fixed.length : 12; const i = pd.vals.length; if (i >= lim) return; const col = pd.fixed ? pd.fixed[i] : pd.color; if (v === '!' && col !== 'w') return; pd.vals.push(v === '!' ? '!' : +v); render(); return; }
       case 'pdel': ui.pad.vals.pop(); render(); return;
+      case 'restart': if (confirm(tx('Recommencer la mission depuis la mise en place ? (la partie en cours sera effacée)', 'Restart the mission from setup? (the current game will be erased)'))) { const old = st.games[m.id], inv = old && (old.inv0 || old.players.map(x => [x.name, x.inv])); st.games[m.id] = newGame(m, st.n); if (inv) inv.forEach(([nm, iv]) => { const q = st.games[m.id].players.find(x => x.name === nm); if (q && iv) q.inv = JSON.parse(JSON.stringify(iv)); }); undo = []; A.stop(); go('setup'); } return;
       case 'cdk': if (ui.pend && ui.pend.type === 'codec') { ui.pend.q = ((ui.pend.q || '').length >= 4 ? '' : ui.pend.q || '') + v; if (ui.pend.q.length === 4) A.sfx(AU().codec); } render(); return;
       case 'cdd': if (ui.pend && ui.pend.type === 'codec') ui.pend.q = (ui.pend.q || '').slice(0, -1); render(); return;
       case 'pdef': ui.pad.def = Math.max(1, Math.min(8, ui.pad.def + +v)); render(); return;
@@ -1436,7 +1441,7 @@
         const from = g.players.find(o => o !== q && (o.inv || []).some(i => i.num === n));
         if (from) { const it = from.inv.find(i => i.num === n); from.inv = from.inv.filter(i => i !== it); q.inv.push(it); save(); render(); return; }
         const kn = cardInfo(n);
-        if (kn && kn.only && !kn.only.includes(q.name)) { toast(`⛔ ${esc(kn.name)} : réservé à ${kn.only.join(' / ')}.`); return; }
+        if (kn && kn.only && !kn.only.includes(q.name)) { toast(`⛔ ${esc(kn.name)} : ${tx('réservé à', 'only for')} ${kn.only.join(' / ')}.`); return; }
         if (kn) { q.inv.push(mkCard(n, kn)); save(); } else ui.cardAsk = { p: +b.dataset.p, n };
         render(); return; }
       case 'invCardType': { const ca = ui.cardAsk; if (!ca) return; const box = LS.get('mgsg.cards', {}); const nm = `Carte #${String(ca.n).padStart(3, '0')} (${ITYPES[v][1]})`;
@@ -1448,25 +1453,26 @@
     switch (a) {
       case 'start': {
         g.started = true; g.t0 = now(); g.round = 1; g.phase = 1; g.cur = 0;
+        g.inv0 = g.players.map(x => [x.name, JSON.parse(JSON.stringify(x.inv || []))]);   // équipement de départ (pour « Recommencer »)
         g.players.forEach(x => { x.left = 4; x.noisy = 0; x.done = false; });
-        log(`🎬 Début de la mission « ${m.name} » (${g.players.map(x => x.name).join(', ')})`, 'sys');
+        log(tx(`🎬 Début de la mission « ${m.name} » (${g.players.map(x => x.name).join(', ')})`, `🎬 Mission start: “${m.name}” (${g.players.map(x => x.name).join(', ')})`), 'sys');
         if (st.auto) A.music(missionTrack(m), 'mission'); A.sfx(AU().codec);
         st.screen = 'play'; ui = { sel: null, pend: null, place: null, pad: null };
-        setTimeout(() => turnBanner(`${CE[g.players[0].name] || ''} Au tour de ${g.players[0].name}`), 300);
+        setTimeout(() => turnBanner(`${CE[g.players[0].name] || ''} ${tx('Au tour de', 'Your turn,')} ${g.players[0].name}`), 300);
         break;
       }
-      case 'resetPos': { if (g.started && !confirm('Replacer tous les pions selon le livret ?')) { undo.pop(); return; } const keep = g.pieces.filter(x => x.k === 'q' || x.k === 'a'); g.pieces = gridPieces(m, g.n).concat(g.started ? keep : []); g.gridV = gridVer(m); ui.sel = null; toast('↺ Pions replacés selon le livret.'); break; }
+      case 'resetPos': { if (g.started && !confirm(tx('Replacer tous les pions selon le livret ?', 'Reset all pieces to the book layout?'))) { undo.pop(); return; } const keep = g.pieces.filter(x => x.k === 'q' || x.k === 'a'); g.pieces = gridPieces(m, g.n).concat(g.started ? keep : []); g.gridV = gridVer(m); ui.sel = null; toast(tx('↺ Pions replacés selon le livret.', '↺ Pieces reset to the book layout.')); break; }
       case 'add': { const id = (v === 'guard' ? 'g' : 'c') + (Date.now() % 1000000); g.pieces.push({ id, k: v, x: null, y: null, f: 'down' }); ui.place = id; break; }
       case 'rot': { const pc = piece(ui.sel); const o = ['up', 'right', 'down', 'left']; pc.f = o[(o.indexOf(pc.f || 'down') + (+v) + 4) % 4]; if (pc.k === 'cam') A.sfx(AU().camRotate); break; }
-      case 'pko': { const pc = piece(ui.sel); pc.k = 'ko2'; pc.hurt = false; g.ko2++; A.sfx('punch-guard-kox1.mp3'); log('⭐ Garde KO (★★)', ''); ui.sel = null; break; }
-      case 'pdead': { const pc = piece(ui.sel); pc.k = 'dead'; pc.hurt = false; g.dead++; log('☠ Garde éliminé', ''); ui.sel = null; break; }
+      case 'pko': { const pc = piece(ui.sel); pc.k = 'ko2'; pc.hurt = false; g.ko2++; A.sfx('punch-guard-kox1.mp3'); log(tx('⭐ Garde KO (★★)', '⭐ Guard KO (★★)'), ''); ui.sel = null; break; }
+      case 'pdead': { const pc = piece(ui.sel); pc.k = 'dead'; pc.hurt = false; g.dead++; log(tx('☠ Garde éliminé', '☠ Guard eliminated'), ''); ui.sel = null; break; }
       case 'phurt': { const pc = piece(ui.sel); pc.hurt = !pc.hurt; break; }
-      case 'pwake': { const pc = piece(ui.sel); if (pc.k === 'ko1') g.ko1 = Math.max(0, g.ko1 - 1); else g.ko2 = Math.max(0, g.ko2 - 1); pc.k = 'guard'; A.sfx('guard-whered-he-go_zHLpH97.mp3'); log('💂 Un garde se relève', ''); ui.sel = null; break; }
+      case 'pwake': { const pc = piece(ui.sel); if (pc.k === 'ko1') g.ko1 = Math.max(0, g.ko1 - 1); else g.ko2 = Math.max(0, g.ko2 - 1); pc.k = 'guard'; A.sfx('guard-whered-he-go_zHLpH97.mp3'); log(tx('💂 Un garde se relève', '💂 A Guard gets back up'), ''); ui.sel = null; break; }
       case 'prm': { g.pieces = g.pieces.filter(x => x.id !== ui.sel); ui.sel = null; break; }
-      case 'pflip': { const pc = piece(ui.sel); const pl = g.players.find(x => x.name === pc.owner); setAtt(g, pl, pl.att === 2 ? 1 : 2, 'retourné', true); break; }
-      case 'prmatt': { const pc = piece(ui.sel); const pl = g.players.find(x => x.name === pc.owner); setAtt(g, pl, 0, null, true); log(`🃏 Jeton Attention de ${pl.name} retiré`, ''); ui.sel = null; break; }
+      case 'pflip': { const pc = piece(ui.sel); const pl = g.players.find(x => x.name === pc.owner); setAtt(g, pl, pl.att === 2 ? 1 : 2, tx('retourné', 'flipped'), true); break; }
+      case 'prmatt': { const pc = piece(ui.sel); const pl = g.players.find(x => x.name === pc.owner); setAtt(g, pl, 0, null, true); log(tx(`🃏 Jeton Attention de ${pl.name} retiré`, `🃏 ${pl.name}'s Attention token removed`), ''); ui.sel = null; break; }
       case 'phase': g.phase = +v; if (g.phase === 2) g.step = 0; ui.pend = null; ui.pad = null; break;
-      case 'toPlayers': zoomBack(); g.players.forEach(x => { x.left = 4; x.noisy = 0; x.done = false; x.ask = null; x.hurt = false; x.sneakUsed = false; }); g.phase = 1; g.cur = 0; log(`🔄 Round ${g.round} : phase des joueurs`, 'sys'); setTimeout(() => { A.sfx(AU().codec); turnBanner(`${CE[g.players[0].name] || ''} Au tour de ${g.players[0].name}`); }, 200); if (st.auto && !A.cur) A.music(missionTrack(m), 'mission'); break;
+      case 'toPlayers': zoomBack(); g.players.forEach(x => { x.left = 4; x.noisy = 0; x.done = false; x.ask = null; x.hurt = false; x.sneakUsed = false; }); g.phase = 1; g.cur = 0; log(tx(`🔄 Round ${g.round} : phase des joueurs`, `🔄 Round ${g.round}: player phase`), 'sys'); setTimeout(() => { A.sfx(AU().codec); turnBanner(`${CE[g.players[0].name] || ''} ${tx('Au tour de', 'Your turn,')} ${g.players[0].name}`); }, 200); if (st.auto && !A.cur) A.music(missionTrack(m), 'mission'); break;
       case 'who': g.cur = +v; ui.pend = null; ui.pad = null; break;
       case 'water': p.water = !p.water; if (p.water) A.sfx(AU().water); break;
       case 'att': setAtt(g, p, +v, null, true); break;
@@ -1476,63 +1482,63 @@
       case 'targetNo': undo.pop(); chooseTarget(null); return;
       case 'pok': applyPad(m, g); if (ui.queue && ui.queue.length) openPad(ui.queue.shift()); break;
       case 'end': {
-        if (p.noisy && g.grid) { const S = toS(g), me = S.figs.find(f => f.kind === 'player' && f.name === p.name); if (me && !GG().guardInZone(world(m), S, me)) { p.noisy = 0; toast('🔊 Aucun garde dans ta zone : pas de noise check.'); } }
+        if (p.noisy && g.grid) { const S = toS(g), me = S.figs.find(f => f.kind === 'player' && f.name === p.name); if (me && !GG().guardInZone(world(m), S, me)) { p.noisy = 0; toast(tx('🔊 Aucun garde dans ta zone : pas de noise check.', '🔊 No Guard in your zone: no noise check.')); } }
         if (p.hurt) p.ask = 'hurt'; else if (p.noisy) p.ask = 'noise';
-        else { p.done = true; log(`🏁 Fin du tour de ${p.name} (pas de bruit)`, '', p.name); endTurnFollow(g); }
+        else { p.done = true; log(tx(`🏁 Fin du tour de ${p.name} (pas de bruit)`, `🏁 ${p.name}'s turn ends (no noise)`), '', p.name); endTurnFollow(g); }
         break;
       }
-      case 'hurt': { if (v === 'up') setAtt(g, p, 2, 'garde blessé resté debout'); else g.pieces.forEach(x => { x.hurt = false; }); p.hurt = false; if (p.noisy) p.ask = 'noise'; else { p.ask = null; p.done = true; endTurnFollow(g); } break; }
-      case 'noisePad': openPad({ kind: 'noise', actor: p.name, fixed: Array(p.noisy).fill('w'), title: `🔊 Noise check : lance ${p.noisy} dé(s) blanc(s)`, hint: 'Tape chaque résultat (« ! » si tu le vois).', showDef: false }); break;
-      case 'noise': p.ask = null; p.done = true; log(`🏁 Fin du tour de ${p.name} (pas de garde dans la zone)`, '', p.name); endTurnFollow(g); break;
-      case 'toEnemy': ui.seq = null; g.phase = 2; g.step = 0; log(`👹 Round ${g.round} : phase ennemie`, 'sys'); break;
-      case 'draw': if (g.deck) g.deck.drawn++; g.step = 1; log('🃏 Carte Guard Order piochée', 'sys'); break;
-      case 'gameover': gameOver(m, g, 'La carte GAME OVER est sortie : temps écoulé.'); break;
+      case 'hurt': { if (v === 'up') setAtt(g, p, 2, tx('garde blessé resté debout', 'wounded Guard still standing')); else g.pieces.forEach(x => { x.hurt = false; }); p.hurt = false; if (p.noisy) p.ask = 'noise'; else { p.ask = null; p.done = true; endTurnFollow(g); } break; }
+      case 'noisePad': openPad({ kind: 'noise', actor: p.name, fixed: Array(p.noisy).fill('w'), title: tx(`🔊 Noise check : lance ${p.noisy} dé(s) blanc(s)`, `🔊 Noise check: roll ${p.noisy} white ${p.noisy > 1 ? 'dice' : 'die'}`), hint: tx('Tape chaque résultat (« ! » si tu le vois).', 'Enter each result (“!” if you see it).'), showDef: false }); break;
+      case 'noise': p.ask = null; p.done = true; log(tx(`🏁 Fin du tour de ${p.name} (pas de garde dans la zone)`, `🏁 ${p.name}'s turn ends (no Guard in the zone)`), '', p.name); endTurnFollow(g); break;
+      case 'toEnemy': ui.seq = null; g.phase = 2; g.step = 0; log(tx(`👹 Round ${g.round} : phase ennemie`, `👹 Round ${g.round}: enemy phase`), 'sys'); break;
+      case 'draw': if (g.deck) g.deck.drawn++; g.step = 1; log(tx('🃏 Carte Guard Order piochée', '🃏 Guard Order card drawn'), 'sys'); break;
+      case 'gameover': gameOver(m, g, tx('La carte GAME OVER est sortie : temps écoulé.', 'The GAME OVER card was revealed: time\'s up.')); break;
       case 's1': {
         if (g.grid) { gridSection1(m, g, v); g.step = 2; break; }
-        if (v === 'waken') { const up = g.ko1; g.ko1 = g.ko2; g.ko2 = 0; g.pieces.forEach(x => { if (x.k === 'ko1') x.k = 'guard'; else if (x.k === 'ko2') x.k = 'ko1'; }); A.sfx('guard-whered-he-go_zHLpH97.mp3'); log(`✨ Réveil : ${up} garde(s) se relèvent, ★★ → ★`, 'sys'); toast(`✨ Réveil (zones actives) : ${up} garde(s) ★ se relèvent, les ★★ passent à ★. Fais pareil sur le plateau.`, 4500); }
-        if (v === 'radio') { A.sfx('guard-return-to-your-positions_9aocsFp.mp3'); log('📻 Radio-In', 'sys'); toast('📻 Radio-In : complète chaque zone active jusqu\'au Guard Count du Barracks (icône radio). ＋💂 pour les poser à l\'écran.', 5000); }
-        if (v === 'lost') { const n = Math.floor(g.dead / 3); if (g.deck) { g.deck.drawn += n; g.deck.burned += n; } log(`☠ Lost Contact : ${n} carte(s) brûlée(s)`, 'sys'); toast(n ? `☠ Lost Contact : ${n} carte(s) brûlée(s). Si l'une est GAME OVER → perdu !` : '☠ Lost Contact : moins de 3 morts, rien.', 4500); }
-        if (v === 'stay') { log('❓ Stay Alert', 'sys'); toast('❓ Stay Alert : tout joueur à ≤ 2 cases d\'un garde (sans obstacle) pose son jeton ? (bouton « ? » sur sa fiche).', 5000); }
+        if (v === 'waken') { const up = g.ko1; g.ko1 = g.ko2; g.ko2 = 0; g.pieces.forEach(x => { if (x.k === 'ko1') x.k = 'guard'; else if (x.k === 'ko2') x.k = 'ko1'; }); A.sfx('guard-whered-he-go_zHLpH97.mp3'); log(tx(`✨ Réveil : ${up} garde(s) se relèvent, ★★ → ★`, `✨ Waken: ${up} Guard(s) get up, ★★ → ★`), 'sys'); toast(tx(`✨ Réveil (zones actives) : ${up} garde(s) ★ se relèvent, les ★★ passent à ★. Fais pareil sur le plateau.`, `✨ Waken (active zones): ${up} ★ Guard(s) get up, ★★ flip to ★. Do the same on the board.`), 4500); }
+        if (v === 'radio') { A.sfx('guard-return-to-your-positions_9aocsFp.mp3'); log('📻 Radio-In', 'sys'); toast(tx('📻 Radio-In : complète chaque zone active jusqu\'au Guard Count du Barracks (icône radio). ＋💂 pour les poser à l\'écran.', '📻 Radio-In: fill each active zone up to the Barracks Guard Count (radio icon). ＋💂 to place them on screen.'), 5000); }
+        if (v === 'lost') { const n = Math.floor(g.dead / 3); if (g.deck) { g.deck.drawn += n; g.deck.burned += n; } log(tx(`☠ Lost Contact : ${n} carte(s) brûlée(s)`, `☠ Lost Contact: ${n} card(s) burned`), 'sys'); toast(n ? tx(`☠ Lost Contact : ${n} carte(s) brûlée(s). Si l'une est GAME OVER → perdu !`, `☠ Lost Contact: ${n} card(s) burned. If one is GAME OVER → you lose!`) : tx('☠ Lost Contact : moins de 3 morts, rien.', '☠ Lost Contact: fewer than 3 bodies, nothing happens.'), 4500); }
+        if (v === 'stay') { log('❓ Stay Alert', 'sys'); toast(tx('❓ Stay Alert : tout joueur à ≤ 2 cases d\'un garde (sans obstacle) pose son jeton ? (bouton « ? » sur sa fiche).', '❓ Stay Alert: every player within 2 spaces of a Guard places their ? token (the “?” button on their panel).'), 5000); }
         g.step = 2; break;
       }
-      case 'cam': if (g.grid) { if (v === 'flip') { g.cam = g.cam === 'vert' ? 'orange' : 'vert'; A.sfx(AU().camRotate); log('📹 Les caméras pivotent', 'sys'); camCheck(m, g); } g.step = 3; break; }
-        if (v === 'flip') { g.cam = g.cam === 'vert' ? 'orange' : 'vert'; A.sfx(AU().camRotate); g.pieces.forEach(x => { if (x.k === 'cam') { const o = ['up', 'right', 'down', 'left']; x.f = o[(o.indexOf(x.f || 'down') + 1) % 4]; } }); log('📹 Les caméras pivotent', 'sys'); } g.step = 3; break;
-      case 'camSeen': { const q = g.players[+v]; A.sfx(AU().camSpot); setTimeout(() => { setAtt(g, q, 2, 'vu par une caméra'); save(); render(); }, 700); break; }
-      case 'seen': { const q = g.players[+v]; A.sfx('guard-there-he-is_JHZ7rPO.mp3'); setAtt(g, q, 2, 'vu par un garde'); ui.sel = null; openPad({ kind: 'guardAtk', victim: q.name, def: defOf(q.name), fixed: ['b', 'b'], title: `👁️ Le garde attaque ${q.name} : lance 2 dés noirs`, hint: 'Focus possible : modifie la valeur avant de la taper.', defLabel: `de ${q.name}` }); break; }
-      case 'react': A.sfx('guard-what-was-that-noise_IVtXtq7.mp3'); log('🃏 Guard Reaction', 'sys'); toast('🃏 Guard Reaction : pioche une carte, résous chaque jeton de la case (haut → bas). Mets à jour les jetons ? / ! (touche-les sur le plan).', 5000); break;
+      case 'cam': if (g.grid) { if (v === 'flip') { g.cam = g.cam === 'vert' ? 'orange' : 'vert'; A.sfx(AU().camRotate); log(tx('📹 Les caméras pivotent', '📹 Cameras flip'), 'sys'); camCheck(m, g); } g.step = 3; break; }
+        if (v === 'flip') { g.cam = g.cam === 'vert' ? 'orange' : 'vert'; A.sfx(AU().camRotate); g.pieces.forEach(x => { if (x.k === 'cam') { const o = ['up', 'right', 'down', 'left']; x.f = o[(o.indexOf(x.f || 'down') + 1) % 4]; } }); log(tx('📹 Les caméras pivotent', '📹 Cameras flip'), 'sys'); } g.step = 3; break;
+      case 'camSeen': { const q = g.players[+v]; A.sfx(AU().camSpot); setTimeout(() => { setAtt(g, q, 2, tx('vu par une caméra', 'spotted by a Camera')); save(); render(); }, 700); break; }
+      case 'seen': { const q = g.players[+v]; A.sfx('guard-there-he-is_JHZ7rPO.mp3'); setAtt(g, q, 2, tx('vu par un garde', 'spotted by a Guard')); ui.sel = null; openPad({ kind: 'guardAtk', victim: q.name, def: defOf(q.name), fixed: ['b', 'b'], title: tx(`👁️ Le garde attaque ${q.name} : lance 2 dés noirs`, `👁️ The Guard attacks ${q.name}: roll 2 black dice`), hint: tx('Focus possible : modifie la valeur avant de la taper.', 'Focus allowed: adjust the value before entering it.'), defLabel: tx(`de ${q.name}`, `of ${q.name}`) }); break; }
+      case 'react': A.sfx('guard-what-was-that-noise_IVtXtq7.mp3'); log('🃏 Guard Reaction', 'sys'); toast(tx('🃏 Guard Reaction : pioche une carte, résous chaque jeton de la case (haut → bas). Mets à jour les jetons ? / ! (touche-les sur le plan).', '🃏 Guard Reaction: draw a card, resolve each token in the space (top → bottom). Update the ? / ! tokens (tap them on the map).'), 5000); break;
       case 'bossCard': { g.boss.cards++; const ss = stageSnd(m); if (g.boss.cards === 1 && st.auto && ss.boss && A.cur !== ss.boss) A.music(ss.boss, 'boss'); const vo = (ss.voices || []).filter(x => !/death|vaincu|abattu/i.test(x[0] + x[1])); if (vo.length) A.sfx(vo[Math.floor(Math.random() * vo.length)][0]); log(`🃏 Carte boss n°${g.boss.cards}`, 'sys'); break; }
-      case 'bossAtk': { const q = g.players[+v]; openPad({ kind: 'bossAtk', victim: q.name, def: defOf(q.name), color: 'b', min: 1, title: `⚔️ ${esc((m.boss || {}).name || 'Le boss')} attaque ${q.name}`, hint: 'Tape chaque dé lancé (nombre : carte ou stat Attaque).', defLabel: `de ${q.name}` }); break; }
+      case 'bossAtk': { const q = g.players[+v]; openPad({ kind: 'bossAtk', victim: q.name, def: defOf(q.name), color: 'b', min: 1, title: `⚔️ ${esc((m.boss || {}).name || tx('Le boss', 'The boss'))} ${tx('attaque', 'attacks')} ${q.name}`, hint: tx('Tape chaque dé lancé (nombre : carte ou stat Attaque).', 'Enter each die rolled (count: card or Attack stat).'), defLabel: tx(`de ${q.name}`, `of ${q.name}`) }); break; }
       case 'bd': g.boss.dmg = Math.max(0, g.boss.dmg + +v); break;
       case 'bt': g.boss.threat = Math.max(0, g.boss.threat + +v); break;
-      case 'bossDown': { const d = (stageSnd(m).voices || []).find(x => /death/i.test(x[0])); A.sfx(d ? d[0] : AU().win); log('👾 Boss vaincu !', 'win'); win(m, g, 'Boss vaincu'); break; }
+      case 'bossDown': { const d = (stageSnd(m).voices || []).find(x => /death/i.test(x[0])); A.sfx(d ? d[0] : AU().win); log(tx('👾 Boss vaincu !', '👾 Boss defeated!'), 'win'); win(m, g, tx('Boss vaincu', 'Boss defeated')); break; }
       case 'elevGo': {
         const W6 = world(m), from = g.elev, to = v, map = GG().elevatorMap(W6, from, to), ac = ACTS.find(x => x.id === 'elev');
         spend(g, p, ac); A.sfx(AU().elevCall); setTimeout(() => A.sfx(AU().elevator), 700);
         g.pieces.forEach(x => { if (x.x == null) return; const k = cellKey(x.x, x.y); if (map[k]) { const [nx, ny] = map[k].split(',').map(Number); x.x = nx; x.y = ny; } });
         g.elev = to; ui.pend = null;
-        log(`🛗 ${p.name} : ascenseur ${from} → ${to}`, '', p.name); toast(`🛗 L'ascenseur part vers <b>${to}</b>. Déplace l'ascenseur et les figurines dedans sur le vrai plateau.`, 4000);
+        log(`🛗 ${p.name} : ${tx('ascenseur', 'elevator')} ${from} → ${to}`, '', p.name); toast(tx(`🛗 L'ascenseur part vers <b>${to}</b>. Déplace l'ascenseur et les figurines dedans sur le vrai plateau.`, `🛗 The elevator heads to <b>${to}</b>. Move the elevator and the figures inside on the real board.`), 4000);
         break;
       }
       case 'edit': undo.pop(); ui.edit = ui.edit ? null : 'wall'; render(); return;
       case 'editMode': undo.pop(); ui.edit = v; render(); return;
-      case 'editReset': undo.pop(); if (confirm('Effacer toutes tes corrections de ce plan ?')) { LS.set('mgsg.fix.' + m.id, { walls: [], cells: {} }); delete worlds[m.id]; render(); } return;
-      case 'editExport': { undo.pop(); const t = JSON.stringify({ mission: m.id, fix: fixOf(m) }); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast('📤 Corrections copiées : colle-les-moi pour que je les intègre au plan.', 4000), () => prompt('Copie ces corrections :', t)); return; }
+      case 'editReset': undo.pop(); if (confirm(tx('Effacer toutes tes corrections de ce plan ?', 'Erase all your corrections to this map?'))) { LS.set('mgsg.fix.' + m.id, { walls: [], cells: {} }); delete worlds[m.id]; render(); } return;
+      case 'editExport': { undo.pop(); const t = JSON.stringify({ mission: m.id, fix: fixOf(m) }); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast(tx('📤 Corrections copiées : colle-les-moi pour que je les intègre au plan.', '📤 Corrections copied: share them so they can be added to the map.'), 4000), () => prompt(tx('Copie ces corrections :', 'Copy these corrections:'), t)); return; }
       case 'los': undo.pop(); st.showLOS = !st.showLOS; save(); render(); return;
       case 'card': g.card[b.dataset.k] = b.dataset.k === 'arrow' ? v : +v; break;
-      case 'seqStart': { const ids = GG().activationOrder(world(m), toS(g)); if (!ids.length) { toast('Aucun garde dans une zone active : rien ne bouge.'); g.step = 4; ui.seq = { ids: [], i: 0 }; } else { ui.seq = { ids, i: 0 }; log(`💂 Activation des gardes (rouge ${g.card.red}, bleu ${g.card.blue}, flèche ${g.card.arrow === 'left' ? '⟲' : '⟳'})`, 'sys'); } break; }
+      case 'seqStart': { const ids = GG().activationOrder(world(m), toS(g)); if (!ids.length) { toast(tx('Aucun garde dans une zone active : rien ne bouge.', 'No Guard in an active zone: nothing moves.')); g.step = 4; ui.seq = { ids: [], i: 0 }; } else { ui.seq = { ids, i: 0 }; log(tx(`💂 Activation des gardes (rouge ${g.card.red}, bleu ${g.card.blue}, flèche ${g.card.arrow === 'left' ? '⟲' : '⟳'})`, `💂 Guard activation (red ${g.card.red}, blue ${g.card.blue}, arrow ${g.card.arrow === 'left' ? '⟲' : '⟳'})`), 'sys'); } break; }
       case 'seqGo': runGuard(m, g); return;
       case 'seqSkip': ui.seq.i++; break;
       case 'react': { const tid = b.dataset.t, tk = piece(tid); if (tk) { const pl = tk.owner && g.players.find(x => x.name === tk.owner);
-          if (v === 'rm') { if (pl) setAtt(g, pl, 0, null, true); else g.pieces = g.pieces.filter(x => x.id !== tid); log('🃏 Guard Reaction : jeton retiré', 'sys'); }
+          if (v === 'rm') { if (pl) setAtt(g, pl, 0, null, true); else g.pieces = g.pieces.filter(x => x.id !== tid); log(tx('🃏 Guard Reaction : jeton retiré', '🃏 Guard Reaction: token removed'), 'sys'); }
           if (v === 'up' && pl) setAtt(g, pl, 2, 'Guard Reaction', true);
-          if (v === 'wake') { tk.k = 'guard'; tk.f = tk.f || 'down'; log('🃏 Guard Reaction : garde réveillé', 'sys'); } }
+          if (v === 'wake') { tk.k = 'guard'; tk.f = tk.f || 'down'; log(tx('🃏 Guard Reaction : garde réveillé', '🃏 Guard Reaction: Guard woken up'), 'sys'); } }
         ui.react.tokens = ui.react.tokens.filter(x => x.id !== tid); if (!ui.react.tokens.length) ui.react = null; break; }
       case 'reactDone': ui.react = null; break;
       case 'nextRound': zoomBack(); ui.seq = null; ui.react = null; g.round++; g.phase = 0; g.step = 0; log(`— Round ${g.round} —`, 'sys'); break;
       case 'event': { const ev = (m.events || []).find(x => x.k === v); g.ev[v] = !g.ev[v]; if (g.ev[v]) { A.sfx(AU()[(stageSnd(m).events || {})[v] || 'pop'] || AU().pop); log(`🅰️ Event ${v} atteint`, 'sys'); toast(`<span class="ma-ev">${v}</span> ${ev ? ev.d : ''}`, 6500); } break; }
       case 'cue': A.music(v, 'mission'); break;
-      case 'win': win(m, g, 'Objectif rempli'); break;
-      case 'lose': gameOver(m, g, 'Mission abandonnée / échouée.'); break;
+      case 'win': win(m, g, tx('Objectif rempli', 'Objective complete')); break;
+      case 'lose': gameOver(m, g, tx('Mission abandonnée / échouée.', 'Mission abandoned / failed.')); break;
       default: undo.pop(); return;
     }
     save(); render();
@@ -1542,49 +1548,49 @@
   function statsHtml(m, g) {
     const dur = g.t0 ? (g.t1 || now()) - g.t0 : 0, cards = g.deck ? g.deck.drawn : 0;
     const tot = k => g.players.reduce((s, p) => s + (p.s[k] || 0), 0);
-    const rank = g.over === 'win' ? (!g.alerts ? '🦊 FOXHOUND — aucune alerte !' : g.alerts <= 1 ? '🐕 Doberman' : g.alerts <= 3 ? '🐺 Loup' : '🐘 Éléphant') : '';
+    const rank = g.over === 'win' ? (!g.alerts ? tx('🦊 FOXHOUND — aucune alerte !', '🦊 FOXHOUND — no alerts!') : g.alerts <= 1 ? '🐕 Doberman' : g.alerts <= 3 ? tx('🐺 Loup', '🐺 Wolf') : tx('🐘 Éléphant', '🐘 Elephant')) : '';
     return `<div class="ma-stats">
-      <div class="ma-stat"><b>${g.over === 'win' ? '🏆' : g.over === 'go' ? '💀' : '⏳'}</b>${g.over === 'win' ? 'Réussie' : g.over === 'go' ? 'Échouée' : 'En cours'}</div>
-      <div class="ma-stat"><b>${fmtT(dur)}</b>Temps de jeu</div><div class="ma-stat"><b>${g.round}</b>Rounds</div>
-      <div class="ma-stat"><b>${g.alerts}</b>Alertes</div><div class="ma-stat"><b>${tot('ko')}</b>Gardes KO</div><div class="ma-stat"><b>${tot('kill')}</b>Gardes éliminés</div>
-      <div class="ma-stat"><b>${tot('dmgIn')}</b>Dégâts subis</div>${g.deck ? `<div class="ma-stat"><b>${cards}/${g.deck.red + g.deck.blue}</b>Cartes ennemies</div>` : ''}${isBoss(m) ? `<div class="ma-stat"><b>${g.boss.dmg}</b>Dégâts au boss</div>` : ''}</div>
-      ${rank ? `<p style="font-size:1.2rem;margin:10px 0 0">Rang : <b>${rank}</b></p>` : ''}
-      <div style="overflow-x:auto"><table class="ma-tab" style="margin-top:10px"><tr><th>Joueur</th><th>Actions</th><th>Déplac.</th><th>Attaques</th><th>Réussites</th><th>KO</th><th>Élim.</th><th>Dégâts subis</th><th>Repéré</th><th>Bruit raté</th></tr>
+      <div class="ma-stat"><b>${g.over === 'win' ? '🏆' : g.over === 'go' ? '💀' : '⏳'}</b>${g.over === 'win' ? tx('Réussie', 'Complete') : g.over === 'go' ? tx('Échouée', 'Failed') : tx('En cours', 'In progress')}</div>
+      <div class="ma-stat"><b>${fmtT(dur)}</b>${tx('Temps de jeu', 'Play time')}</div><div class="ma-stat"><b>${g.round}</b>Rounds</div>
+      <div class="ma-stat"><b>${g.alerts}</b>${tx('Alertes', 'Alerts')}</div><div class="ma-stat"><b>${tot('ko')}</b>${tx('Gardes KO', 'Guards KO\'d')}</div><div class="ma-stat"><b>${tot('kill')}</b>${tx('Gardes éliminés', 'Guards eliminated')}</div>
+      <div class="ma-stat"><b>${tot('dmgIn')}</b>${tx('Dégâts subis', 'Damage taken')}</div>${g.deck ? `<div class="ma-stat"><b>${cards}/${g.deck.red + g.deck.blue}</b>${tx('Cartes ennemies', 'Enemy cards')}</div>` : ''}${isBoss(m) ? `<div class="ma-stat"><b>${g.boss.dmg}</b>${tx('Dégâts au boss', 'Boss damage')}</div>` : ''}</div>
+      ${rank ? `<p style="font-size:1.2rem;margin:10px 0 0">${tx('Rang', 'Rank')} : <b>${rank}</b></p>` : ''}
+      <div style="overflow-x:auto"><table class="ma-tab" style="margin-top:10px"><tr>${(EN ? ['Player', 'Actions', 'Moves', 'Attacks', 'Hits', 'KO', 'Kills', 'Damage taken', 'Spotted', 'Noise failed'] : ['Joueur', 'Actions', 'Déplac.', 'Attaques', 'Réussites', 'KO', 'Élim.', 'Dégâts subis', 'Repéré', 'Bruit raté']).map(x => `<th>${x}</th>`).join('')}</tr>
       ${g.players.map(p => `<tr><td>${CE[p.name] || ''} ${p.name}</td><td>${p.s.act}</td><td>${p.s.move}</td><td>${p.s.atk}</td><td>${p.s.hit}</td><td>${p.s.ko}</td><td>${p.s.kill}</td><td>${p.s.dmgIn}</td><td>${p.s.alerts}</td><td>${p.s.noise}</td></tr>`).join('')}</table></div>`;
   }
-  function logHtml(g) { return `<ul class="ma-log">${g.log.map(l => `<li class="${l.kind}"><span class="t">${fmtT(l.t)}</span><span class="r">R${l.r}</span><span class="x">${esc(l.txt)}</span></li>`).join('') || '<li><span></span><span></span><span class="x">Rien pour l\'instant.</span></li>'}</ul>`; }
+  function logHtml(g) { return `<ul class="ma-log">${g.log.map(l => `<li class="${l.kind}"><span class="t">${fmtT(l.t)}</span><span class="r">R${l.r}</span><span class="x">${esc(l.txt)}</span></li>`).join('') || `<li><span></span><span></span><span class="x">${tx('Rien pour l\'instant.', 'Nothing yet.')}</span></li>`}</ul>`; }
   function report(m, g) {
     const dur = g.t0 ? (g.t1 || now()) - g.t0 : 0;
-    return [`MGS — ${typeof m.id === 'number' ? 'Stage ' + m.id : m.id} « ${m.name} » — ${g.over === 'win' ? 'RÉUSSIE' : g.over === 'go' ? 'ÉCHOUÉE' : 'en cours'}${g.why ? ' (' + g.why + ')' : ''}`,
-      `Joueurs : ${g.players.map(p => p.name).join(', ')} · Temps : ${fmtT(dur)} · Rounds : ${g.round} · Alertes : ${g.alerts}`, '',
+    return [`MGS — ${typeof m.id === 'number' ? 'Stage ' + m.id : m.id} « ${m.name} » — ${g.over === 'win' ? tx('RÉUSSIE', 'COMPLETE') : g.over === 'go' ? tx('ÉCHOUÉE', 'FAILED') : tx('en cours', 'in progress')}${g.why ? ' (' + g.why + ')' : ''}`,
+      tx(`Joueurs : ${g.players.map(p => p.name).join(', ')} · Temps : ${fmtT(dur)} · Rounds : ${g.round} · Alertes : ${g.alerts}`, `Players: ${g.players.map(p => p.name).join(', ')} · Time: ${fmtT(dur)} · Rounds: ${g.round} · Alerts: ${g.alerts}`), '',
       ...g.log.map(l => `[${fmtT(l.t)}] R${l.r}  ${l.txt}`)].join('\n');
   }
   function vDebrief(m) {
     const g = game();
     const i = MIS().findIndex(x => x.id === m.id), nx = MIS()[i + 1];
-    body.innerHTML = `<h2 style="margin:4px 0 8px">🏁 Débrief — ${esc(m.name)}</h2>${g.over ? `<div class="ma-ban ${g.over === 'win' ? 'win' : 'go'}">${g.over === 'win' ? '🏆 MISSION RÉUSSIE' : '💀 MISSION ÉCHOUÉE'}${g.why ? `<div style="font-size:1rem;font-weight:600">${esc(g.why)}</div>` : ''}</div>` : ''}
-      ${statsHtml(m, g)}<div class="ma-card"><h4>📜 Journal de la partie</h4>${logHtml(g)}</div>
-      <div class="ma-next"><button class="ma-b" data-a2="copy">📋 Copier le rapport</button><button class="ma-b" data-a2="replay">↺ Rejouer</button>${nx ? `<button class="ma-b pri big" data-a2="next" data-v="${nx.id}">Mission suivante ▶</button>` : ''}</div>`;
+    body.innerHTML = `<h2 style="margin:4px 0 8px">🏁 ${tx('Débrief', 'Debrief')} — ${esc(m.name)}</h2>${g.over ? `<div class="ma-ban ${g.over === 'win' ? 'win' : 'go'}">${g.over === 'win' ? tx('🏆 MISSION RÉUSSIE', '🏆 MISSION COMPLETE') : tx('💀 MISSION ÉCHOUÉE', '💀 MISSION FAILED')}${g.why ? `<div style="font-size:1rem;font-weight:600">${esc(g.why)}</div>` : ''}</div>` : ''}
+      ${statsHtml(m, g)}<div class="ma-card"><h4>📜 ${tx('Journal de la partie', 'Game log')}</h4>${logHtml(g)}</div>
+      <div class="ma-next"><button class="ma-b" data-a2="copy">📋 ${tx('Copier le rapport', 'Copy the report')}</button><button class="ma-b" data-a2="replay">↺ ${tx('Rejouer', 'Replay')}</button>${nx ? `<button class="ma-b pri big" data-a2="next" data-v="${nx.id}">${tx('Mission suivante ▶', 'Next mission ▶')}</button>` : ''}</div>`;
     body.querySelectorAll('[data-a2]').forEach(b => b.onclick = () => {
-      if (b.dataset.a2 === 'copy') { const t = report(m, g); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast('📋 Rapport copié'), () => { prompt('Copie le rapport :', t); }); }
+      if (b.dataset.a2 === 'copy') { const t = report(m, g); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast(tx('📋 Rapport copié', '📋 Report copied')), () => { prompt(tx('Copie le rapport :', 'Copy the report:'), t); }); }
       if (b.dataset.a2 === 'replay') { st.games[m.id] = newGame(m, st.n); undo = []; go('setup'); }
       if (b.dataset.a2 === 'next') { st.mid = isNaN(+b.dataset.v) ? b.dataset.v : +b.dataset.v; const mm = mission(); if (!pcounts(mm).includes(String(st.n))) st.n = +pcounts(mm)[0]; undo = []; A.stop(); go('brief'); }
     });
   }
   function vLog(m) {
     const g = game();
-    body.innerHTML = `<h2 style="margin:4px 0 8px">📜 Journal — ${esc(m.name)}</h2>${g.t0 ? statsHtml(m, g) : ''}<div class="ma-card">${logHtml(g)}</div>
-      <div class="ma-next"><button class="ma-b pri" data-go="${g.started && !g.over ? 'play' : 'brief'}">◀ Retour</button></div>`;
+    body.innerHTML = `<h2 style="margin:4px 0 8px">📜 ${tx('Journal', 'Log')} — ${esc(m.name)}</h2>${g.t0 ? statsHtml(m, g) : ''}<div class="ma-card">${logHtml(g)}</div>
+      <div class="ma-next"><button class="ma-b pri" data-go="${g.started && !g.over ? 'play' : 'brief'}">◀ ${tx('Retour', 'Back')}</button></div>`;
   }
   function vSnd(m) {
     const ss = stageSnd(m), S = SND();
     const mus = arr => `<div class="ma-snd">${arr.map(([f, t]) => `<button class="mu" data-mu="${esc(f)}">🎵 ${esc(t)}</button>`).join('')}</div>`;
     const sfx = (arr, c = '') => `<div class="ma-snd">${arr.map(([f, t]) => `<button class="${c}" data-sx="${esc(f)}">${esc(t)}</button>`).join('')}</div>`;
-    body.innerHTML = `<p style="opacity:.75">Les sons sont automatiques pendant la partie ; cet écran sert de secours.</p>
-      <div class="ma-h3">🎵 Musiques de la mission</div>${ss.music && ss.music.length ? mus(ss.music) : '<p>—</p>'}<div class="ma-h3">🚨 Alerte / ⏳ Brief</div>${mus([...(S.alert || []), ...(S.setup || [])])}
-      ${ss.voices && ss.voices.length ? `<div class="ma-h3">🗣️ Voix du boss</div>${sfx(ss.voices, 'vo')}` : ''}${ss.sfx && ss.sfx.length ? `<div class="ma-h3">⭐ Spécial mission</div>${sfx(ss.sfx)}` : ''}
+    body.innerHTML = `<p style="opacity:.75">${tx('Les sons sont automatiques pendant la partie ; cet écran sert de secours.', 'Sounds play automatically during the game; this screen is a backup.')}</p>
+      <div class="ma-h3">🎵 ${tx('Musiques de la mission', 'Mission music')}</div>${ss.music && ss.music.length ? mus(ss.music) : '<p>—</p>'}<div class="ma-h3">${tx('🚨 Alerte / ⏳ Brief', '🚨 Alert / ⏳ Briefing')}</div>${mus([...(S.alert || []), ...(S.setup || [])])}
+      ${ss.voices && ss.voices.length ? `<div class="ma-h3">🗣️ ${tx('Voix du boss', 'Boss voice')}</div>${sfx(ss.voices, 'vo')}` : ''}${ss.sfx && ss.sfx.length ? `<div class="ma-h3">⭐ ${tx('Spécial mission', 'Mission specials')}</div>${sfx(ss.sfx)}` : ''}
       ${(S.groups || []).map(gr => `<div class="ma-h3">${gr.ic} ${gr.t}</div>${sfx(gr.sfx)}`).join('')}
-      <div class="ma-next"><button class="ma-b pri" data-go="${(game() || {}).started ? 'play' : 'brief'}">◀ Retour</button></div>`;
+      <div class="ma-next"><button class="ma-b pri" data-go="${(game() || {}).started ? 'play' : 'brief'}">◀ ${tx('Retour', 'Back')}</button></div>`;
   }
 
   /* ======================= Ouverture ======================= */

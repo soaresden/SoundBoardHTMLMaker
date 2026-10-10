@@ -6,7 +6,8 @@
     "themeColor2": "#0f1406",
     "offline": "auto",
     "versionSwitch": false,
-    "description": "Soundboard d'ambiance + Maître du Jeu complet (rôles, nuits, votes) pour animer une partie de Loup-Garou sur tablette."
+    "description": "Soundboard d'ambiance + Maître du Jeu complet (rôles, nuits, votes) pour animer une partie de Loup-Garou sur tablette.",
+    "description_en": "Ambient soundboard + a full Game Master (roles, nights, votes) to run a Werewolf game on a tablet."
   },
   "musicCategories": [
     {

@@ -1,10 +1,14 @@
 # 🎲 SoundBoardHTMLMaker
 
+🇬🇧 [English version](README.en.md)
+
 **Crée l'interface de ton jeu de société, sans coder.** Des ambiances, des bruitages, et si tu veux tes propres outils (règles, assistant de partie…). Le tout dans une page web qui marche sur PC, tablette et téléphone, même hors-ligne.
 
 Tu poses tes mp3 dans un dossier, tu ranges tout dans l'éditeur, tu exportes. C'est tout.
 
 👉 **Démo :** [soaresden.github.io/SoundBoardHTMLMaker](https://soaresden.github.io/SoundBoardHTMLMaker/)
+
+L'interface existe en **français et en anglais** (bouton 🇫🇷 / 🇬🇧, ou automatiquement selon la langue du navigateur).
 
 ![Page d'accueil des jeux](docs/img/accueil.png)
 
@@ -86,10 +90,10 @@ build.py · runme.bat        ← les outils
 |---|---|---|
 | `name` | Nom affiché | `"Loup-Garou 🐺"` |
 | `themeColor`, `themeColor2` | Les 2 couleurs du thème (aussi réglables dans l'éditeur) | `"#5b8cff"`, `"#8a5cff"` |
-| `description` | Texte sur la page d'accueil | `"Ambiances pour…"` |
+| `description` / `description_en` | Texte sur la page d'accueil (français / anglais) | `"Ambiances pour…"` |
 | `offline` | `"button"` = bouton 📥 Hors-ligne · `"auto"` = mise en cache automatique · absent = désactivé | `"button"` |
 | `versionSwitch` | Affiche le bouton de bascule Light / All-in-one | `true` |
-| `links` | Liens en plus sur la page d'accueil | `[{"title": "📖 Règles", "href": "regles.html"}]` |
+| `links` | Liens en plus sur la page d'accueil (`title`, `title_en`, `href`) | `[{"title": "📖 Règles", "href": "regles.html"}]` |
 
 ### Aller plus loin : `inject/` et `extras/`
 

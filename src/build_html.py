@@ -45,20 +45,22 @@ def _header_buttons(project, is_portable, extra):
         parts.append(extra.rstrip("\n"))
     if project.get("versionSwitch", True):
         if is_portable:
-            other, label, title = ("index.html", "🪶 Light",
-                                   "Basculer vers la version légère (utilise music/sfx/covers/ à côté)")
+            other, label, title, title_en = ("index.html", "🪶 Light",
+                                   "Basculer vers la version légère (utilise music/sfx/covers/ à côté)",
+                                   "Switch to the light version (uses the music/sfx/covers/ folders next to it)")
         else:
-            other, label, title = ("index_aio.html", "📦 All-in-one",
-                                   "Basculer vers la version all-in-one (un seul fichier auto-suffisant)")
+            other, label, title, title_en = ("index_aio.html", "📦 All-in-one",
+                                   "Basculer vers la version all-in-one (un seul fichier auto-suffisant)",
+                                   "Switch to the all-in-one version (a single self-contained file)")
         parts.append(f'        <a class="btn btn-switch" id="btnSwitchVersion"\n'
                      f'           href="{other}"\n'
-                     f'           title="{title}">{label}</a>')
+                     f'           title="{title}" data-en-title="{title_en}">{label}</a>')
         parts.append('        <button class="btn btn-switch" id="btnDownload"\n'
-                     '                title="Télécharger ce HTML autonome (un seul fichier)"\n'
-                     '                style="display:none;">⬇ Télécharger</button>')
+                     '                title="Télécharger ce HTML autonome (un seul fichier)" data-en-title="Download this standalone HTML (single file)"\n'
+                     '                style="display:none;" data-en="⬇ Download">⬇ Télécharger</button>')
     if project.get("offline") == "button" and not is_portable:
         parts.append('        <button class="btn btn-switch" id="btnOffline"\n'
-                     '                title="Charger tous les sons en cache pour une utilisation hors-ligne">📥 Hors-ligne</button>')
+                     '                title="Charger tous les sons en cache pour une utilisation hors-ligne" data-en-title="Cache every sound for offline use" data-en="📥 Offline">📥 Hors-ligne</button>')
     return "\n".join(parts) + ("\n" if parts else "")
 
 

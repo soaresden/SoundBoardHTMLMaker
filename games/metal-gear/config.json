@@ -10,13 +10,15 @@
     "links": [
       {
         "title": "📖 Guide & missions",
-        "href": "guide.html"
+        "href": "guide.html",
+        "title_en": "📖 Guide & missions"
       }
-    ]
+    ],
+    "description_en": "Metal Gear Solid ambience and voices + an interactive guide: animated rules, 14 missions, errata, and a game assistant."
   },
   "musicCategories": [
     {
-      "name": "❗Alert et GameOver",
+      "name": "❗Alert & Game Over",
       "pos": 1
     },
     {
@@ -86,7 +88,7 @@
   ],
   "sfxCategories": [
     {
-      "name": "👣 Déplacements & objets",
+      "name": "👣 Movement & items",
       "pos": 1
     },
     {
@@ -98,11 +100,11 @@
       "pos": 3
     },
     {
-      "name": "Guardes",
+      "name": "Guards",
       "pos": 4
     },
     {
-      "name": "Degats",
+      "name": "Damage",
       "pos": 5
     },
     {
@@ -116,7 +118,7 @@
       "title": "Encounter (Alert)",
       "disc": 0,
       "track": 6,
-      "category": "❗Alert et GameOver",
+      "category": "❗Alert & Game Over",
       "pos": 1,
       "volume": 0.7,
       "cover": "covers/06._Encounter.mp3.jpg"
@@ -126,7 +128,7 @@
       "title": "Old Alert",
       "disc": 0,
       "track": 0,
-      "category": "❗Alert et GameOver",
+      "category": "❗Alert & Game Over",
       "pos": 2,
       "volume": 0.7,
       "cover": null
@@ -531,105 +533,105 @@
     {
       "file": "tindeck_1.mp3",
       "label": "❗ ALERT",
-      "category": "Guardes",
+      "category": "Guards",
       "pos": 1,
       "volume": 1
     },
     {
       "file": "mgs-alert-camera.mp3",
       "label": "❗📸 Camera ALERT",
-      "category": "Guardes",
+      "category": "Guards",
       "pos": 2,
       "volume": 1
     },
     {
       "file": "guard-i-heard-something_SP0Q6Fw.mp3",
       "label": "👮❔ I heard something",
-      "category": "Guardes",
+      "category": "Guards",
       "pos": 3,
       "volume": 1
     },
     {
       "file": "guard-what-was-that-noise_IVtXtq7.mp3",
       "label": "👮‍♂️❔ What was that noise?",
-      "category": "Guardes",
+      "category": "Guards",
       "pos": 4,
       "volume": 1
     },
     {
       "file": "guard-whats-that_8vgwEbf.mp3",
       "label": "👮‍♂️❔ What's that?",
-      "category": "Guardes",
+      "category": "Guards",
       "pos": 5,
       "volume": 1
     },
     {
       "file": "guard-whos-that_x8gyPDo.mp3",
       "label": "👮‍♂️❗ Who's that?",
-      "category": "Guardes",
+      "category": "Guards",
       "pos": 6,
       "volume": 1
     },
     {
       "file": "guard-there-he-is_JHZ7rPO.mp3",
       "label": "👮‍♂️❗🔊 There he is!",
-      "category": "Guardes",
+      "category": "Guards",
       "pos": 7,
       "volume": 1
     },
     {
       "file": "guard-this-way_dYsTCuS.mp3",
       "label": "👮‍♂️❗🔊 This way!",
-      "category": "Guardes",
+      "category": "Guards",
       "pos": 8,
       "volume": 1
     },
     {
       "file": "guard-eat-this_r8zo9ce.mp3",
       "label": "👮‍♂️❗ Eat this!",
-      "category": "Guardes",
+      "category": "Guards",
       "pos": 9,
       "volume": 1
     },
     {
       "file": "guard-whered-he-go_zHLpH97.mp3",
       "label": "👮‍♂️❗ Where'd he go?",
-      "category": "Guardes",
+      "category": "Guards",
       "pos": 10,
       "volume": 1
     },
     {
       "file": "guard-return-to-your-positions_9aocsFp.mp3",
       "label": "👮‍♂️🔊 Return to positions",
-      "category": "Guardes",
+      "category": "Guards",
       "pos": 11,
       "volume": 1
     },
     {
       "file": "mgs-damage-snake.mp3",
       "label": "🐍💥 Snake takes damage",
-      "category": "Degats",
+      "category": "Damage",
       "pos": 1,
       "volume": 1
     },
     {
       "file": "mgs-damage-gray-fox.mp3",
       "label": "🤖💥 Gray Fox takes damage",
-      "category": "Degats",
+      "category": "Damage",
       "pos": 2,
       "volume": 1
     },
     {
       "file": "mgs-damage-meryl.mp3",
       "label": "👩‍🦰💥 Meryl takes damage",
-      "category": "Degats",
+      "category": "Damage",
       "pos": 3,
       "volume": 1
     },
     {
       "file": "mgs-damage-otacon.mp3",
       "label": "👓💥 Otacon takes damage",
-      "category": "Degats",
+      "category": "Damage",
       "pos": 4,
       "volume": 1
     },
@@ -649,106 +651,106 @@
     },
     {
       "file": "mgs-crawl-1.mp3",
-      "label": "🐾 Pas (rampé) 1",
-      "category": "👣 Déplacements & objets",
+      "label": "🐾 Crawl 1",
+      "category": "👣 Movement & items",
       "pos": 1,
       "volume": 1.0
     },
     {
       "file": "mgs-crawl-2.mp3",
-      "label": "🐾 Pas (rampé) 2",
-      "category": "👣 Déplacements & objets",
+      "label": "🐾 Crawl 2",
+      "category": "👣 Movement & items",
       "pos": 2,
       "volume": 1.0
     },
     {
       "file": "mgs-run-1.mp3",
-      "label": "🏃 Course 1",
-      "category": "👣 Déplacements & objets",
+      "label": "🏃 Run 1",
+      "category": "👣 Movement & items",
       "pos": 3,
       "volume": 1.0
     },
     {
       "file": "mgs-run-2.mp3",
-      "label": "🏃 Course 2",
-      "category": "👣 Déplacements & objets",
+      "label": "🏃 Run 2",
+      "category": "👣 Movement & items",
       "pos": 4,
       "volume": 1.0
     },
     {
       "file": "mgs-run-water.mp3",
-      "label": "💧 Dans l'eau",
-      "category": "👣 Déplacements & objets",
+      "label": "💧 In water",
+      "category": "👣 Movement & items",
       "pos": 5,
       "volume": 1.0
     },
     {
       "file": "mgs-on-the-wall.mp3",
-      "label": "🧱 Dos au mur",
-      "category": "👣 Déplacements & objets",
+      "label": "🧱 On the wall",
+      "category": "👣 Movement & items",
       "pos": 6,
       "volume": 1.0
     },
     {
       "file": "mgs-door.mp3",
-      "label": "🚪 Porte",
-      "category": "👣 Déplacements & objets",
+      "label": "🚪 Door",
+      "category": "👣 Movement & items",
       "pos": 7,
       "volume": 1.0
     },
     {
       "file": "mgs-elevator-call.mp3",
-      "label": "🛗 Appel ascenseur",
-      "category": "👣 Déplacements & objets",
+      "label": "🛗 Elevator call",
+      "category": "👣 Movement & items",
       "pos": 8,
       "volume": 1.0
     },
     {
       "file": "mgs-pop-item.mp3",
-      "label": "✨ Objet apparaît",
-      "category": "👣 Déplacements & objets",
+      "label": "✨ Item appears",
+      "category": "👣 Movement & items",
       "pos": 9,
       "volume": 1.0
     },
     {
       "file": "mgs-use-ration.mp3",
       "label": "🍴 Ration",
-      "category": "👣 Déplacements & objets",
+      "category": "👣 Movement & items",
       "pos": 10,
       "volume": 1.0
     },
     {
       "file": "mgs-chaff-jamming.mp3",
-      "label": "📡 Brouillage chaff",
-      "category": "👣 Déplacements & objets",
+      "label": "📡 Chaff jamming",
+      "category": "👣 Movement & items",
       "pos": 11,
       "volume": 1.0
     },
     {
       "file": "mgs-camera-rotate.mp3",
-      "label": "📹 Caméra pivote",
-      "category": "👣 Déplacements & objets",
+      "label": "📹 Camera turns",
+      "category": "👣 Movement & items",
       "pos": 12,
       "volume": 1.0
     },
     {
       "file": "mgs-camera-spot.mp3",
-      "label": "📹 Caméra te repère",
-      "category": "👣 Déplacements & objets",
+      "label": "📹 Camera spots you",
+      "category": "👣 Movement & items",
       "pos": 13,
       "volume": 1.0
     },
     {
       "file": "mgs-clear-alarm.mp3",
-      "label": "✅ Fin d'alerte",
-      "category": "👣 Déplacements & objets",
+      "label": "✅ Alert cleared",
+      "category": "👣 Movement & items",
       "pos": 14,
       "volume": 1.0
     },
     {
       "file": "mgs-briefing-read.mp3",
       "label": "📡 Briefing",
-      "category": "👣 Déplacements & objets",
+      "category": "👣 Movement & items",
       "pos": 15,
       "volume": 1.0
     }

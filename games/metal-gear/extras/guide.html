@@ -197,7 +197,7 @@ b.ok{color:var(--acc)!important}b.ko{color:var(--red)!important}
 .mtile .nm{font-weight:800;font-size:1.08rem;padding-right:50px}
 .mtile .meta{color:var(--mut);font-size:.86rem}
 .mtile.cleared{border-color:var(--acc2)}
-.mtile.cleared:after{content:"✔ RÉUSSI";position:absolute;right:10px;bottom:10px;font:700 .75rem var(--mono);color:var(--acc)}
+.mtile.cleared:after{content:"✔ " attr(data-ok);position:absolute;right:10px;bottom:10px;font:700 .75rem var(--mono);color:var(--acc)}
 .mhead{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
 .mhead .big{font:700 3rem var(--mono);color:var(--acc);line-height:1}
 .mhead h2{margin:0}
@@ -294,15 +294,15 @@ details.q p{margin:0 0 12px}
 <body>
 <header>
   <div class="hrow">
-    <div class="logo">◤ CODEC 140.85 <small>Metal Gear Solid · Le jeu de plateau</small></div>
-    <div class="freq"><button class="btn sm" data-mgs-help title="Aide animée (touche ?)">❓ Aide</button><button class="btn sm" id="offBtn" title="Tout télécharger pour jouer sans réseau">📥 Hors-ligne</button><button class="btn sm" id="sndBtn" title="Son codec">🔇</button><a href="index.html">🎵 Soundboard</a></div>
+    <div class="logo">◤ CODEC 140.85 <small data-en="Metal Gear Solid · The Board Game">Metal Gear Solid · Le jeu de plateau</small></div>
+    <div class="freq"><button class="btn sm" id="langBtn"></button><button class="btn sm" data-mgs-help title="Aide animée (touche ?)" data-en-title="Animated help (? key)" data-en="❓ Help">❓ Aide</button><button class="btn sm" id="offBtn" title="Tout télécharger pour jouer sans réseau" data-en-title="Download everything to play offline" data-en="📥 Offline">📥 Hors-ligne</button><button class="btn sm" id="sndBtn" title="Son codec" data-en-title="Codec sound">🔇</button><a href="index.html">🎵 Soundboard</a></div>
   </div>
   <nav id="nav">
-    <a href="#learn" data-r="learn">📘 Apprendre</a>
+    <a href="#learn" data-r="learn" data-en="📘 Learn">📘 Apprendre</a>
     <a href="#missions" data-r="missions">🗺️ Missions</a>
-    <a href="#game" data-r="game">🎲 Assistant de partie</a>
-    <a href="#chars" data-r="chars">👥 Persos</a>
-    <a href="#ref" data-r="ref">📋 Aide-mémoire</a>
+    <a href="#game" data-r="game" data-en="🎲 Game Assistant">🎲 Assistant de partie</a>
+    <a href="#chars" data-r="chars" data-en="👥 Characters">👥 Persos</a>
+    <a href="#ref" data-r="ref" data-en="📋 Cheat Sheet">📋 Aide-mémoire</a>
     <a href="#faq" data-r="faq">⚠️ FAQ & Errata</a>
   </nav>
 </header>
@@ -310,18 +310,30 @@ details.q p{margin:0 0 12px}
 
 <div id="viewer"><div class="vbar"><span class="t" id="vTitle"></span><button class="btn sm" id="vOut">－</button><button class="btn sm" id="vFit">⤢</button><button class="btn sm" id="vIn">＋</button><button class="btn sm red" id="vClose">✕</button></div><div class="vscroll" id="vScroll"><img id="vImg" alt=""></div></div>
 
+<script src="i18n.js?v=1"></script>
 <script src="guide/data.js?v=3"></script>
+<script src="guide/data.en.js?v=1"></script>
 <script src="guide/missions.js?v=3"></script>
+<script src="guide/missions.en.js?v=1"></script>
 <script src="guide/lessons.js?v=3"></script>
+<script src="guide/lessons.en.js?v=1"></script>
 <script src="guide/grids.js?v=2"></script>
 <script src="mgs-grid.js?v=37"></script>
 <script src="guide/sounds.js?v=3"></script>
+<script src="guide/sounds.en.js?v=1"></script>
 <script src="guide/codec.js?v=1"></script>
-<script src="help-overlay.js?v=2"></script>
-<script src="mgs-assistant.js?v=50"></script>
+<script src="guide/codec.en.js?v=1"></script>
+<script src="help-overlay.js?v=3"></script>
+<script src="mgs-assistant.js?v=53"></script>
 <script>
 (function(){
   const $ = (s, r=document) => r.querySelector(s);
+  const tx = window.tx || (fr => fr);              // i18n.js : tx('FR', 'EN')
+  const EN = window.MGS_LANG === 'en';
+  if (EN) { document.querySelectorAll('[data-en]').forEach(e => e.innerHTML = e.dataset.en); document.querySelectorAll('[data-en-title]').forEach(e => e.title = e.dataset.enTitle); }
+  const langBtn = $('#langBtn');
+  langBtn.textContent = EN ? '🇫🇷 FR' : '🇬🇧 EN'; langBtn.title = EN ? 'Passer en français' : 'Switch to English';
+  langBtn.onclick = () => window.MGS_setLang && window.MGS_setLang(EN ? 'fr' : 'en');
   const app = $('#app');
   const M = window.MGS_MISSIONS || [];
   const store = {
@@ -330,11 +342,11 @@ details.q p{margin:0 0 12px}
   };
   const esc = s => String(s ?? '');
   const CHAR = { 'Snake':'🐍', 'Meryl':'🔫', 'Otacon':'🤓', 'Gray Fox':'🥷' };
-  const LEGEND_FR = { guards:'💂 Gardes', cameras:'📹 Caméras', events:'🅰️ Events', exits:'🚪 Sorties', traps:'❓ Pièges', terminals:'💻 Terminaux', lockedDoors:'🔒 Portes verrouillées',
-    objectives:'🎯 Objectifs', alertTokens:'❗ Jetons Alerte', interact:'🖐️ Interact', interactTokens:'🖐️ Jetons Interact', startingArea:'🟢 Départ', startingSpaces:'🟢 Cases de départ',
-    obstacles:'🟥 Obstacles', tileCodes:'🧩 Tuiles', boss:'👾 Boss', guardPriorityToken:'↘️ Jeton Guard Priority', cameraFacingToken:'🔄 Jeton Camera Facing', terminalLevels:'💻 Niveaux terminaux',
-    lockedDoorLevels:'🔒 Niveaux portes', kennethBaker:'🧑‍💼 Kenneth Baker', shadowTokens:'🌑 Jetons Shadow', numberedSpaces:'🔢 Cases numérotées', impassable:'🟨 Infranchissable',
-    grid:'📐 Grille', snakeFigure:'🐍 Snake', wolfTokens:'🐺 Jetons Wolf', crosshairs:'🎯 Crosshairs', raven:'🦅 Raven', barracks:'📻 Barracks', metalGearRex:'🤖 Metal Gear REX', bossSpawn:'👾 Apparition boss' };
+  const LEGEND_FR = { guards:tx('💂 Gardes','💂 Guards'), cameras:tx('📹 Caméras','📹 Cameras'), events:'🅰️ Events', exits:tx('🚪 Sorties','🚪 Exits'), traps:tx('❓ Pièges','❓ Traps'), terminals:tx('💻 Terminaux','💻 Terminals'), lockedDoors:tx('🔒 Portes verrouillées','🔒 Locked doors'),
+    objectives:tx('🎯 Objectifs','🎯 Objectives'), alertTokens:tx('❗ Jetons Alerte','❗ Alert tokens'), interact:'🖐️ Interact', interactTokens:tx('🖐️ Jetons Interact','🖐️ Interact tokens'), startingArea:tx('🟢 Départ','🟢 Starting area'), startingSpaces:tx('🟢 Cases de départ','🟢 Starting spaces'),
+    obstacles:'🟥 Obstacles', tileCodes:tx('🧩 Tuiles','🧩 Tiles'), boss:'👾 Boss', guardPriorityToken:tx('↘️ Jeton Guard Priority','↘️ Guard Priority token'), cameraFacingToken:tx('🔄 Jeton Camera Facing','🔄 Camera Facing token'), terminalLevels:tx('💻 Niveaux terminaux','💻 Terminal levels'),
+    lockedDoorLevels:tx('🔒 Niveaux portes','🔒 Door levels'), kennethBaker:'🧑‍💼 Kenneth Baker', shadowTokens:tx('🌑 Jetons Shadow','🌑 Shadow tokens'), numberedSpaces:tx('🔢 Cases numérotées','🔢 Numbered spaces'), impassable:tx('🟨 Infranchissable','🟨 Impassable'),
+    grid:tx('📐 Grille','📐 Grid'), snakeFigure:'🐍 Snake', wolfTokens:tx('🐺 Jetons Wolf','🐺 Wolf tokens'), crosshairs:'🎯 Crosshairs', raven:'🦅 Raven', barracks:'📻 Barracks', metalGearRex:'🤖 Metal Gear REX', bossSpawn:tx('👾 Apparition boss','👾 Boss spawn') };
 
   /* ---------- son codec ---------- */
   let snd = store.get('snd', false);
@@ -351,15 +363,15 @@ details.q p{margin:0 0 12px}
   if (!httpOK) offBtn.style.display = 'none'; // en file:// tout est déjà local
   else navigator.serviceWorker.register('sw.js').catch(() => {});
   offBtn.onclick = async () => {
-    const urls = ['guide.html', 'guide/data.js?v=3', 'guide/missions.js?v=3', 'guide/lessons.js?v=3', 'guide/sounds.js?v=3', 'guide/codec.js?v=1', 'help-overlay.js?v=2', 'mgs-assistant.js?v=50', 'sfx/codec.mp3',
+    const urls = ['guide.html', 'i18n.js?v=1', 'guide/data.js?v=3', 'guide/data.en.js?v=1', 'guide/missions.js?v=3', 'guide/missions.en.js?v=1', 'guide/lessons.js?v=3', 'guide/lessons.en.js?v=1', 'guide/sounds.js?v=3', 'guide/sounds.en.js?v=1', 'guide/codec.js?v=1', 'guide/codec.en.js?v=1', 'help-overlay.js?v=3', 'mgs-assistant.js?v=53', 'sfx/codec.mp3',
       ...['guard-order-card','snake-dashboard','los-facing','los-box','obstacles','los-move','camera-trap-laser','waken','camera-tokens'].map(n => `guide/img/${n}.jpg`),
       ...M.flatMap(m => [...(m.images||[]), ...(m.pageImages||[])])];
     try {
       const reg = await navigator.serviceWorker.ready; const sw = reg.active; if (!sw) throw 0;
       const ch = new MessageChannel(); offBtn.disabled = true;
-      ch.port1.onmessage = e => { const d = e.data || {}; offBtn.textContent = d.finished ? `✅ ${d.ok}/${d.total} en cache` : `📥 ${d.done}/${d.total}`; if (d.finished) offBtn.disabled = false; };
+      ch.port1.onmessage = e => { const d = e.data || {}; offBtn.textContent = d.finished ? `✅ ${d.ok}/${d.total} ${tx('en cache', 'cached')}` : `📥 ${d.done}/${d.total}`; if (d.finished) offBtn.disabled = false; };
       sw.postMessage({ type: 'PRECACHE', urls: urls.map(u => new URL(u, location.href).href) }, [ch.port2]);
-    } catch (_) { offBtn.textContent = '⚠️ Réessaie'; offBtn.disabled = false; }
+    } catch (_) { offBtn.textContent = tx('⚠️ Réessaie', '⚠️ Retry'); offBtn.disabled = false; }
   };
 
   /* ---------- viewer zoomable ---------- */
@@ -398,22 +410,28 @@ details.q p{margin:0 0 12px}
   function viewLearn(){
     const done = store.get('lessons', {});
     const LS = window.MGS_LESSONS;
-    app.innerHTML = `<h2>📘 Apprendre à jouer</h2>
-      <p class="lead">Tu as oublié les règles ? Suis les leçons dans l'ordre (≈ 15 min). Chaque leçon a une animation ou un petit bac à sable à toucher.</p>
-      <div class="lgrid">${LS.map((l,i)=>`<button class="ltile ${done[l.id]?'done':''}" onclick="location.hash='lesson/${l.id}'"><div class="ic">${l.icon}</div><div><div class="n">LEÇON ${i+1}</div><div class="t">${l.title}</div><div class="s">${l.sub}</div></div></button>`).join('')}</div>
-      <div class="card" style="margin-top:18px"><h4>⚡ Version ultra-courte</h4><ol class="big">
+    app.innerHTML = `<h2>${tx('📘 Apprendre à jouer', '📘 Learn to play')}</h2>
+      <p class="lead">${tx("Tu as oublié les règles ? Suis les leçons dans l'ordre (≈ 15 min). Chaque leçon a une animation ou un petit bac à sable à toucher.", 'Forgot the rules? Go through the lessons in order (≈ 15 min). Each lesson has an animation or a little sandbox to play with.')}</p>
+      <div class="lgrid">${LS.map((l,i)=>`<button class="ltile ${done[l.id]?'done':''}" onclick="location.hash='lesson/${l.id}'"><div class="ic">${l.icon}</div><div><div class="n">${tx('LEÇON', 'LESSON')} ${i+1}</div><div class="t">${l.title}</div><div class="s">${l.sub}</div></div></button>`).join('')}</div>
+      <div class="card" style="margin-top:18px"><h4>${tx('⚡ Version ultra-courte', '⚡ Super-short version')}</h4><ol class="big">${tx(`
         <li>Chaque round : <b>tous les joueurs</b> jouent (4 actions chacun, dans l'ordre qu'on veut), puis <b>les ennemis</b>.</li>
         <li>Reste <b>hors de la vue</b> des gardes et caméras (direction du regard + rien entre vous).</li>
         <li>Le bruit fait poser un jeton <span class="tqi">?</span> (les gardes viennent voir) ; être vu fait poser un <span class="tai">!</span> (tous les gardes foncent sur toi).</li>
         <li>Les gardes suivent la carte <b>Guard Order</b> : <b style="color:#ff5a5a">rouge</b> si alerte, <b style="color:#4aa3ff">bleu</b> sinon. Le paquet est ton chrono.</li>
         <li>Dés : chaque dé ≥ Défense = 1 dégât. Assomme (KO) plutôt que tuer… mais les KO se réveillent.</li>
-      </ol></div>`;
+      `, `
+        <li>Each round: <b>all players</b> take their turns (4 actions each, in any order), then <b>the enemies</b>.</li>
+        <li>Stay <b>out of sight</b> of guards and cameras (facing direction + nothing in between).</li>
+        <li>Noise puts down a <span class="tqi">?</span> token (guards come to investigate); being seen puts down a <span class="tai">!</span> (every guard rushes at you).</li>
+        <li>Guards follow the <b>Guard Order</b> card: <b style="color:#ff5a5a">red</b> on alert, <b style="color:#4aa3ff">blue</b> otherwise. The deck is your clock.</li>
+        <li>Dice: each die ≥ Defense = 1 damage. Knock guards out (KO) rather than kill them… but KO'd guards wake up.</li>
+      `)}</ol></div>`;
   }
   function viewLesson(id){
     const LS = window.MGS_LESSONS; const i = LS.findIndex(l => l.id === id); const l = LS[i]; if (!l) return viewLearn();
     const done = store.get('lessons', {}); done[id] = 1; store.set('lessons', done);
-    app.innerHTML = `<div class="lhead"><div class="ic">${l.icon}</div><div><div class="muted" style="font-family:var(--mono)">LEÇON ${i+1}/${LS.length}</div><h2 style="margin:0">${l.title}</h2></div></div><div id="lbody">${l.html}</div>
-      <div class="lnav">${i>0?`<a class="btn" href="#lesson/${LS[i-1].id}">◀ ${LS[i-1].title}</a>`:'<a class="btn" href="#learn">◀ Sommaire</a>'}${i<LS.length-1?`<a class="btn pri" href="#lesson/${LS[i+1].id}">${LS[i+1].title} ▶</a>`:'<a class="btn pri" href="#missions">🗺️ Aux missions ▶</a>'}</div>`;
+    app.innerHTML = `<div class="lhead"><div class="ic">${l.icon}</div><div><div class="muted" style="font-family:var(--mono)">${tx('LEÇON', 'LESSON')} ${i+1}/${LS.length}</div><h2 style="margin:0">${l.title}</h2></div></div><div id="lbody">${l.html}</div>
+      <div class="lnav">${i>0?`<a class="btn" href="#lesson/${LS[i-1].id}">◀ ${LS[i-1].title}</a>`:`<a class="btn" href="#learn">${tx('◀ Sommaire', '◀ Contents')}</a>`}${i<LS.length-1?`<a class="btn pri" href="#lesson/${LS[i+1].id}">${LS[i+1].title} ▶</a>`:`<a class="btn pri" href="#missions">${tx('🗺️ Aux missions ▶', '🗺️ On to the missions ▶')}</a>`}</div>`;
     try{ l.mount($('#lbody')); }catch(e){ console.error(e); }
     beep();
   }
@@ -421,12 +439,12 @@ details.q p{margin:0 0 12px}
   /* ---------- Missions ---------- */
   function cleared(){ return store.get('cleared', {}); }
   function unlocks(){ return store.get('unlocks', {}); }
-  function typeBadge(m){ return m.type === 'sneak' ? '<span class="badge b-sneak">🕵️ INFILTRATION</span>' : m.type === 'boss' ? '<span class="badge b-boss">👾 BOSS</span>' : m.type === 'boss+sneak' ? '<span class="badge b-boss">👾 BOSS</span> <span class="badge b-sneak">🕵️ + INFILTRATION</span>' : ''; }
+  function typeBadge(m){ const inf = tx('INFILTRATION', 'SNEAK'); return m.type === 'sneak' ? `<span class="badge b-sneak">🕵️ ${inf}</span>` : m.type === 'boss' ? '<span class="badge b-boss">👾 BOSS</span>' : m.type === 'boss+sneak' ? `<span class="badge b-boss">👾 BOSS</span> <span class="badge b-sneak">🕵️ + ${inf}</span>` : ''; }
   const ROSTER = ['Snake', 'Meryl', 'Gray Fox', 'Otacon'];
   function pcounts(m){ return Object.keys(m.players || {1:1}).filter(k => /^\d+$/.test(k)); }
   function pchars(m, n){ const c = (m.players && m.players[n]) || ['Snake']; return c.some(x => !CHAR[x]) ? ROSTER.slice(0, n) : c; }
   function pnotes(m){ return (m.players && m.players.note) || []; }
-  function playersShort(m){ const k = pcounts(m); return k.length ? (k.length > 1 ? k[0]+'–'+k[k.length-1] : k[0]) + ' joueur' + (k.length>1||k[0]>1?'s':'') : ''; }
+  function playersShort(m){ const k = pcounts(m); return k.length ? (k.length > 1 ? k[0]+'–'+k[k.length-1] : k[0]) + tx(' joueur', ' player') + (k.length>1||k[0]>1?'s':'') : ''; }
   function allUnlockCards(){
     const set = new Map();
     M.forEach(m => (m.cleared||[]).forEach(c => { (c.match(/#\s?0?\d{2,3}/g)||[]).forEach(x => { const n = x.replace(/[#\s]/g,'').padStart(3,'0'); if (!set.has(n)) set.set(n, m.id); }); }));
@@ -436,12 +454,12 @@ details.q p{margin:0 0 12px}
     const cl = cleared(), un = unlocks();
     const camp = M.filter(m => typeof m.id === 'number'), vr = M.filter(m => typeof m.id !== 'number');
     const n = camp.filter(m => cl[m.id]).length;
-    const tile = m => `<button class="mtile ${cl[m.id]?'cleared':''}" onclick="location.hash='m/${m.id}'"><div class="num">${typeof m.id==='number'?String(m.id).padStart(2,'0'):'VR'}</div><div>${typeBadge(m)} ${m.errata&&m.errata.length?'<span class="badge b-err">ERRATA</span>':''}</div><div class="nm">${esc(m.name)}</div><div class="meta">${esc(m.subtitle||'')}</div><div class="meta">⏱ ${esc(m.time||'?')} · 👥 ${playersShort(m)}</div></button>`;
+    const tile = m => `<button class="mtile ${cl[m.id]?'cleared':''}" data-ok="${tx('RÉUSSI', 'CLEARED')}" onclick="location.hash='m/${m.id}'"><div class="num">${typeof m.id==='number'?String(m.id).padStart(2,'0'):'VR'}</div><div>${typeBadge(m)} ${m.errata&&m.errata.length?'<span class="badge b-err">ERRATA</span>':''}</div><div class="nm">${esc(m.name)}</div><div class="meta">${esc(m.subtitle||'')}</div><div class="meta">⏱ ${esc(m.time||'?')} · 👥 ${playersShort(m)}</div></button>`;
     const cards = allUnlockCards();
-    app.innerHTML = `<div class="mtop"><h2 style="margin:0">🗺️ Campagne Shadow Moses</h2><div class="prog" title="${n}/${camp.length}"><i style="width:${camp.length? n/camp.length*100 : 0}%"></i></div><b>${n}/${camp.length}</b></div>
+    app.innerHTML = `<div class="mtop"><h2 style="margin:0">${tx('🗺️ Campagne Shadow Moses', '🗺️ Shadow Moses Campaign')}</h2><div class="prog" title="${n}/${camp.length}"><i style="width:${camp.length? n/camp.length*100 : 0}%"></i></div><b>${n}/${camp.length}</b></div>
       <div class="mgrid">${camp.map(tile).join('')}</div>
-      ${vr.length?`<h3 style="margin-top:26px">🟪 Missions VR</h3><div class="mgrid">${vr.map(tile).join('')}</div>`:''}
-      <div class="card" style="margin-top:22px"><h4>📦 Memory Box — cartes Équipement débloquées</h4><p class="muted">Touche une carte pour la marquer comme débloquée (sauvegardé sur cette tablette).</p>
+      ${vr.length?`<h3 style="margin-top:26px">${tx('🟪 Missions VR', '🟪 VR Missions')}</h3><div class="mgrid">${vr.map(tile).join('')}</div>`:''}
+      <div class="card" style="margin-top:22px"><h4>${tx('📦 Memory Box — cartes Équipement débloquées', '📦 Memory Box — unlocked Equipment cards')}</h4><p class="muted">${tx('Touche une carte pour la marquer comme débloquée (sauvegardé sur cette tablette).', 'Tap a card to mark it as unlocked (saved on this tablet).')}</p>
         <div class="unl" id="unl">${cards.map(([k, sid])=>`<div class="u ${un[k]?'ok':''}" data-k="${k}"><span class="k">#${k}</span><span class="muted">Stage ${sid}</span>${un[k]?' ✔':''}</div>`).join('')}</div></div>`;
     $('#unl').addEventListener('click', e => { const u = e.target.closest('.u'); if (!u) return; const x = unlocks(); x[u.dataset.k] = !x[u.dataset.k]; store.set('unlocks', x); viewMissions(); });
   }
@@ -453,47 +471,47 @@ details.q p{margin:0 0 12px}
     const chk = store.get('chk.'+m.id, {});
     const tab = store.get('mtab', 'setup');
     const pl = m.players || {};
-    const legend = m.legend ? Object.entries(m.legend).filter(([k,v]) => v && !(Array.isArray(v) && !v.length)).map(([k,v]) => `<span class="chip">${(LEGEND_FR[k]||k)} : ${Array.isArray(v)?v.join(' '):v}</span>`).join('') : '';
-    const deck = m.guardDeck ? (typeof m.guardDeck === 'string' ? m.guardDeck : Object.entries(m.guardDeck).map(([k,v])=>`${k} j : ${v}`).join(' · ')) : null;
+    const legend = m.legend ? Object.entries(m.legend).filter(([k,v]) => v && !(Array.isArray(v) && !v.length)).map(([k,v]) => `<span class="chip">${(LEGEND_FR[k]||k)}${tx(' : ', ': ')}${Array.isArray(v)?v.join(' '):v}</span>`).join('') : '';
+    const deck = m.guardDeck ? (typeof m.guardDeck === 'string' ? m.guardDeck : Object.entries(m.guardDeck).map(([k,v])=>tx(`${k} j : ${v}`, `${k}P: ${v}`)).join(' · ')) : null;
     const setupSteps = [...(m.setup||[])];
     const special = (m.special||[]).map(s => typeof s === 'string' ? `<dt>•</dt><dd>${s}</dd>` : `<dt>${s.t}</dt><dd>${s.d}</dd>`).join('');
     const events = (m.events||[]).map(e => `<dt><span class="evk">${e.k}</span>Event ${e.k}</dt><dd>${e.d}</dd>`).join('');
     const imgs = (m.images||[]);
-    const pagesHtml = (m.pageImages||[]).map(p => `<img src="${p}" data-zoom="${p}" alt="Page du livret" loading="lazy">`).join('');
+    const pagesHtml = (m.pageImages||[]).map(p => `<img src="${p}" data-zoom="${p}" alt="${tx('Page du livret', 'Rulebook page')}" loading="lazy">`).join('');
     const sec = {
-      setup: `<div class="mapcol"><div>${imgs.map(s=>`<div class="mapbox" style="margin-bottom:10px"><img src="${s}" data-zoom="${s}" alt="Setup ${esc(m.name)}"></div>`).join('') || '<p class="muted">Pas d\'image.</p>'}<p class="muted">Touche le plan pour zoomer (pincer / ＋).</p></div>
-        <div><div class="card" style="margin-top:0"><h4>🧰 Matériel</h4>
-          ${m.tiles&&m.tiles.length?`<p><b>Tuiles :</b> ${m.tiles.join(', ')}</p>`:''}
-          ${deck?`<p><b>Guard Order :</b> ${deck}</p>`:''}
+      setup: `<div class="mapcol"><div>${imgs.map(s=>`<div class="mapbox" style="margin-bottom:10px"><img src="${s}" data-zoom="${s}" alt="Setup ${esc(m.name)}"></div>`).join('') || `<p class="muted">${tx("Pas d'image.", 'No image.')}</p>`}<p class="muted">${tx('Touche le plan pour zoomer (pincer / ＋).', 'Tap the map to zoom (pinch / ＋).')}</p></div>
+        <div><div class="card" style="margin-top:0"><h4>${tx('🧰 Matériel', '🧰 Components')}</h4>
+          ${m.tiles&&m.tiles.length?`<p><b>${tx('Tuiles :', 'Tiles:')}</b> ${m.tiles.join(', ')}</p>`:''}
+          ${deck?`<p><b>${tx('Guard Order :', 'Guard Order:')}</b> ${deck}</p>`:''}
           ${legend?`<div>${legend}</div>`:''}</div>
-          <div class="card"><h4>✅ Mise en place</h4><ul class="check" id="chk">${[
+          <div class="card"><h4>${tx('✅ Mise en place', '✅ Setup')}</h4><ul class="check" id="chk">${[
             ...setupSteps,
-            ...(m.type!=='boss'? ['Guard dashboard près de la carte, deck Guard Order (bleues sur rouges) et deck Guard Reaction (6) mélangés.'] : []),
-            'Chaque joueur : dashboard, 4 jetons Action, 4 Focus, jeton Attention, équipement (≤ limite) + jetons munitions/charges.',
-            'Dés et jetons (dégâts, KO, Mort…) en réserve commune.'
+            ...(m.type!=='boss'? [tx('Guard dashboard près de la carte, deck Guard Order (bleues sur rouges) et deck Guard Reaction (6) mélangés.', 'Guard dashboard next to the map; Guard Order deck (blue on top of red) and Guard Reaction deck (6) shuffled.')] : []),
+            tx('Chaque joueur : dashboard, 4 jetons Action, 4 Focus, jeton Attention, équipement (≤ limite) + jetons munitions/charges.', 'Each player: dashboard, 4 Action tokens, 4 Focus tokens, Attention token, Equipment (≤ limit) + ammo/charge tokens.'),
+            tx('Dés et jetons (dégâts, KO, Mort…) en réserve commune.', 'Dice and tokens (damage, KO, KIA…) in a shared supply.')
           ].map((s,i)=>`<li class="${chk[i]?'ok':''}" data-i="${i}"><span class="bx">${chk[i]?'✓':''}</span><span class="tx">${s}</span></li>`).join('')}</ul>
-          <div class="ctrls"><button class="btn sm" id="chkReset">↺ Décocher tout</button></div></div></div></div>`,
-      rules: `<div class="two"><div class="card"><h4>🎯 Objectif</h4>${list(m.objective)}${m.optional&&m.optional.length?`<h4>⭐ Optionnel</h4>${list(m.optional)}`:''}</div>
-        <div class="card warnc"><h4>💀 Échec</h4>${list(m.failure)}</div></div>
-        ${special?`<div class="card"><h4>📜 Règles spéciales</h4><dl class="rules">${special}</dl></div>`:''}
+          <div class="ctrls"><button class="btn sm" id="chkReset">${tx('↺ Décocher tout', '↺ Uncheck all')}</button></div></div></div></div>`,
+      rules: `<div class="two"><div class="card"><h4>${tx('🎯 Objectif', '🎯 Objective')}</h4>${list(m.objective)}${m.optional&&m.optional.length?`<h4>${tx('⭐ Optionnel', '⭐ Optional')}</h4>${list(m.optional)}`:''}</div>
+        <div class="card warnc"><h4>${tx('💀 Échec', '💀 Failure')}</h4>${list(m.failure)}</div></div>
+        ${special?`<div class="card"><h4>${tx('📜 Règles spéciales', '📜 Special rules')}</h4><dl class="rules">${special}</dl></div>`:''}
         ${events?`<div class="card"><h4>🅰️ Events</h4><dl class="rules">${events}</dl></div>`:''}
-        ${m.boss?`<div class="card bossc"><h4>👾 ${esc(m.boss.name)}</h4>${m.boss.health?`<p><b>Santé :</b> ${m.boss.health}</p>`:''}${m.boss.defense?`<p><b>Défense :</b> ${m.boss.defense}</p>`:''}${list(m.boss.notes)}</div>`:''}`,
+        ${m.boss?`<div class="card bossc"><h4>👾 ${esc(m.boss.name)}</h4>${m.boss.health?`<p><b>${tx('Santé :', 'Health:')}</b> ${m.boss.health}</p>`:''}${m.boss.defense?`<p><b>${tx('Défense :', 'Defense:')}</b> ${m.boss.defense}</p>`:''}${list(m.boss.notes)}</div>`:''}`,
       end: `<div class="card"><h4>🏆 Stage Cleared</h4>${list(m.cleared)}
-          <div class="ctrls"><button class="btn ${cl[m.id]?'on':'pri'}" id="clrBtn">${cl[m.id]?'✔ Mission réussie (annuler)':'🏆 Marquer comme réussie'}</button></div></div>`,
-      tips: `${m.errata&&m.errata.length?`<div class="card" style="border-color:#7a6418"><h4 style="color:var(--yel)">⚠️ Errata & FAQ pour ce Stage</h4>${list(m.errata)}</div>`:''}
+          <div class="ctrls"><button class="btn ${cl[m.id]?'on':'pri'}" id="clrBtn">${cl[m.id]?tx('✔ Mission réussie (annuler)', '✔ Mission cleared (undo)'):tx('🏆 Marquer comme réussie', '🏆 Mark as cleared')}</button></div></div>`,
+      tips: `${m.errata&&m.errata.length?`<div class="card" style="border-color:#7a6418"><h4 style="color:var(--yel)">${tx('⚠️ Errata & FAQ pour ce Stage', '⚠️ Errata & FAQ for this Stage')}</h4>${list(m.errata)}</div>`:''}
         ${(window.MGS_FAQ||[]).flatMap(c=>c.items).filter(q=>q.stage===m.id).map(q=>`<details class="q" open><summary>${q.q}</summary><p>${q.a}</p></details>`).join('')}
-        <div class="card"><h4>💡 Conseils</h4>${list(m.tips)}</div>
-        ${m.rulesNotes&&m.rulesNotes.length?`<div class="card"><h4>📖 Règles introduites ici</h4>${list(m.rulesNotes)}</div>`:''}
-        ${pagesHtml?`<div class="card"><h4>📄 Pages originales du livret</h4><div class="pages">${pagesHtml}</div></div>`:''}`
+        <div class="card"><h4>${tx('💡 Conseils', '💡 Tips')}</h4>${list(m.tips)}</div>
+        ${m.rulesNotes&&m.rulesNotes.length?`<div class="card"><h4>${tx('📖 Règles introduites ici', '📖 Rules introduced here')}</h4>${list(m.rulesNotes)}</div>`:''}
+        ${pagesHtml?`<div class="card"><h4>${tx('📄 Pages originales du livret', '📄 Original rulebook pages')}</h4><div class="pages">${pagesHtml}</div></div>`:''}`
     };
     const idx = M.indexOf(m);
     app.innerHTML = `<div class="ctrls" style="margin-top:0"><a class="btn sm" href="#missions">◀ Missions</a>${idx>0?`<a class="btn sm" href="#m/${M[idx-1].id}">◀ ${M[idx-1].id}</a>`:''}${idx<M.length-1?`<a class="btn sm" href="#m/${M[idx+1].id}">${M[idx+1].id} ▶</a>`:''}</div>
-      <div class="mhead"><div class="big">${typeof m.id==='number'?String(m.id).padStart(2,'0'):'VR'}</div><div style="flex:1;min-width:240px"><div>${typeBadge(m)} ${cl[m.id]?'<span class="badge b-sneak">✔ RÉUSSI</span>':''}</div><h2>${esc(m.name)}</h2><div class="muted">${esc(m.subtitle||'')}</div></div>
-        <button class="btn pri" id="playBtn">🎮 Lancer la partie</button></div>
+      <div class="mhead"><div class="big">${typeof m.id==='number'?String(m.id).padStart(2,'0'):'VR'}</div><div style="flex:1;min-width:240px"><div>${typeBadge(m)} ${cl[m.id]?`<span class="badge b-sneak">${tx('✔ RÉUSSI', '✔ CLEARED')}</span>`:''}</div><h2>${esc(m.name)}</h2><div class="muted">${esc(m.subtitle||'')}</div></div>
+        <button class="btn pri" id="playBtn">${tx('🎮 Lancer la partie', '🎮 Start game')}</button></div>
       ${m.briefing?`<div class="card" style="font-style:italic">📡 ${m.briefing}</div>`:''}
       <div class="facts"><div class="fact"><span>⏱</span>${esc(m.time||'?')}</div>${pcounts(m).map(n=>`<div class="fact"><span>${n}👤</span>${pl[n].map(c=>(CHAR[c]||'')+' '+c).join(', ')}</div>`).join('')}</div>
       ${pnotes(m).length?`<p class="muted">👥 ${pnotes(m).join(' ')}</p>`:''}
-      <div class="mtabs seg" id="mtabs">${[['setup','🧰 Setup'],['rules','📜 Règles & objectifs'],['end','🏆 Fin'],['tips','💡 Conseils & errata']].map(([k,t])=>`<button class="btn ${k===tab?'on':''}" data-t="${k}">${t}</button>`).join('')}</div>
+      <div class="mtabs seg" id="mtabs">${[['setup','🧰 Setup'],['rules',tx('📜 Règles & objectifs', '📜 Rules & objectives')],['end',tx('🏆 Fin', '🏆 End')],['tips',tx('💡 Conseils & errata', '💡 Tips & errata')]].map(([k,t])=>`<button class="btn ${k===tab?'on':''}" data-t="${k}">${t}</button>`).join('')}</div>
       <div id="msec">${sec[tab]}</div>`;
     const bindSec = () => {
       const c = $('#chk'); if (c) c.addEventListener('click', e => { const li = e.target.closest('li'); if (!li) return; const x = store.get('chk.'+m.id, {}); x[li.dataset.i] = !x[li.dataset.i]; store.set('chk.'+m.id, x); li.classList.toggle('ok', !!x[li.dataset.i]); li.querySelector('.bx').textContent = x[li.dataset.i] ? '✓' : ''; });
@@ -534,28 +552,28 @@ details.q p{margin:0 0 12px}
       const nOpts = pcounts(m);
       const total = g.deck ? g.deck.red + g.deck.blue : 0, left = g.deck ? Math.max(0, total - g.deck.drawn) : 0;
       app.innerHTML = `<div class="gtop"><select id="gMis">${M.map(x=>`<option value="${x.id}" ${String(x.id)===String(g.mid)?'selected':''}>${typeof x.id==='number'?'Stage '+x.id:x.id} — ${x.name}</option>`).join('')}</select>
-        <select id="gN">${nOpts.map(k=>`<option value="${k}" ${+k===g.n?'selected':''}>${k} joueur${k>1?'s':''}</option>`).join('')}</select>
-        <a class="btn sm" href="#m/${m.id}">📄 Fiche mission</a><button class="btn sm red" id="gNew">↺ Nouvelle partie</button></div>
+        <select id="gN">${nOpts.map(k=>`<option value="${k}" ${+k===g.n?'selected':''}>${k} ${tx('joueur', 'player')}${k>1?'s':''}</option>`).join('')}</select>
+        <a class="btn sm" href="#m/${m.id}">${tx('📄 Fiche mission', '📄 Mission sheet')}</a><button class="btn sm red" id="gNew">${tx('↺ Nouvelle partie', '↺ New game')}</button></div>
       <div class="card" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap"><div class="round">ROUND <span class="n">${g.round}</span></div><div class="muted" style="flex:1">${typeBadge(m)} <b>${esc(m.name)}</b> — 🎯 ${(m.objective||[]).join(' · ')}</div></div>
-      <div class="phases"><div class="phase ${g.phase===0?'on':''}" data-p="0">1 · Début du round</div><div class="phase ${g.phase===1?'on':''}" data-p="1">2 · Joueurs</div><div class="phase ${g.phase===2?'on':''}" data-p="2">3 · Ennemis</div></div>
+      <div class="phases"><div class="phase ${g.phase===0?'on':''}" data-p="0">${tx('1 · Début du round', '1 · Start of round')}</div><div class="phase ${g.phase===1?'on':''}" data-p="1">${tx('2 · Joueurs', '2 · Players')}</div><div class="phase ${g.phase===2?'on':''}" data-p="2">${tx('3 · Ennemis', '3 · Enemies')}</div></div>
       <div id="gBody"></div>
-      ${g.deck?`<div class="deck"><h4>🃏 Paquet Guard Order — chrono</h4><div class="deckbar">${Array.from({length: total}, (_, i) => `<i class="${i < g.deck.drawn ? 'x' : (i - g.deck.drawn < (g.deck.blue - Math.min(g.deck.blue, g.deck.drawn)) ? 'b' : 'r')}"></i>`).join('')}</div>
-        <p><b>${left}</b> carte(s) restante(s) ${g.deck.drawn >= g.deck.blue ? '<b class="alert">— vous êtes dans les ROUGES, le temps presse !</b>' : `— encore ${g.deck.blue - g.deck.drawn} bleue(s) avant les rouges.`}</p>
-        <div class="ctrls"><button class="btn" id="dDraw">🃏 Carte piochée (phase ennemie)</button><button class="btn" id="dRev">🔥 Carte révélée & mise dessous</button><button class="btn sm" id="dUndo">↶ −1</button></div>
-        <p class="muted">« Révélée & mise dessous » : Lost Contact (par 3 morts), spawn impossible, Guard Reaction… Elle reste dans le paquet mais vous rapproche de la fin : le compteur la retire de la pile utile.</p></div>`:''}`;
+      ${g.deck?`<div class="deck"><h4>${tx('🃏 Paquet Guard Order — chrono', '🃏 Guard Order deck — clock')}</h4><div class="deckbar">${Array.from({length: total}, (_, i) => `<i class="${i < g.deck.drawn ? 'x' : (i - g.deck.drawn < (g.deck.blue - Math.min(g.deck.blue, g.deck.drawn)) ? 'b' : 'r')}"></i>`).join('')}</div>
+        <p><b>${left}</b> ${tx('carte(s) restante(s)', 'card(s) left')} ${g.deck.drawn >= g.deck.blue ? `<b class="alert">${tx('— vous êtes dans les ROUGES, le temps presse !', "— you're into the RED cards, time is running out!")}</b>` : tx(`— encore ${g.deck.blue - g.deck.drawn} bleue(s) avant les rouges.`, `— ${g.deck.blue - g.deck.drawn} blue card(s) left before the red ones.`)}</p>
+        <div class="ctrls"><button class="btn" id="dDraw">${tx('🃏 Carte piochée (phase ennemie)', '🃏 Card drawn (enemy phase)')}</button><button class="btn" id="dRev">${tx('🔥 Carte révélée & mise dessous', '🔥 Card revealed & put on the bottom')}</button><button class="btn sm" id="dUndo">↶ −1</button></div>
+        <p class="muted">${tx('« Révélée & mise dessous » : Lost Contact (par 3 morts), spawn impossible, Guard Reaction… Elle reste dans le paquet mais vous rapproche de la fin : le compteur la retire de la pile utile.', '"Revealed & put on the bottom": Lost Contact (per 3 KIA), impossible spawn, Guard Reaction… It stays in the deck but brings you closer to the end: the counter removes it from the usable pile.')}</p></div>`:''}`;
       const body = $('#gBody');
       if (g.phase === 0) {
-        body.innerHTML = `<div class="card"><h4>🔄 Début du round ${g.round}</h4><p>Chaque joueur reprend ses <b>4 jetons Action</b>.</p><div class="ctrls"><button class="btn pri" id="toP">▶ Phase Joueurs</button></div></div>`;
+        body.innerHTML = `<div class="card"><h4>${tx('🔄 Début du round', '🔄 Start of round')} ${g.round}</h4><p>${tx('Chaque joueur reprend ses <b>4 jetons Action</b>.', 'Each player takes back their <b>4 Action tokens</b>.')}</p><div class="ctrls"><button class="btn pri" id="toP">${tx('▶ Phase Joueurs', '▶ Player phase')}</button></div></div>`;
         $('#toP').onclick = () => { g.chars.forEach(c => { c.left = 4; c.noisy = 0; c.done = false; }); g.phase = 1; save(); render(); };
       } else if (g.phase === 1) {
-        body.innerHTML = `<p class="muted">Ordre libre. Touche les jetons pour les dépenser. « 🔊 » = jetons sur actions bruyantes.</p><div class="players">${g.chars.map((c,i)=>{ const ci = charInfo(c.name); const hp = ci.stats ? ci.stats.hp : null; return `<div class="pcard ${c.done?'done':''}" data-i="${i}" style="border-color:${ci.color||'var(--line)'}"><h4>${CHAR[c.name]||''} ${c.name}${ci.stats?` <span class="muted" style="font-size:.8rem">DÉF ${ci.stats.def}</span>`:''}</h4>
+        body.innerHTML = `<p class="muted">${tx('Ordre libre. Touche les jetons pour les dépenser. « 🔊 » = jetons sur actions bruyantes.', 'Any order. Tap tokens to spend them. "🔊" = tokens spent on Noisy actions.')}</p><div class="players">${g.chars.map((c,i)=>{ const ci = charInfo(c.name); const hp = ci.stats ? ci.stats.hp : null; return `<div class="pcard ${c.done?'done':''}" data-i="${i}" style="border-color:${ci.color||'var(--line)'}"><h4>${CHAR[c.name]||''} ${c.name}${ci.stats?` <span class="muted" style="font-size:.8rem">${tx('DÉF', 'DEF')} ${ci.stats.def}</span>`:''}</h4>
           <div class="atoks">${[0,1,2,3].map(k=>`<button class="${k < c.left ? '' : 'sp'}" data-a="tok" data-k="${k}"></button>`).join('')}</div>
-          <div class="prow"><span class="lab">🔊 Bruyant</span><button class="btn sm" data-a="n-">−</button><b>${c.noisy}</b><button class="btn sm" data-a="n+">＋</button></div>
-          <div class="prow"><span class="lab">💔 Dégâts</span><button class="btn sm" data-a="d-">−</button><b>${c.dmg}${hp?' / '+hp:''}</b><button class="btn sm" data-a="d+">＋</button>${hp && c.dmg >= hp ? '<b class="alert">KIA !</b>' : ''}</div>
+          <div class="prow"><span class="lab">${tx('🔊 Bruyant', '🔊 Noisy')}</span><button class="btn sm" data-a="n-">−</button><b>${c.noisy}</b><button class="btn sm" data-a="n+">＋</button></div>
+          <div class="prow"><span class="lab">${tx('💔 Dégâts', '💔 Damage')}</span><button class="btn sm" data-a="d-">−</button><b>${c.dmg}${hp?' / '+hp:''}</b><button class="btn sm" data-a="d+">＋</button>${hp && c.dmg >= hp ? `<b class="alert">${tx('KIA !', 'KIA!')}</b>` : ''}</div>
           <div class="prow"><span class="lab">Attention</span><div class="att">${['—','?','!'].map((t,k)=>`<button class="btn sm ${c.att===k?'on':''}" data-a="att" data-k="${k}">${t}</button>`).join('')}</div></div>
-          <div class="ctrls"><button class="btn ${c.done?'':'pri'}" data-a="end">${c.done?'✔ Tour fini':'🏁 Fin de tour'}</button></div>
-          ${c.done && c.noisy ? `<div class="tip warn">Noise check : garde dans ta zone ? Lance <b>${c.noisy}</b> dé(s) blanc(s).</div>` : ''}</div>`; }).join('')}</div>
-          <div class="ctrls"><button class="btn pri" id="toE">▶ Phase Ennemie</button></div>`;
+          <div class="ctrls"><button class="btn ${c.done?'':'pri'}" data-a="end">${c.done?tx('✔ Tour fini', '✔ Turn done'):tx('🏁 Fin de tour', '🏁 End turn')}</button></div>
+          ${c.done && c.noisy ? `<div class="tip warn">${tx(`Noise check : garde dans ta zone ? Lance <b>${c.noisy}</b> dé(s) blanc(s).`, `Noise check: guard in your zone? Roll <b>${c.noisy}</b> white dice.`)}</div>` : ''}</div>`; }).join('')}</div>
+          <div class="ctrls"><button class="btn pri" id="toE">${tx('▶ Phase Ennemie', '▶ Enemy phase')}</button></div>`;
         body.querySelector('.players').addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (!b) return; const c = g.chars[+b.closest('.pcard').dataset.i]; const a = b.dataset.a;
           if (a === 'tok') { const k = +b.dataset.k; c.left = k < c.left ? k : k + 1; }
           if (a === 'n+') c.noisy++; if (a === 'n-') c.noisy = Math.max(0, c.noisy - 1);
@@ -565,23 +583,27 @@ details.q p{margin:0 0 12px}
           save(); render(); });
         $('#toE').onclick = () => { g.phase = 2; if (g.deck && hasSneak) g.deck.drawn++; save(); render(); };
       } else {
-        const sneakSteps = `<div class="card"><h4>🃏 Carte Guard Order ${g.deck?`(piochée automatiquement : ${Math.max(0,(g.deck.red+g.deck.blue)-g.deck.drawn)} restantes)`:''}</h4>
+        const sneakSteps = `<div class="card"><h4>${tx('🃏 Carte Guard Order', '🃏 Guard Order card')} ${g.deck?tx(`(piochée automatiquement : ${Math.max(0,(g.deck.red+g.deck.blue)-g.deck.drawn)} restantes)`, `(drawn automatically: ${Math.max(0,(g.deck.red+g.deck.blue)-g.deck.drawn)} left)`):''}</h4>${tx(`
           <p>Carte <b>Game Over</b> ? → mission échouée.</p>
           <div class="estep"><span class="k">I</span><div><b>Guard Action</b> — Waken (KO ★→debout, ★★→★) · Radio-In (compléter le Guard Count) · Lost Contact (1 carte brûlée / 3 morts) · Stay Alert (≤2 cases d'un garde → ?).</div></div>
           <div class="estep"><span class="k">II</span><div><b>Caméras</b> — retourner Camera Facing si indiqué, vérifier toutes les LOS.</div></div>
-          <div class="estep"><span class="k">III</span><div><b>Activer les gardes</b> des zones actives (zone la plus proche du Guard Priority, haut→bas, gauche→droite).<br><b class="alert">! dans la zone → ALERTE, chiffre rouge</b> · <b style="color:#4aa3ff">plus proche d'un ? / voit ★☠ → INVESTIGATION, bleu</b> · sinon <b>PATROUILLE, bleu</b>.<br>Stop : LOS → attaque (2 dés noirs vs Défense) · jeton → Guard Reaction · bloqué.</div></div></div>`;
-        const bossSteps = `<div class="card bossc"><h4>👾 Tour du boss${m.boss?' : '+esc(m.boss.name):''}</h4><ol class="big"><li>Retourne la carte du dessus du deck Boss et résous-la (+ règles du dashboard).</li><li>Remets-la <b>sous</b> le deck (jamais mélangé).</li><li>Attaque sans nombre de dés précisé → stat Attaque du dashboard ; le joueur lance contre sa Défense.</li></ol>
-          <div class="prow"><span class="lab">💥 Dégâts boss</span><button class="btn sm" data-b="d-">−</button><b style="font-size:1.4rem">${g.boss.dmg}</b><button class="btn sm" data-b="d+">＋</button><button class="btn sm" data-b="d5">＋5</button></div>
-          <div class="prow"><span class="lab">📈 Menace</span><button class="btn sm" data-b="t-">−</button><b>${g.boss.threat}</b><button class="btn sm" data-b="t+">＋</button></div>
-          ${m.boss&&m.boss.health?`<p class="muted">Santé : ${m.boss.health}</p>`:''}</div>`;
-        body.innerHTML = (m.type === 'sneak' ? sneakSteps : m.type === 'boss' ? bossSteps : bossSteps + `<p class="muted">Stage mixte : résous le tour du boss <b>avant</b> l'activation des gardes.</p>` + sneakSteps) + `<div class="ctrls"><button class="btn pri" id="toR">▶ Round suivant</button></div>`;
+          <div class="estep"><span class="k">III</span><div><b>Activer les gardes</b> des zones actives (zone la plus proche du Guard Priority, haut→bas, gauche→droite).<br><b class="alert">! dans la zone → ALERTE, chiffre rouge</b> · <b style="color:#4aa3ff">plus proche d'un ? / voit ★☠ → INVESTIGATION, bleu</b> · sinon <b>PATROUILLE, bleu</b>.<br>Stop : LOS → attaque (2 dés noirs vs Défense) · jeton → Guard Reaction · bloqué.</div></div>`, `
+          <p><b>Game Over</b> card? → mission failed.</p>
+          <div class="estep"><span class="k">I</span><div><b>Guard Action</b> — Waken (KO ★→standing, ★★→★) · Radio-In (fill up to the Guard Count) · Lost Contact (burn 1 card per 3 KIA) · Stay Alert (≤2 spaces from a guard → ?).</div></div>
+          <div class="estep"><span class="k">II</span><div><b>Cameras</b> — rotate Camera Facing if shown, check every LOS.</div></div>
+          <div class="estep"><span class="k">III</span><div><b>Activate guards</b> in active zones (zone closest to the Guard Priority token first, top→bottom, left→right).<br><b class="alert">! in the zone → ALERT, red number</b> · <b style="color:#4aa3ff">closer to a ? / sees ★☠ → INVESTIGATE, blue</b> · otherwise <b>PATROL, blue</b>.<br>Stop: LOS → attack (2 black dice vs Defense) · token → Guard Reaction · blocked.</div></div>`)}</div>`;
+        const bossSteps = `<div class="card bossc"><h4>${tx('👾 Tour du boss', '👾 Boss turn')}${m.boss?tx(' : ', ': ')+esc(m.boss.name):''}</h4><ol class="big">${tx('<li>Retourne la carte du dessus du deck Boss et résous-la (+ règles du dashboard).</li><li>Remets-la <b>sous</b> le deck (jamais mélangé).</li><li>Attaque sans nombre de dés précisé → stat Attaque du dashboard ; le joueur lance contre sa Défense.</li>', '<li>Flip the top card of the Boss deck and resolve it (+ dashboard rules).</li><li>Put it on the <b>bottom</b> of the deck (never shuffled).</li><li>Attack with no dice count given → dashboard Attack stat; the player rolls against their Defense.</li>')}</ol>
+          <div class="prow"><span class="lab">${tx('💥 Dégâts boss', '💥 Boss damage')}</span><button class="btn sm" data-b="d-">−</button><b style="font-size:1.4rem">${g.boss.dmg}</b><button class="btn sm" data-b="d+">＋</button><button class="btn sm" data-b="d5">＋5</button></div>
+          <div class="prow"><span class="lab">${tx('📈 Menace', '📈 Threat')}</span><button class="btn sm" data-b="t-">−</button><b>${g.boss.threat}</b><button class="btn sm" data-b="t+">＋</button></div>
+          ${m.boss&&m.boss.health?`<p class="muted">${tx('Santé :', 'Health:')} ${m.boss.health}</p>`:''}</div>`;
+        body.innerHTML = (m.type === 'sneak' ? sneakSteps : m.type === 'boss' ? bossSteps : bossSteps + `<p class="muted">${tx("Stage mixte : résous le tour du boss <b>avant</b> l'activation des gardes.", 'Mixed Stage: resolve the boss turn <b>before</b> activating guards.')}</p>` + sneakSteps) + `<div class="ctrls"><button class="btn pri" id="toR">${tx('▶ Round suivant', '▶ Next round')}</button></div>`;
         body.querySelectorAll('[data-b]').forEach(b => b.onclick = () => { const a = b.dataset.b; if (a==='d+') g.boss.dmg++; if (a==='d5') g.boss.dmg+=5; if (a==='d-') g.boss.dmg=Math.max(0,g.boss.dmg-1); if (a==='t+') g.boss.threat++; if (a==='t-') g.boss.threat=Math.max(0,g.boss.threat-1); save(); render(); });
         $('#toR').onclick = () => { g.round++; g.phase = 0; save(); render(); };
       }
       document.querySelectorAll('.phase').forEach(p => p.onclick = () => { g.phase = +p.dataset.p; save(); render(); });
       $('#gMis').onchange = e => { g = newGame(e.target.value); save(); render(); };
       $('#gN').onchange = e => { g = newGame(g.mid, +e.target.value); save(); render(); };
-      $('#gNew').onclick = () => { if (confirm('Recommencer la partie ?')) { g = newGame(g.mid, g.n); save(); render(); } };
+      $('#gNew').onclick = () => { if (confirm(tx('Recommencer la partie ?', 'Restart the game?'))) { g = newGame(g.mid, g.n); save(); render(); } };
       if (g.deck) { $('#dDraw').onclick = () => { g.deck.drawn++; save(); render(); }; $('#dRev').onclick = () => { g.deck.drawn++; save(); render(); }; $('#dUndo').onclick = () => { g.deck.drawn = Math.max(0, g.deck.drawn - 1); save(); render(); }; }
     };
     render();
@@ -589,28 +611,28 @@ details.q p{margin:0 0 12px}
 
   /* ---------- Persos ---------- */
   function viewChars(){
-    app.innerHTML = `<h2>👥 Les personnages</h2><p class="muted">Stats en bas à gauche de chaque dashboard : <span class="badge" style="background:#1665b8;color:#fff">Équipement</span> <span class="badge" style="background:#1f8a4a;color:#fff">Défense</span> <span class="badge" style="background:#b8202f;color:#fff">Santé</span>. Tous ont les actions communes (Sneak, Dash, corps-à-corps, Combo, Focus, Drag Body, Interact, Knock).</p>
-      <div class="chgrid">${(window.MGS_CHARS||[]).map(c=>`<div class="card ch" style="--c:${c.color}"><h3>${c.emoji} ${c.name} <span class="muted" style="font-size:.8rem;font-family:var(--sans)">dispo dès ${c.from}</span></h3>
-        ${c.stats?`<div class="stats"><span class="st e">ÉQUIP ${c.stats.equip}</span><span class="st d">DÉF ${c.stats.def}</span><span class="st h">SANTÉ ${c.stats.hp}</span></div>`:'<p class="muted">Stats : lis le bas de son dashboard.</p>'}
-        <p><b>Départ :</b> ${c.start}</p>
-        ${c.actions.length?`<h4>Actions uniques</h4>${c.actions.map(a=>`<p><b>${a[0]}</b> <span class="chip">${a[1]} action${a[1]>1?'s':''}</span><br>${a[2]}</p>`).join('')}`:''}
-        <h4>Capacités</h4>${c.abilities.map(a=>`<p><b>${a[0]}</b> — ${a[1]}</p>`).join('')}
+    app.innerHTML = `<h2>${tx('👥 Les personnages', '👥 Characters')}</h2><p class="muted">${tx('Stats en bas à gauche de chaque dashboard : <span class="badge" style="background:#1665b8;color:#fff">Équipement</span> <span class="badge" style="background:#1f8a4a;color:#fff">Défense</span> <span class="badge" style="background:#b8202f;color:#fff">Santé</span>. Tous ont les actions communes (Sneak, Dash, corps-à-corps, Combo, Focus, Drag Body, Interact, Knock).', 'Stats are at the bottom left of each dashboard: <span class="badge" style="background:#1665b8;color:#fff">Equipment</span> <span class="badge" style="background:#1f8a4a;color:#fff">Defense</span> <span class="badge" style="background:#b8202f;color:#fff">Health</span>. Everyone has the common actions (Sneak, Dash, Hand-to-Hand, Combo, Focus, Drag Body, Interact, Knock).')}</p>
+      <div class="chgrid">${(window.MGS_CHARS||[]).map(c=>`<div class="card ch" style="--c:${c.color}"><h3>${c.emoji} ${c.name} <span class="muted" style="font-size:.8rem;font-family:var(--sans)">${tx('dispo dès', 'available from')} ${c.from}</span></h3>
+        ${c.stats?`<div class="stats"><span class="st e">${tx('ÉQUIP', 'EQUIP')} ${c.stats.equip}</span><span class="st d">${tx('DÉF', 'DEF')} ${c.stats.def}</span><span class="st h">${tx('SANTÉ', 'HEALTH')} ${c.stats.hp}</span></div>`:`<p class="muted">${tx('Stats : lis le bas de son dashboard.', 'Stats: check the bottom of their dashboard.')}</p>`}
+        <p><b>${tx('Départ :', 'Start:')}</b> ${c.start}</p>
+        ${c.actions.length?`<h4>${tx('Actions uniques', 'Unique actions')}</h4>${c.actions.map(a=>`<p><b>${a[0]}</b> <span class="chip">${a[1]} action${a[1]>1?'s':''}</span><br>${a[2]}</p>`).join('')}`:''}
+        <h4>${tx('Capacités', 'Abilities')}</h4>${c.abilities.map(a=>`<p><b>${a[0]}</b> — ${a[1]}</p>`).join('')}
         <h4>Focus</h4><div class="fgrid">${c.focus.map(f=>`<div class="ftok">${f}</div>`).join('')}</div></div>`).join('')}</div>
-      <h3 style="margin-top:22px">🎒 Actions communes</h3><div class="ref">${window.MGS_ACTIONS.map(a=>`<div class="card"><h4>${a.icon} ${a.fr} <span class="muted" style="font-family:var(--sans);font-size:.8rem">${a.name} · ${a.cost} action${a.cost>1?'s':''}${a.noisy?' · 🔊':''}</span></h4><p>${a.desc}</p></div>`).join('')}</div>`;
+      <h3 style="margin-top:22px">${tx('🎒 Actions communes', '🎒 Common actions')}</h3><div class="ref">${window.MGS_ACTIONS.map(a=>`<div class="card"><h4>${a.icon} ${a.fr} <span class="muted" style="font-family:var(--sans);font-size:.8rem">${a.name} · ${a.cost} action${a.cost>1?'s':''}${a.noisy?' · 🔊':''}</span></h4><p>${a.desc}</p></div>`).join('')}</div>`;
   }
 
   /* ---------- Aide-mémoire ---------- */
   function viewRef(){
-    app.innerHTML = `<h2>📋 Aide-mémoire</h2><div class="ref">${window.MGS_REF.map(r=>`<div class="card"><h4>${r.t}</h4><p>${r.d}</p></div>`).join('')}</div>
-      <div class="imgrow" style="margin-top:16px"><figure><img src="guide/img/guard-order-card.jpg"><figcaption>Carte Guard Order : I action · II caméras · III rouge (alerte) / bleu (sinon) + flèche de rotation.</figcaption></figure><figure><img src="guide/img/snake-dashboard.jpg"><figcaption>Dashboard joueur.</figcaption></figure></div>`;
+    app.innerHTML = `<h2>${tx('📋 Aide-mémoire', '📋 Cheat Sheet')}</h2><div class="ref">${window.MGS_REF.map(r=>`<div class="card"><h4>${r.t}</h4><p>${r.d}</p></div>`).join('')}</div>
+      <div class="imgrow" style="margin-top:16px"><figure><img src="guide/img/guard-order-card.jpg"><figcaption>${tx('Carte Guard Order : I action · II caméras · III rouge (alerte) / bleu (sinon) + flèche de rotation.', 'Guard Order card: I action · II cameras · III red (alert) / blue (otherwise) + rotation arrow.')}</figcaption></figure><figure><img src="guide/img/snake-dashboard.jpg"><figcaption>${tx('Dashboard joueur.', 'Player dashboard.')}</figcaption></figure></div>`;
   }
 
   /* ---------- FAQ ---------- */
   function viewFaq(){
     const F = window.MGS_FAQ || [];
-    app.innerHTML = `<h2>⚠️ FAQ & Errata (v1.2)</h2><input class="search" id="fq" placeholder="🔎 Chercher (ex. caméra, Otacon, leapfrog…)">
+    app.innerHTML = `<h2>⚠️ FAQ & Errata (v1.2)</h2><input class="search" id="fq" placeholder="${tx('🔎 Chercher (ex. caméra, Otacon, leapfrog…)', '🔎 Search (e.g. camera, Otacon, leapfrog…)')}">
       <div id="fqList"></div>`;
-    const draw = q => { q = (q||'').toLowerCase(); $('#fqList').innerHTML = F.map(c => { const it = c.items.filter(x => !q || (x.q+x.a).toLowerCase().includes(q)); return it.length ? `<div class="faqcat"><h3>${c.cat}</h3>${it.map(x=>`<details class="q" ${q?'open':''}><summary>${x.tag==='errata'?'<span class="badge b-err">ERRATA</span> ':''}${x.stage?`<span class="badge b-sneak">Stage ${x.stage}</span> `:''}${x.q}</summary><p>${x.a}</p></details>`).join('')}</div>` : ''; }).join('') || '<p class="muted">Rien trouvé.</p>'; };
+    const draw = q => { q = (q||'').toLowerCase(); $('#fqList').innerHTML = F.map(c => { const it = c.items.filter(x => !q || (x.q+x.a).toLowerCase().includes(q)); return it.length ? `<div class="faqcat"><h3>${c.cat}</h3>${it.map(x=>`<details class="q" ${q?'open':''}><summary>${x.tag==='errata'?'<span class="badge b-err">ERRATA</span> ':''}${x.stage?`<span class="badge b-sneak">Stage ${x.stage}</span> `:''}${x.q}</summary><p>${x.a}</p></details>`).join('')}</div>` : ''; }).join('') || `<p class="muted">${tx('Rien trouvé.', 'Nothing found.')}</p>`; };
     $('#fq').addEventListener('input', e => draw(e.target.value)); draw('');
   }
 

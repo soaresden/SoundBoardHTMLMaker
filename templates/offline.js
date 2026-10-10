@@ -12,10 +12,10 @@
     const supported = ("serviceWorker" in navigator) && httpOK;
     if (!supported) {
       if (btn) {
-        btn.textContent = "📥 Hors-ligne (http requis)";
-        btn.title = "Le mode hors-ligne nécessite que la page soit servie via http(s) (GitHub Pages ou un serveur local), pas en ouverture directe du fichier (file://).";
+        btn.textContent = SBT("📥 Hors-ligne (http requis)", "📥 Offline (http required)");
+        btn.title = SBT("Le mode hors-ligne nécessite que la page soit servie via http(s) (GitHub Pages ou un serveur local), pas en ouverture directe du fichier (file://).", "Offline mode needs the page to be served over http(s) (GitHub Pages or a local server), not opened directly as a file (file://).");
         btn.addEventListener("click", () => {
-          alert("Le mode hors-ligne nécessite que la page soit servie via http(s) — par ex. GitHub Pages ou un petit serveur local — et non en double-cliquant le fichier (file://).");
+          alert(SBT("Le mode hors-ligne nécessite que la page soit servie via http(s) — par ex. GitHub Pages ou un petit serveur local — et non en double-cliquant le fichier (file://).", "Offline mode needs the page to be served over http(s) — e.g. GitHub Pages or a small local server — not by double-clicking the file (file://)."));
         });
       } else {
         console.warn("[offline] indisponible : la page doit être servie via http(s), pas en file://");
@@ -82,11 +82,11 @@
           const res = await precacheViaSW(urls, (done, total) => {
             btn.textContent = "📥 " + done + "/" + total + "…";
           });
-          btn.textContent = "✅ Hors-ligne prêt (" + res.ok + ")";
+          btn.textContent = SBT("✅ Hors-ligne prêt (", "✅ Offline ready (") + res.ok + ")";
           setTimeout(() => { btn.textContent = orig; }, 3000);
         } catch (e) {
           console.error("[offline] KO:", e);
-          alert("Échec du chargement hors-ligne : " + e.message);
+          alert(SBT("Échec du chargement hors-ligne : ", "Offline download failed: ") + e.message);
           btn.textContent = orig;
         } finally {
           btn.disabled = false; busy = false;
@@ -102,7 +102,7 @@
         pop = document.createElement('div');
         pop.id = 'offline-progress-pop';
         pop.style.cssText = 'position:fixed;right:14px;bottom:14px;z-index:99999;background:linear-gradient(135deg,rgba(25,25,45,0.96),rgba(40,30,60,0.96));border:1px solid rgba(199,125,255,0.5);border-radius:10px;padding:10px 14px;font:600 12px/1.3 system-ui,sans-serif;color:#e8e8f0;box-shadow:0 6px 24px rgba(0,0,0,0.5);max-width:250px;opacity:0;transition:opacity .3s;';
-        pop.innerHTML = '<div id="ofp-txt">Preparation hors-ligne...</div><div style="margin-top:6px;height:5px;border-radius:3px;background:rgba(255,255,255,0.15);overflow:hidden;"><div id="ofp-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#5174db,#c77dff);transition:width .2s;"></div></div>';
+        pop.innerHTML = '<div id="ofp-txt">' + SBT('Préparation hors-ligne…', 'Preparing offline mode…') + '</div><div style="margin-top:6px;height:5px;border-radius:3px;background:rgba(255,255,255,0.15);overflow:hidden;"><div id="ofp-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#5174db,#c77dff);transition:width .2s;"></div></div>';
         document.body.appendChild(pop);
         requestAnimationFrame(() => { if (pop) pop.style.opacity = '1'; });
         return pop;
@@ -114,7 +114,7 @@
       };
       const showLocal = (n) => {
         ensurePopup();
-        pop.innerHTML = '<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:18px;">✅</span><div><div style="color:#66d999;">Version locale</div><div style="font-weight:400;opacity:0.78;font-size:11px;">' + n + ' fichiers en cache — hors-ligne OK</div></div></div>';
+        pop.innerHTML = '<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:18px;">✅</span><div><div style="color:#66d999;">' + SBT('Version locale', 'Local copy') + '</div><div style="font-weight:400;opacity:0.78;font-size:11px;">' + n + SBT(' fichiers en cache — hors-ligne OK', ' files cached — offline OK') + '</div></div></div>';
         setTimeout(() => { if (pop) { pop.style.opacity = '0'; setTimeout(() => { if (pop) { pop.remove(); pop = null; } }, 400); } }, 5000);
       };
       const run = async (attempt = 1) => {

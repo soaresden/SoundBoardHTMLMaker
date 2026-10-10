@@ -345,12 +345,13 @@ def cmd_portal(quiet: bool = False):
             continue
         href = lambda p: "/".join(part.replace(" ", "%20") for part in f"{out_rel}/{p}".split("/"))
         e = htmlmod.escape
-        links = "".join(f'<a class="sub" href="{href(l["href"])}">{e(l.get("title", l["href"]))}</a>'
+        en = lambda s: f' data-en="{e(s)}"' if s else ""   # version anglaise (appliquée par la page selon la langue)
+        links = "".join(f'<a class="sub" href="{href(l["href"])}"{en(l.get("title_en"))}>{e(l.get("title", l["href"]))}</a>'
                         for l in proj.get("links", []) if l.get("href"))
         cards.append(
             f'<article class="game" style="--c1:{e(proj.get("themeColor", "#667eea"))};--c2:{e(proj.get("themeColor2", "#764ba2"))}">'
-            f'<h2>{e(proj.get("name", g))}</h2><p>{e(proj.get("description", ""))}</p>'
-            f'<div class="links"><a class="main" href="{href(OUTPUT_FILE)}">▶ Ouvrir</a>{links}</div></article>')
+            f'<h2>{e(proj.get("name", g))}</h2><p{en(proj.get("description_en"))}>{e(proj.get("description", ""))}</p>'
+            f'<div class="links"><a class="main" href="{href(OUTPUT_FILE)}" data-en="▶ Open">▶ Ouvrir</a>{links}</div></article>')
     page = tpl("portal.html").replace("{{CARDS}}", "\n".join(cards) or "<p>Aucun jeu exporté pour l'instant.</p>")
     with open(os.path.join(G.ROOT, "index.html"), "w", encoding="utf-8", newline="\n") as f:
         f.write(page)

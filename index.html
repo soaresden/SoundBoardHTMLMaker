@@ -5,6 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b0a12">
 <title>Soundboards de jeux de société</title>
+<script>
+  // Langue : choix mémorisé (sb.lang) sinon langue du navigateur ; les éléments data-en passent en anglais.
+  (function () {
+    var l = null; try { l = localStorage.getItem('sb.lang'); } catch (_) {}
+    if (l !== 'fr' && l !== 'en') l = /^fr/i.test(navigator.language || '') ? 'fr' : 'en';
+    window.SB_LANG = l; document.documentElement.lang = l;
+    if (l === 'en') document.title = 'Board game soundboards';
+    document.addEventListener('DOMContentLoaded', function () {
+      if (l === 'en') document.querySelectorAll('[data-en]').forEach(function (e) { e.innerHTML = e.getAttribute('data-en'); });
+      var b = document.getElementById('lang');
+      b.textContent = l === 'en' ? '🇫🇷 FR' : '🇬🇧 EN';
+      b.onclick = function () { try { localStorage.setItem('sb.lang', l === 'en' ? 'fr' : 'en'); localStorage.setItem('mgs.lang', l === 'en' ? 'fr' : 'en'); } catch (_) {} location.reload(); };
+    });
+  })();
+</script>
 <!-- Page générée par build.py (templates/portal.html) : ne pas modifier à la main. -->
 <style>
   :root{--bg:#0b0a12;--panel:#15131f;--line:#2a2640;--tx:#ecebf5;--mut:#9b97b3;--acc:#c77dff}
@@ -27,22 +42,24 @@
   .make p{margin:0 0 12px;color:var(--mut)}
   .make a{color:var(--acc);font-weight:700}
   code{background:#221f33;border-radius:6px;padding:1px 6px}
+  #lang{position:absolute;top:16px;right:16px;border:1px solid var(--line);background:#1d1a2b;color:var(--tx);border-radius:11px;padding:8px 12px;font:700 14px system-ui;cursor:pointer;min-height:40px}
 </style>
 </head>
 <body>
+<button id="lang" title="Français / English">🇬🇧 EN</button>
 <main>
   <header>
-    <h1>🎲 Soundboards de jeux de société</h1>
-    <p>Des interfaces pour animer une partie : ambiances, bruitages et outils de jeu. Elles marchent sur PC, tablette et téléphone, même hors-ligne.</p>
+    <h1 data-en="🎲 Board game soundboards">🎲 Soundboards de jeux de société</h1>
+    <p data-en="Interfaces to bring a game night to life: ambience, sound effects and game tools. They work on PC, tablet and phone, even offline.">Des interfaces pour animer une partie : ambiances, bruitages et outils de jeu. Elles marchent sur PC, tablette et téléphone, même hors-ligne.</p>
   </header>
   <section class="grid">
-<article class="game" style="--c1:#5174db;--c2:#0f1406"><h2>Loup-Garou 🐺</h2><p>Soundboard d&#x27;ambiance + Maître du Jeu complet (rôles, nuits, votes) pour animer une partie de Loup-Garou sur tablette.</p><div class="links"><a class="main" href="FOLDERTOEXPORT/loup-garou/index.html">▶ Ouvrir</a></div></article>
-<article class="game" style="--c1:#5b8cff;--c2:#8a5cff"><h2>Metal Gear Solid</h2><p>Ambiances et voix de Metal Gear Solid + guide interactif : règles animées, 14 missions, errata, assistant de partie.</p><div class="links"><a class="main" href="FOLDERTOEXPORT/metal-gear/index.html">▶ Ouvrir</a><a class="sub" href="FOLDERTOEXPORT/metal-gear/guide.html">📖 Guide &amp; missions</a></div></article>
+<article class="game" style="--c1:#5174db;--c2:#0f1406"><h2>Loup-Garou 🐺</h2><p data-en="Ambient soundboard + a full Game Master (roles, nights, votes) to run a Werewolf game on a tablet.">Soundboard d&#x27;ambiance + Maître du Jeu complet (rôles, nuits, votes) pour animer une partie de Loup-Garou sur tablette.</p><div class="links"><a class="main" href="FOLDERTOEXPORT/loup-garou/index.html" data-en="▶ Open">▶ Ouvrir</a></div></article>
+<article class="game" style="--c1:#5b8cff;--c2:#8a5cff"><h2>Metal Gear Solid</h2><p data-en="Metal Gear Solid ambience and voices + an interactive guide: animated rules, 14 missions, errata, and a game assistant.">Ambiances et voix de Metal Gear Solid + guide interactif : règles animées, 14 missions, errata, assistant de partie.</p><div class="links"><a class="main" href="FOLDERTOEXPORT/metal-gear/index.html" data-en="▶ Open">▶ Ouvrir</a><a class="sub" href="FOLDERTOEXPORT/metal-gear/guide.html" data-en="📖 Guide &amp; missions">📖 Guide &amp; missions</a></div></article>
   </section>
   <section class="make">
-    <h2>🛠️ Crée la tienne</h2>
-    <p>Ces jeux sont des exemples faits avec <b>SoundBoardHTMLMaker</b> : tu mets tes mp3 dans un dossier, tu ranges tout dans l'éditeur, tu exportes. Sans rien coder.</p>
-    <a id="repo" href="https://github.com/soaresden/SoundBoardHTMLMaker">Voir le projet et le mode d'emploi →</a>
+    <h2 data-en="🛠️ Make your own">🛠️ Crée la tienne</h2>
+    <p data-en="These games are examples made with &lt;b&gt;SoundBoardHTMLMaker&lt;/b&gt;: drop your mp3 files in a folder, arrange everything in the editor, export. No coding needed.">Ces jeux sont des exemples faits avec <b>SoundBoardHTMLMaker</b> : tu mets tes mp3 dans un dossier, tu ranges tout dans l'éditeur, tu exportes. Sans rien coder.</p>
+    <a id="repo" href="https://github.com/soaresden/SoundBoardHTMLMaker" data-en="See the project and how-to →">Voir le projet et le mode d'emploi →</a>
   </section>
 </main>
 <script>

@@ -105,7 +105,7 @@
       // Si on a déjà joué quelque chose, on garde la dernière cover.
       // Sinon on affiche la cover du 1er morceau dispo.
       nowTitle.textContent = lastTrack ? lastTrack.name : (musics[0]?.name || "Aucune musique");
-      nowSub.textContent = lastTrack ? "(en pause)" : "Choisis une track à droite";
+      nowSub.textContent = lastTrack ? SBT("(en pause)", "(paused)") : SBT("Choisis une track à droite", "Pick a track on the right");
       btnPlayPause.textContent = "▶";
       bar.style.width = "0%";
       tCur.textContent = "0:00";
@@ -442,7 +442,7 @@
     btnDownload.addEventListener("click", async (ev) => {
       ev.preventDefault();
       const orig = btnDownload.textContent;
-      btnDownload.textContent = "⏳ Préparation…";
+      btnDownload.textContent = SBT("⏳ Préparation…", "⏳ Preparing…");
       btnDownload.disabled = true;
       try {
         let blob;
@@ -466,11 +466,11 @@
         a.remove();
         // Libère le blob après un délai (le download a déjà commencé)
         setTimeout(() => URL.revokeObjectURL(url), 5000);
-        btnDownload.textContent = "✅ Téléchargé";
+        btnDownload.textContent = SBT("✅ Téléchargé", "✅ Downloaded");
         setTimeout(() => { btnDownload.textContent = orig; }, 1800);
       } catch (e) {
         console.error("[download] failed:", e);
-        alert("Le téléchargement a échoué : " + e.message);
+        alert(SBT("Le téléchargement a échoué : ", "Download failed: ") + e.message);
         btnDownload.textContent = orig;
       } finally {
         btnDownload.disabled = false;
@@ -494,7 +494,7 @@
       musicAudio.currentTime = 0;
       musicAudio.play();
       highlightActive(); updateNow();
-      nowTitle.textContent = lastTrack.name; nowSub.textContent = "Musique"; btnPlayPause.textContent = "⏸";
+      nowTitle.textContent = lastTrack.name; nowSub.textContent = SBT("Musique", "Music"); btnPlayPause.textContent = "⏸";
       return true;
     },
     playSfx(file, vol) {

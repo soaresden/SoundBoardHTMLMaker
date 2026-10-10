@@ -7,6 +7,21 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Soundboard</title>
+  <script>
+    // Langue de l'interface : choix mémorisé (sb.lang), sinon langue du navigateur (fr → français, sinon anglais).
+    (function () {
+      var l = null; try { l = localStorage.getItem('sb.lang') || localStorage.getItem('mgs.lang'); } catch (_) {}
+      if (l !== 'fr' && l !== 'en') l = /^fr/i.test(navigator.language || '') ? 'fr' : 'en';
+      window.SB_LANG = l; document.documentElement.lang = l;
+      window.SBT = function (fr, en) { return l === 'en' && en != null ? en : fr; };
+      document.addEventListener('DOMContentLoaded', function () {
+        if (l !== 'en') return;
+        document.querySelectorAll('[data-en]').forEach(function (e) { e.textContent = e.getAttribute('data-en'); });
+        document.querySelectorAll('[data-en-title]').forEach(function (e) { e.title = e.getAttribute('data-en-title'); });
+        document.querySelectorAll('[data-en-ph]').forEach(function (e) { e.placeholder = e.getAttribute('data-en-ph'); });
+      });
+    })();
+  </script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1196,7 +1211,7 @@ input[type="range"]{ width:100%; accent-color:var(--accent); }
        font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;
        transition:opacity 0.35s ease;">
     <div style="font-size:22px; font-weight:800; letter-spacing:0.5px;">🎵 Soundboard</div>
-    <div style="font-size:11px; opacity:0.55; margin-top:4px;" id="initialLoaderSub">Préparation de l'audio…</div>
+    <div style="font-size:11px; opacity:0.55; margin-top:4px;" id="initialLoaderSub" data-en="Loading audio…">Préparation de l'audio…</div>
     <div style="width:240px; height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; margin-top:18px;">
       <div id="initialLoaderBar" style="height:100%; width:0%;
            background:linear-gradient(90deg, #5174db, #c77dff);
@@ -1249,8 +1264,8 @@ input[type="range"]{ width:100%; accent-color:var(--accent); }
         <div class="panel-content">
           <div class="now-card">
             <div class="cover" id="cover">🎲</div>
-            <div class="now-title" id="nowTitle">Aucune musique</div>
-            <div class="now-sub" id="nowSub">Choisis une track à droite</div>
+            <div class="now-title" id="nowTitle" data-en="No music">Aucune musique</div>
+            <div class="now-sub" id="nowSub" data-en="Pick a track on the right">Choisis une track à droite</div>
 
             <div class="progress-wrap">
               <div class="progress">
@@ -1292,7 +1307,7 @@ input[type="range"]{ width:100%; accent-color:var(--accent); }
         <div class="panel-content">
           <div class="toolbar">
             <input class="search" id="musicSearch" placeholder="🔎 Music…">
-            <button class="btn-view" id="btnViewMode" title="Basculer liste / vignettes">⊞</button>
+            <button class="btn-view" id="btnViewMode" title="Basculer liste / vignettes" data-en-title="Toggle list / grid">⊞</button>
           </div>
           <div id="musicList" class="list"></div>
         </div>
@@ -1306,7 +1321,7 @@ input[type="range"]{ width:100%; accent-color:var(--accent); }
         <div class="panel-content">
           <div class="toolbar">
             <input class="search" id="sfxSearch" placeholder="🔎 SFX…">
-            <button class="btn-stop-sfx" id="btnStopSfx" title="Stop tous les SFX en cours (laisse la musique)">⏹</button>
+            <button class="btn-stop-sfx" id="btnStopSfx" title="Stop tous les SFX en cours (laisse la musique)" data-en-title="Stop all playing SFX (keeps the music)">⏹</button>
           </div>
           <div id="sfxList" class="sfx-container"></div>
         </div>
@@ -1316,7 +1331,7 @@ input[type="range"]{ width:100%; accent-color:var(--accent); }
   </div>
 
   <script>
-    const CONFIG = {"project": {"name": "Loup-Garou 🐺", "version": 1, "themeColor": "#5174db", "themeColor2": "#0f1406", "offline": "auto", "versionSwitch": false, "description": "Soundboard d'ambiance + Maître du Jeu complet (rôles, nuits, votes) pour animer une partie de Loup-Garou sur tablette."}, "tracks": [{"type": "music", "file": "1ere Nuit - Harpfire Reliquary.mp3", "name": "1ere Nuit - Harpfire Reliquary 1", "category": "Nuit", "order": 1, "volume": 0.7, "cover": "covers/1ere_Nuit_-_Harpfire_Reliquary.mp3.jpg"}, {"type": "music", "file": "1ere nuit - Harpfire Reliquary (1).mp3", "name": "1ere nuit - Harpfire Reliquary 2", "category": "Nuit", "order": 2, "volume": 0.7, "cover": "covers/1ere_nuit_-_Harpfire_Reliquary__1_.mp3.jpg"}, {"type": "music", "file": "Nuit - Wounded Ringers (1).mp3", "name": "Nuit - Wounded Ringers 1", "category": "Nuit - Lycans", "order": 1, "volume": 0.7, "cover": "covers/Nuit_-_Wounded_Ringers__1_.mp3.jpg"}, {"type": "music", "file": "Nuit - Wounded Ringers.mp3", "name": "Nuit - Wounded Ringers 2", "category": "Nuit - Lycans", "order": 2, "volume": 0.7, "cover": "covers/Nuit_-_Wounded_Ringers.mp3.jpg"}, {"type": "music", "file": "Vote Final - Gavel Thunder.mp3", "name": "Vote Final - Gavel Thunder 1", "category": "Jour", "order": 1, "volume": 0.7, "cover": "covers/Vote_Final_-_Gavel_Thunder.mp3.jpg"}, {"type": "music", "file": "Vote Final - Gavel Thunder (1).mp3", "name": "Vote Final - Gavel Thunder 2", "category": "Jour", "order": 2, "volume": 0.7, "cover": "covers/Vote_Final_-_Gavel_Thunder__1_.mp3.jpg"}, {"type": "music", "file": "Jour - Salted Confession (1).mp3", "name": "Jour - Salted Confession 1", "category": "Vie du Village", "order": 1, "volume": 0.7, "cover": "covers/Jour_-_Salted_Confession__1_.mp3.jpg"}, {"type": "music", "file": "Jour - Salted Confession.mp3", "name": "Jour - Salted Confession 2", "category": "Vie du Village", "order": 2, "volume": 0.7, "cover": "covers/Jour_-_Salted_Confession.mp3.jpg"}, {"type": "music", "file": "05 Mission Objective.mp3", "name": "Qui est mort - HeartBeat Crescendo", "category": "Vie du Village", "order": 3, "volume": 0.7, "cover": "covers/05_Mission_Objective.mp3.jpg"}, {"type": "sfx", "file": "Cupidon Firing Arrow.mp3", "name": "🏹", "category": "🪛01 Cupidon", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "sims-2-falling-in-love.mp3", "name": "🥰", "category": "🪛01 Cupidon", "order": 2, "volume": 1.0}, {"type": "sfx", "file": "kiss-pop.mp3", "name": "😘", "category": "🪛02 Amoureux", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "virtualzero-boy-giggling-playful-laugh-hd-379353.mp3", "name": "🚸", "category": "🪛03 Enfant Sauvage", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "stu9-dog-howl-2-352681.mp3", "name": "🐶", "category": "🪛04 Chien Loup", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "universfield-bear-191995.mp3", "name": "🐻", "category": "🪛05 Montreur d'Ours", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "creatorshome-draw-a-sword-327726.mp3", "name": "⚔️", "category": "🪛06 Chevalier Tetanos", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "Voicy_Owl hooting.mp3", "name": "🦉", "category": "###Pendant la Nuit###", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "Voicy_Violent Thunder Sound With Rain.mp3", "name": "⚡", "category": "###Pendant la Nuit###", "order": 2, "volume": 1.0}, {"type": "sfx", "file": "universfield-mysterious-places-30s-159313.mp3", "name": "🔮", "category": "🏳️01 Voyante", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "BANK_01_INSTR_0000_SND_006D.mp3", "name": "🦊", "category": "🏳️02 Renard", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "dragon-studio-holy-spell-cast-450460.mp3", "name": "😇", "category": "🏳️03 Salvateur", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "freesound_community-short-choir-6116.mp3", "name": "👼", "category": "🏳️03 Salvateur", "order": 2, "volume": 1.0}, {"type": "sfx", "file": "Voicy_Howling werewolf sound effect.mp3", "name": "🐺", "category": "🐺04 Lycans", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "Voicy_Werewolves Sound Effects.mp3", "name": "💀", "category": "🐺04 Lycans", "order": 2, "volume": 1.0}, {"type": "sfx", "file": "freesound_community-wolf-howl-6310.mp3", "name": "🐺", "category": "🐺05 Alpha", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "universfield-wolf-howling-140235.mp3", "name": "🐺", "category": "🐺06 Grand Méchant", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "Voicy_Werewolves Sound Effects - Copie.mp3", "name": "🐺", "category": "🐺07 Noir (Infecte)", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "alesiadavina-werewolf-sound-pain-wail-457328.mp3", "name": "🐺", "category": "🐺08 Blanc (Solo)", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "freesound_community-bubbles-003-6397.mp3", "name": "🧋", "category": "🏳️09 Sorciere (1 Vie et Mort)", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "Witch Laughing.mp3", "name": "😏", "category": "🏳️09 Sorciere (1 Vie et Mort)", "order": 2, "volume": 1.0}, {"type": "sfx", "file": "dragon-studio-crow-caw-with-echoing-reverb-472375.mp3", "name": "🐦‍⬛", "category": "🏳️10 Corbeau (+2 Votes)", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "freesound_community-brahma-rooster-89888.mp3", "name": "⏰", "category": "###Au Matin###", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "Voicy_Suspense.mp3", "name": "👀", "category": "###Au Matin###", "order": 2, "volume": 1.0}, {"type": "sfx", "file": "universfield-bear-191995 - Copie.mp3", "name": "🐻", "category": "🏳️11 Montreur d'Ours (Grr Autour de Lui)", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "freesound_community-spas-12-89800.mp3", "name": "🔫", "category": "Roles", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "VOXScrm_Cri wilhelm (ID 0477)_LaSonotheque.fr.mp3", "name": "😱", "category": "Roles", "order": 2, "volume": 1.0}]};
+    const CONFIG = {"project": {"name": "Loup-Garou 🐺", "version": 1, "themeColor": "#5174db", "themeColor2": "#0f1406", "offline": "auto", "versionSwitch": false, "description": "Soundboard d'ambiance + Maître du Jeu complet (rôles, nuits, votes) pour animer une partie de Loup-Garou sur tablette.", "description_en": "Ambient soundboard + a full Game Master (roles, nights, votes) to run a Werewolf game on a tablet."}, "tracks": [{"type": "music", "file": "1ere Nuit - Harpfire Reliquary.mp3", "name": "1ere Nuit - Harpfire Reliquary 1", "category": "Nuit", "order": 1, "volume": 0.7, "cover": "covers/1ere_Nuit_-_Harpfire_Reliquary.mp3.jpg"}, {"type": "music", "file": "1ere nuit - Harpfire Reliquary (1).mp3", "name": "1ere nuit - Harpfire Reliquary 2", "category": "Nuit", "order": 2, "volume": 0.7, "cover": "covers/1ere_nuit_-_Harpfire_Reliquary__1_.mp3.jpg"}, {"type": "music", "file": "Nuit - Wounded Ringers (1).mp3", "name": "Nuit - Wounded Ringers 1", "category": "Nuit - Lycans", "order": 1, "volume": 0.7, "cover": "covers/Nuit_-_Wounded_Ringers__1_.mp3.jpg"}, {"type": "music", "file": "Nuit - Wounded Ringers.mp3", "name": "Nuit - Wounded Ringers 2", "category": "Nuit - Lycans", "order": 2, "volume": 0.7, "cover": "covers/Nuit_-_Wounded_Ringers.mp3.jpg"}, {"type": "music", "file": "Vote Final - Gavel Thunder.mp3", "name": "Vote Final - Gavel Thunder 1", "category": "Jour", "order": 1, "volume": 0.7, "cover": "covers/Vote_Final_-_Gavel_Thunder.mp3.jpg"}, {"type": "music", "file": "Vote Final - Gavel Thunder (1).mp3", "name": "Vote Final - Gavel Thunder 2", "category": "Jour", "order": 2, "volume": 0.7, "cover": "covers/Vote_Final_-_Gavel_Thunder__1_.mp3.jpg"}, {"type": "music", "file": "Jour - Salted Confession (1).mp3", "name": "Jour - Salted Confession 1", "category": "Vie du Village", "order": 1, "volume": 0.7, "cover": "covers/Jour_-_Salted_Confession__1_.mp3.jpg"}, {"type": "music", "file": "Jour - Salted Confession.mp3", "name": "Jour - Salted Confession 2", "category": "Vie du Village", "order": 2, "volume": 0.7, "cover": "covers/Jour_-_Salted_Confession.mp3.jpg"}, {"type": "music", "file": "05 Mission Objective.mp3", "name": "Qui est mort - HeartBeat Crescendo", "category": "Vie du Village", "order": 3, "volume": 0.7, "cover": "covers/05_Mission_Objective.mp3.jpg"}, {"type": "sfx", "file": "Cupidon Firing Arrow.mp3", "name": "🏹", "category": "🪛01 Cupidon", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "sims-2-falling-in-love.mp3", "name": "🥰", "category": "🪛01 Cupidon", "order": 2, "volume": 1.0}, {"type": "sfx", "file": "kiss-pop.mp3", "name": "😘", "category": "🪛02 Amoureux", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "virtualzero-boy-giggling-playful-laugh-hd-379353.mp3", "name": "🚸", "category": "🪛03 Enfant Sauvage", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "stu9-dog-howl-2-352681.mp3", "name": "🐶", "category": "🪛04 Chien Loup", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "universfield-bear-191995.mp3", "name": "🐻", "category": "🪛05 Montreur d'Ours", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "creatorshome-draw-a-sword-327726.mp3", "name": "⚔️", "category": "🪛06 Chevalier Tetanos", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "Voicy_Owl hooting.mp3", "name": "🦉", "category": "###Pendant la Nuit###", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "Voicy_Violent Thunder Sound With Rain.mp3", "name": "⚡", "category": "###Pendant la Nuit###", "order": 2, "volume": 1.0}, {"type": "sfx", "file": "universfield-mysterious-places-30s-159313.mp3", "name": "🔮", "category": "🏳️01 Voyante", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "BANK_01_INSTR_0000_SND_006D.mp3", "name": "🦊", "category": "🏳️02 Renard", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "dragon-studio-holy-spell-cast-450460.mp3", "name": "😇", "category": "🏳️03 Salvateur", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "freesound_community-short-choir-6116.mp3", "name": "👼", "category": "🏳️03 Salvateur", "order": 2, "volume": 1.0}, {"type": "sfx", "file": "Voicy_Howling werewolf sound effect.mp3", "name": "🐺", "category": "🐺04 Lycans", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "Voicy_Werewolves Sound Effects.mp3", "name": "💀", "category": "🐺04 Lycans", "order": 2, "volume": 1.0}, {"type": "sfx", "file": "freesound_community-wolf-howl-6310.mp3", "name": "🐺", "category": "🐺05 Alpha", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "universfield-wolf-howling-140235.mp3", "name": "🐺", "category": "🐺06 Grand Méchant", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "Voicy_Werewolves Sound Effects - Copie.mp3", "name": "🐺", "category": "🐺07 Noir (Infecte)", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "alesiadavina-werewolf-sound-pain-wail-457328.mp3", "name": "🐺", "category": "🐺08 Blanc (Solo)", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "freesound_community-bubbles-003-6397.mp3", "name": "🧋", "category": "🏳️09 Sorciere (1 Vie et Mort)", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "Witch Laughing.mp3", "name": "😏", "category": "🏳️09 Sorciere (1 Vie et Mort)", "order": 2, "volume": 1.0}, {"type": "sfx", "file": "dragon-studio-crow-caw-with-echoing-reverb-472375.mp3", "name": "🐦‍⬛", "category": "🏳️10 Corbeau (+2 Votes)", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "freesound_community-brahma-rooster-89888.mp3", "name": "⏰", "category": "###Au Matin###", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "Voicy_Suspense.mp3", "name": "👀", "category": "###Au Matin###", "order": 2, "volume": 1.0}, {"type": "sfx", "file": "universfield-bear-191995 - Copie.mp3", "name": "🐻", "category": "🏳️11 Montreur d'Ours (Grr Autour de Lui)", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "freesound_community-spas-12-89800.mp3", "name": "🔫", "category": "Roles", "order": 1, "volume": 1.0}, {"type": "sfx", "file": "VOXScrm_Cri wilhelm (ID 0477)_LaSonotheque.fr.mp3", "name": "😱", "category": "Roles", "order": 2, "volume": 1.0}]};
   </script>
 
   <script>
@@ -1485,7 +1500,7 @@ input[type="range"]{ width:100%; accent-color:var(--accent); }
       // Si on a déjà joué quelque chose, on garde la dernière cover.
       // Sinon on affiche la cover du 1er morceau dispo.
       nowTitle.textContent = lastTrack ? lastTrack.name : (musics[0]?.name || "Aucune musique");
-      nowSub.textContent = lastTrack ? "(en pause)" : "Choisis une track à droite";
+      nowSub.textContent = lastTrack ? SBT("(en pause)", "(paused)") : SBT("Choisis une track à droite", "Pick a track on the right");
       btnPlayPause.textContent = "▶";
       bar.style.width = "0%";
       tCur.textContent = "0:00";
@@ -1822,7 +1837,7 @@ input[type="range"]{ width:100%; accent-color:var(--accent); }
     btnDownload.addEventListener("click", async (ev) => {
       ev.preventDefault();
       const orig = btnDownload.textContent;
-      btnDownload.textContent = "⏳ Préparation…";
+      btnDownload.textContent = SBT("⏳ Préparation…", "⏳ Preparing…");
       btnDownload.disabled = true;
       try {
         let blob;
@@ -1846,11 +1861,11 @@ input[type="range"]{ width:100%; accent-color:var(--accent); }
         a.remove();
         // Libère le blob après un délai (le download a déjà commencé)
         setTimeout(() => URL.revokeObjectURL(url), 5000);
-        btnDownload.textContent = "✅ Téléchargé";
+        btnDownload.textContent = SBT("✅ Téléchargé", "✅ Downloaded");
         setTimeout(() => { btnDownload.textContent = orig; }, 1800);
       } catch (e) {
         console.error("[download] failed:", e);
-        alert("Le téléchargement a échoué : " + e.message);
+        alert(SBT("Le téléchargement a échoué : ", "Download failed: ") + e.message);
         btnDownload.textContent = orig;
       } finally {
         btnDownload.disabled = false;
@@ -1874,7 +1889,7 @@ input[type="range"]{ width:100%; accent-color:var(--accent); }
       musicAudio.currentTime = 0;
       musicAudio.play();
       highlightActive(); updateNow();
-      nowTitle.textContent = lastTrack.name; nowSub.textContent = "Musique"; btnPlayPause.textContent = "⏸";
+      nowTitle.textContent = lastTrack.name; nowSub.textContent = SBT("Musique", "Music"); btnPlayPause.textContent = "⏸";
       return true;
     },
     playSfx(file, vol) {
@@ -1899,10 +1914,10 @@ input[type="range"]{ width:100%; accent-color:var(--accent); }
     const supported = ("serviceWorker" in navigator) && httpOK;
     if (!supported) {
       if (btn) {
-        btn.textContent = "📥 Hors-ligne (http requis)";
-        btn.title = "Le mode hors-ligne nécessite que la page soit servie via http(s) (GitHub Pages ou un serveur local), pas en ouverture directe du fichier (file://).";
+        btn.textContent = SBT("📥 Hors-ligne (http requis)", "📥 Offline (http required)");
+        btn.title = SBT("Le mode hors-ligne nécessite que la page soit servie via http(s) (GitHub Pages ou un serveur local), pas en ouverture directe du fichier (file://).", "Offline mode needs the page to be served over http(s) (GitHub Pages or a local server), not opened directly as a file (file://).");
         btn.addEventListener("click", () => {
-          alert("Le mode hors-ligne nécessite que la page soit servie via http(s) — par ex. GitHub Pages ou un petit serveur local — et non en double-cliquant le fichier (file://).");
+          alert(SBT("Le mode hors-ligne nécessite que la page soit servie via http(s) — par ex. GitHub Pages ou un petit serveur local — et non en double-cliquant le fichier (file://).", "Offline mode needs the page to be served over http(s) — e.g. GitHub Pages or a small local server — not by double-clicking the file (file://)."));
         });
       } else {
         console.warn("[offline] indisponible : la page doit être servie via http(s), pas en file://");
@@ -1969,11 +1984,11 @@ input[type="range"]{ width:100%; accent-color:var(--accent); }
           const res = await precacheViaSW(urls, (done, total) => {
             btn.textContent = "📥 " + done + "/" + total + "…";
           });
-          btn.textContent = "✅ Hors-ligne prêt (" + res.ok + ")";
+          btn.textContent = SBT("✅ Hors-ligne prêt (", "✅ Offline ready (") + res.ok + ")";
           setTimeout(() => { btn.textContent = orig; }, 3000);
         } catch (e) {
           console.error("[offline] KO:", e);
-          alert("Échec du chargement hors-ligne : " + e.message);
+          alert(SBT("Échec du chargement hors-ligne : ", "Offline download failed: ") + e.message);
           btn.textContent = orig;
         } finally {
           btn.disabled = false; busy = false;
@@ -1989,7 +2004,7 @@ input[type="range"]{ width:100%; accent-color:var(--accent); }
         pop = document.createElement('div');
         pop.id = 'offline-progress-pop';
         pop.style.cssText = 'position:fixed;right:14px;bottom:14px;z-index:99999;background:linear-gradient(135deg,rgba(25,25,45,0.96),rgba(40,30,60,0.96));border:1px solid rgba(199,125,255,0.5);border-radius:10px;padding:10px 14px;font:600 12px/1.3 system-ui,sans-serif;color:#e8e8f0;box-shadow:0 6px 24px rgba(0,0,0,0.5);max-width:250px;opacity:0;transition:opacity .3s;';
-        pop.innerHTML = '<div id="ofp-txt">Preparation hors-ligne...</div><div style="margin-top:6px;height:5px;border-radius:3px;background:rgba(255,255,255,0.15);overflow:hidden;"><div id="ofp-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#5174db,#c77dff);transition:width .2s;"></div></div>';
+        pop.innerHTML = '<div id="ofp-txt">' + SBT('Préparation hors-ligne…', 'Preparing offline mode…') + '</div><div style="margin-top:6px;height:5px;border-radius:3px;background:rgba(255,255,255,0.15);overflow:hidden;"><div id="ofp-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#5174db,#c77dff);transition:width .2s;"></div></div>';
         document.body.appendChild(pop);
         requestAnimationFrame(() => { if (pop) pop.style.opacity = '1'; });
         return pop;
@@ -2001,7 +2016,7 @@ input[type="range"]{ width:100%; accent-color:var(--accent); }
       };
       const showLocal = (n) => {
         ensurePopup();
-        pop.innerHTML = '<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:18px;">✅</span><div><div style="color:#66d999;">Version locale</div><div style="font-weight:400;opacity:0.78;font-size:11px;">' + n + ' fichiers en cache — hors-ligne OK</div></div></div>';
+        pop.innerHTML = '<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:18px;">✅</span><div><div style="color:#66d999;">' + SBT('Version locale', 'Local copy') + '</div><div style="font-weight:400;opacity:0.78;font-size:11px;">' + n + SBT(' fichiers en cache — hors-ligne OK', ' files cached — offline OK') + '</div></div></div>';
         setTimeout(() => { if (pop) { pop.style.opacity = '0'; setTimeout(() => { if (pop) { pop.remove(); pop = null; } }, 400); } }, 5000);
       };
       const run = async (attempt = 1) => {

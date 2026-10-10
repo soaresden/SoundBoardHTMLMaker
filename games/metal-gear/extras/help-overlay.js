@@ -9,6 +9,7 @@
   const ROT = { up: 0, right: 90, down: 180, left: 270 };
   const STOP = Symbol('stop');
   let RUN = 0, paused = false;
+  const T = (fr, en) => (window.tx || (f => f))(fr, en);   // i18n.js (FR/EN) si présent
   const W = ms => { const r = RUN; return new Promise((ok, ko) => setTimeout(() => (RUN === r ? ok() : ko(STOP)), ms)); };
   const waitWhilePaused = async () => { while (paused) await W(150); };
   const mk = (t, a = {}, txt) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); if (txt != null) e.textContent = txt; return e; };
@@ -118,7 +119,7 @@
   const SC = [];
   const scene = (o) => SC.push(o);
 
-  scene({ ic: '🔄', t: 'Un round', cols: 7, rows: 3, hud: 20,
+  scene({ ic: '🔄', t: T('Un round', 'One round'), cols: 7, rows: 3, hud: 20,
     setup(b) {
       this.n = [['🔄', 1], ['🧑‍🤝‍🧑', 3], ['💂', 5]].map(([e, x]) => {
         const g = mk('g', { class: 'node', transform: `translate(${x * S + S / 2},${S * 1.5})` });
@@ -128,128 +129,128 @@
       b.L.fx.appendChild(mk('path', { d: `M ${S * 2.4} ${S * 1.5} L ${S * 2.6} ${S * 1.5} M ${S * 4.4} ${S * 1.5} L ${S * 4.6} ${S * 1.5}`, class: 'link' }));
     },
     steps: [
-      ['Chacun reprend ses 4 jetons', async function () { this.n.forEach((g, i) => g.classList.toggle('mh-on', i === 0)); await W(1500); }],
-      ['Tous les joueurs jouent', async function () { this.n.forEach((g, i) => g.classList.toggle('mh-on', i === 1)); await W(1500); }],
-      ['Puis les ennemis', async function () { this.n.forEach((g, i) => g.classList.toggle('mh-on', i === 2)); await W(1500); }],
+      [T('Chacun reprend ses 4 jetons', 'Everyone takes back 4 Action tokens'), async function () { this.n.forEach((g, i) => g.classList.toggle('mh-on', i === 0)); await W(1500); }],
+      [T('Tous les joueurs jouent', 'All players take their turns'), async function () { this.n.forEach((g, i) => g.classList.toggle('mh-on', i === 1)); await W(1500); }],
+      [T('Puis les ennemis', 'Then the enemies'), async function () { this.n.forEach((g, i) => g.classList.toggle('mh-on', i === 2)); await W(1500); }],
     ] });
 
-  scene({ ic: '🎮', t: '4 actions par tour', cols: 7, rows: 3,
+  scene({ ic: '🎮', t: T('4 actions par tour', '4 actions per turn'), cols: 7, rows: 3,
     setup(b) { b.piece('s', 'snake', 0, 1); b.hudTokens(4, 0); this.u = 0; },
     steps: [
-      ['Sneak : 1 case', async (b) => { b.hudTokens(4, 1); b.hl(1, 1); await b.move('s', 1, 1); }],
-      ['Dash : 2 cases… 🔊 bruyant', async (b) => { b.clearFx(); b.hudTokens(4, 2); b.hl(2, 1); b.hl(3, 1); b.waves(1, 1); await b.move('s', 2, 1, 260); await b.move('s', 3, 1); }],
-      ['Encore Sneak', async (b) => { b.clearFx(); b.hudTokens(4, 3); await b.move('s', 4, 1); }],
-      ['Dernier jeton', async (b) => { b.hudTokens(4, 4); await b.move('s', 5, 1); }],
-      ['Fin du tour', async (b) => { b.bubble(5, 1, '✅'); await W(900); }],
+      [T('Sneak : 1 case', 'Sneak: 1 space'), async (b) => { b.hudTokens(4, 1); b.hl(1, 1); await b.move('s', 1, 1); }],
+      [T('Dash : 2 cases… 🔊 bruyant', 'Dash: 2 spaces… 🔊 Noisy'), async (b) => { b.clearFx(); b.hudTokens(4, 2); b.hl(2, 1); b.hl(3, 1); b.waves(1, 1); await b.move('s', 2, 1, 260); await b.move('s', 3, 1); }],
+      [T('Encore Sneak', 'Sneak again'), async (b) => { b.clearFx(); b.hudTokens(4, 3); await b.move('s', 4, 1); }],
+      [T('Dernier jeton', 'Last token'), async (b) => { b.hudTokens(4, 4); await b.move('s', 5, 1); }],
+      [T('Fin du tour', 'End of turn'), async (b) => { b.bubble(5, 1, '✅'); await W(900); }],
     ] });
 
-  scene({ ic: '✚', t: 'Jamais en diagonale', cols: 5, rows: 5,
+  scene({ ic: '✚', t: T('Jamais en diagonale', 'Never diagonally'), cols: 5, rows: 5,
     setup(b) { b.piece('s', 'snake', 2, 2); b.wall(2, 1, 'right'); b.wall(2, 2, 'right'); b.wall(2, 3, 'right'); },
     steps: [
-      ['Haut, bas, gauche : oui', async (b) => { [[2, 1], [2, 3], [1, 2]].forEach(([x, y]) => b.hl(x, y, 'mh-ok')); await W(1300); }],
-      ['Diagonale : non', async (b) => { b.clearFx(); [[1, 1], [3, 1], [1, 3], [3, 3]].forEach(([x, y]) => { b.hl(x, y, 'mh-ko'); b.bubble(x, y + 0.75, '✖', 'mh-red'); }); await W(1400); }],
-      ['Mur rouge : bloqué', async (b) => { b.clearFx(); b.hl(3, 2, 'mh-ko'); const p = b.p.s; p.x = 2.25; b.place(p); await W(220); p.x = 2; b.place(p); await W(400); b.bubble(3, 2, '🧱', 'mh-red'); await W(900); }],
+      [T('Haut, bas, gauche : oui', 'Up, down, left: yes'), async (b) => { [[2, 1], [2, 3], [1, 2]].forEach(([x, y]) => b.hl(x, y, 'mh-ok')); await W(1300); }],
+      [T('Diagonale : non', 'Diagonal: no'), async (b) => { b.clearFx(); [[1, 1], [3, 1], [1, 3], [3, 3]].forEach(([x, y]) => { b.hl(x, y, 'mh-ko'); b.bubble(x, y + 0.75, '✖', 'mh-red'); }); await W(1400); }],
+      [T('Mur rouge : bloqué', 'Red wall: blocked'), async (b) => { b.clearFx(); b.hl(3, 2, 'mh-ko'); const p = b.p.s; p.x = 2.25; b.place(p); await W(220); p.x = 2; b.place(p); await W(400); b.bubble(3, 2, '🧱', 'mh-red'); await W(900); }],
     ] });
 
-  scene({ ic: '🤸', t: 'Saute-mouton', cols: 6, rows: 3,
+  scene({ ic: '🤸', t: T('Saute-mouton', 'Leapfrog'), cols: 6, rows: 3,
     setup(b) { b.piece('s', 'snake', 1, 1); b.piece('g', 'guard', 2, 1, 'down'); b.obstacle(2, 0); b.obstacle(2, 2); },
     steps: [
-      ['Un garde bloque le couloir', async (b) => { b.hl(2, 1, 'mh-ko'); await W(1100); }],
-      ['Saute par-dessus = 1 case', async (b) => { b.clearFx(); await b.jump('s', 3, 1); }],
-      ['… mais il t\'attaque !', async (b) => { b.bubble(2, 1, '⚔️', 'mh-red'); await W(1100); }],
-      ['Et tu es repéré', async (b) => { b.clearFx(); b.token('a', '!', 3, 1); b.remove('s'); b.piece('s', 'snake', 3, 1); await W(1200); }],
+      [T('Un garde bloque le couloir', 'A guard blocks the hallway'), async (b) => { b.hl(2, 1, 'mh-ko'); await W(1100); }],
+      [T('Saute par-dessus = 1 case', 'Leapfrog over him = 1 space'), async (b) => { b.clearFx(); await b.jump('s', 3, 1); }],
+      [T('… mais il t\'attaque !', '…but he attacks you!'), async (b) => { b.bubble(2, 1, '⚔️', 'mh-red'); await W(1100); }],
+      [T('Et tu es repéré', "And you're spotted"), async (b) => { b.clearFx(); b.token('a', '!', 3, 1); b.remove('s'); b.piece('s', 'snake', 3, 1); await W(1200); }],
     ] });
 
-  scene({ ic: '👁️', t: 'Vu ou pas vu ?', cols: 7, rows: 4,
+  scene({ ic: '👁️', t: T('Vu ou pas vu ?', 'Seen or not?'), cols: 7, rows: 4,
     setup(b) { b.obstacle(4, 1); b.piece('g', 'guard', 1, 1, 'right'); b.piece('s', 'snake', 6, 1); },
     steps: [
-      ['Il regarde tout ce qui est à droite', async (b) => { b.half(1, 1, 'right'); await W(1400); }],
-      ['Obstacle dans la « boîte » : caché', async (b) => { b.clearFx(); b.box(1, 1, 6, 1, false); b.bubble(6, 1, '😌'); await W(1500); }],
-      ['Boîte vide : VU !', async (b) => { b.clearFx(); await b.path('s', [[6, 2], [6, 3], [5, 3], [4, 3], [3, 3]], 300); b.box(1, 1, 3, 3, true); b.bubble(3, 3, '🚨', 'mh-red'); await W(500); b.token('a', '!', 3, 3); await W(900); }],
-      ['Dans son dos : invisible', async (b) => { b.clearFx(); b.untoken('a'); b.remove('s'); b.piece('s', 'snake', 0, 2); b.half(1, 1, 'right'); b.bubble(0, 2, '😌'); await W(1500); }],
+      [T('Il regarde tout ce qui est à droite', 'He sees everything to his right'), async (b) => { b.half(1, 1, 'right'); await W(1400); }],
+      [T('Obstacle dans la « boîte » : caché', 'Obstacle in the "box": hidden'), async (b) => { b.clearFx(); b.box(1, 1, 6, 1, false); b.bubble(6, 1, '😌'); await W(1500); }],
+      [T('Boîte vide : VU !', 'Empty box: SEEN!'), async (b) => { b.clearFx(); await b.path('s', [[6, 2], [6, 3], [5, 3], [4, 3], [3, 3]], 300); b.box(1, 1, 3, 3, true); b.bubble(3, 3, '🚨', 'mh-red'); await W(500); b.token('a', '!', 3, 3); await W(900); }],
+      [T('Dans son dos : invisible', 'Behind him: invisible'), async (b) => { b.clearFx(); b.untoken('a'); b.remove('s'); b.piece('s', 'snake', 0, 2); b.half(1, 1, 'right'); b.bubble(0, 2, '😌'); await W(1500); }],
     ] });
 
-  scene({ ic: '🔊', t: 'Le bruit', cols: 7, rows: 4,
+  scene({ ic: '🔊', t: T('Le bruit', 'Noise'), cols: 7, rows: 4,
     setup(b) { b.obstacle(3, 1); b.obstacle(3, 2); b.piece('s', 'snake', 0, 3); b.piece('g1', 'guard', 5, 0, 'down'); b.piece('g2', 'guard', 6, 3, 'up'); },
     steps: [
-      ['Dash = bruit', async (b) => { b.waves(0, 3); await b.move('s', 1, 3, 260); await b.move('s', 2, 3); }],
-      ['Fin du tour : 1 dé blanc', async (b) => { await b.dice([{ v: '!' }], 40); await W(500); }],
-      ['« ! » → jeton ? sur toi', async (b) => { b.token('q', '?', 2, 3); await W(1000); }],
-      ['Le garde le + proche vient voir…', async (b) => { b.hudClear(); b.hudText('🔵 4', 20, 'mh-blue'); await b.move('g2', 5, 3, 500); }],
-      ['… et te trouve !', async (b) => { b.box(2, 3, 5, 3, true); b.bubble(2, 3, '⚔️', 'mh-red'); await W(1500); }],
+      [T('Dash = bruit', 'Dash = noise'), async (b) => { b.waves(0, 3); await b.move('s', 1, 3, 260); await b.move('s', 2, 3); }],
+      [T('Fin du tour : 1 dé blanc', 'Noise check: 1 white die'), async (b) => { await b.dice([{ v: '!' }], 40); await W(500); }],
+      [T('« ! » → jeton ? sur toi', '"!" → ? token on you'), async (b) => { b.token('q', '?', 2, 3); await W(1000); }],
+      [T('Le garde le + proche vient voir…', 'The nearest guard investigates…'), async (b) => { b.hudClear(); b.hudText('🔵 4', 20, 'mh-blue'); await b.move('g2', 5, 3, 500); }],
+      [T('… et te trouve !', '…and finds you!'), async (b) => { b.box(2, 3, 5, 3, true); b.bubble(2, 3, '⚔️', 'mh-red'); await W(1500); }],
     ] });
 
-  scene({ ic: '🚨', t: 'Alerte !', cols: 7, rows: 4,
+  scene({ ic: '🚨', t: T('Alerte !', 'Alert!'), cols: 7, rows: 4,
     setup(b) { b.obstacle(3, 1); b.piece('s', 'snake', 5, 1); b.token('a', '!', 5, 1); b.piece('g1', 'guard', 0, 0, 'down'); b.piece('g2', 'guard', 0, 3, 'up'); },
     steps: [
-      ['Un ! dans la zone…', async (b) => { b.hl(5, 1, 'mh-ko'); await W(1200); }],
-      ['TOUS foncent dessus 🔴', async (b) => { b.hudText('🔴 6', 20, 'mh-red'); await Promise.all([b.path('g1', [[1, 0], [2, 0], [3, 0], [4, 0]], 320), b.path('g2', [[1, 3], [2, 3], [3, 3], [4, 3]], 320)]); }],
-      ['Dès qu\'ils te voient : attaque', async (b) => { b.box(4, 0, 5, 1, true); b.box(4, 1, 5, 3, true); b.bubble(4, 0, '⚔️', 'mh-red'); b.bubble(4, 3, '⚔️', 'mh-red'); await W(1700); }],
+      [T('Un ! dans la zone…', 'A ! in the zone…'), async (b) => { b.hl(5, 1, 'mh-ko'); await W(1200); }],
+      [T('TOUS foncent dessus 🔴', 'They ALL rush in 🔴'), async (b) => { b.hudText('🔴 6', 20, 'mh-red'); await Promise.all([b.path('g1', [[1, 0], [2, 0], [3, 0], [4, 0]], 320), b.path('g2', [[1, 3], [2, 3], [3, 3], [4, 3]], 320)]); }],
+      [T('Dès qu\'ils te voient : attaque', 'Once they see you: attack'), async (b) => { b.box(4, 0, 5, 1, true); b.box(4, 1, 5, 3, true); b.bubble(4, 0, '⚔️', 'mh-red'); b.bubble(4, 3, '⚔️', 'mh-red'); await W(1700); }],
     ] });
 
-  scene({ ic: '🚶', t: 'La patrouille', cols: 7, rows: 4,
+  scene({ ic: '🚶', t: T('La patrouille', 'Patrol'), cols: 7, rows: 4,
     setup(b) { b.token('t', 'turn', 4, 1); b.piece('g', 'guard', 0, 1, 'right'); b.obstacle(2, 3); b.obstacle(5, 0); },
     steps: [
-      ['Personne en vue : tout droit 🔵', async (b) => { b.hudText('🔵 5', 20, 'mh-blue'); await b.path('g', [[1, 1], [2, 1], [3, 1], [4, 1]], 420); }],
-      ['Flèche au sol : il tourne', async (b) => { await b.turn('g', 'down', 500); await b.path('g', [[4, 2]], 420); }],
-      ['5 cases, fini', async (b) => { b.bubble(4, 2, '5/5'); await W(1200); }],
+      [T('Personne en vue : tout droit 🔵', 'Nobody in sight: straight ahead 🔵'), async (b) => { b.hudText('🔵 5', 20, 'mh-blue'); await b.path('g', [[1, 1], [2, 1], [3, 1], [4, 1]], 420); }],
+      [T('Flèche au sol : il tourne', 'Arrow on the floor: he turns'), async (b) => { await b.turn('g', 'down', 500); await b.path('g', [[4, 2]], 420); }],
+      [T('5 cases, fini', '5 spaces, done'), async (b) => { b.bubble(4, 2, '5/5'); await W(1200); }],
     ] });
 
-  scene({ ic: '🤫', t: 'Élimination silencieuse', cols: 7, rows: 3,
+  scene({ ic: '🤫', t: T('Élimination silencieuse', 'Silent takedown'), cols: 7, rows: 3,
     setup(b) { b.piece('g', 'guard', 3, 1, 'right'); b.piece('s', 'snake', 0, 1); b.obstacle(6, 0); b.obstacle(6, 2); },
     steps: [
-      ['Il regarde ailleurs', async (b) => { b.half(3, 1, 'right'); await W(1100); }],
-      ['Snake se glisse dans son dos', async (b) => { await b.path('s', [[1, 1], [2, 1]], 420); }],
-      ['2 actions : éliminé, sans bruit', async (b) => { b.clearFx(); b.bubble(3, 1, '🤫'); await W(700); b.remove('g'); b.token('d', 'dead', 3, 1); await W(900); }],
-      ['Traîne le corps (1 action 🔊)', async (b) => { b.clearFx(); b.untoken('d'); await b.move('s', 3, 1); b.token('d', 'dead', 3, 2); b.waves(3, 1); await W(900); }],
+      [T('Il regarde ailleurs', 'He looks away'), async (b) => { b.half(3, 1, 'right'); await W(1100); }],
+      [T('Snake se glisse dans son dos', 'Snake sneaks up behind him'), async (b) => { await b.path('s', [[1, 1], [2, 1]], 420); }],
+      [T('2 actions : éliminé, sans bruit', '2 actions: taken out, no noise'), async (b) => { b.clearFx(); b.bubble(3, 1, '🤫'); await W(700); b.remove('g'); b.token('d', 'dead', 3, 1); await W(900); }],
+      [T('Traîne le corps (1 action 🔊)', 'Drag Body (1 action 🔊)'), async (b) => { b.clearFx(); b.untoken('d'); await b.move('s', 3, 1); b.token('d', 'dead', 3, 2); b.waves(3, 1); await W(900); }],
     ] });
 
   scene({ ic: '🎲', t: 'Combat', cols: 6, rows: 3,
     setup(b) { b.piece('s', 'snake', 2, 1); b.piece('g', 'guard', 3, 1, 'up'); },
     steps: [
-      ['Combo : 3 dés', async (b) => { await b.dice([{ v: 4 }, { v: 1 }, { v: 3, c: 'b' }], 34, 3); }],
-      ['Dé ≥ Défense 3 = 1 dégât', async (b) => { b.hudText('= 2 💥', 200, 'mh-big'); await W(1500); }],
-      ['2 dégâts KO : assommé', async (b) => { b.remove('g'); b.token('k', 'ko2', 3, 1); await W(1300); }],
+      [T('Combo : 3 dés', 'Combo: 3 dice'), async (b) => { await b.dice([{ v: 4 }, { v: 1 }, { v: 3, c: 'b' }], 34, 3); }],
+      [T('Dé ≥ Défense 3 = 1 dégât', 'Die ≥ Defense 3 = 1 damage'), async (b) => { b.hudText('= 2 💥', 200, 'mh-big'); await W(1500); }],
+      [T('2 dégâts KO : assommé', '2 KO damage: knocked out'), async (b) => { b.remove('g'); b.token('k', 'ko2', 3, 1); await W(1300); }],
     ] });
 
-  scene({ ic: '💤', t: 'Le KO se réveille', cols: 6, rows: 3,
+  scene({ ic: '💤', t: T('Le KO se réveille', 'KO guards wake up'), cols: 6, rows: 3,
     setup(b) { b.token('k', 'ko2', 2, 1); },
     steps: [
-      ['Assommé : ★★', async (b) => { await W(1200); }],
-      ['Carte « Réveil » : ★', async (b) => { b.hudText('🃏 ✨', 20); b.token('k', 'ko1', 2, 1); await W(1300); }],
-      ['Encore une : debout !', async (b) => { b.untoken('k'); b.piece('g', 'guard', 2, 1, 'right'); await W(1300); }],
+      [T('Assommé : ★★', 'Knocked out: ★★'), async (b) => { await W(1200); }],
+      [T('Carte « Réveil » : ★', '"Waken" card: ★'), async (b) => { b.hudText('🃏 ✨', 20); b.token('k', 'ko1', 2, 1); await W(1300); }],
+      [T('Encore une : debout !', 'Another one: back on his feet!'), async (b) => { b.untoken('k'); b.piece('g', 'guard', 2, 1, 'right'); await W(1300); }],
     ] });
 
-  scene({ ic: '📹', t: 'Les caméras', cols: 7, rows: 4,
+  scene({ ic: '📹', t: T('Les caméras', 'Cameras'), cols: 7, rows: 4,
     setup(b) { b.obstacle(1, 1); b.piece('c', 'camera', 3, 0, 'down'); b.piece('s', 'snake', 0, 3); },
     steps: [
-      ['Elle regarde dans 1 direction', async (b) => { b.half(3, 0, 'down'); await W(1400); }],
-      ['La carte ennemie la fait pivoter', async (b) => { b.clearFx(); await b.turn('c', 'right', 600); b.half(3, 0, 'right'); await W(900); }],
-      ['Elle regarde ailleurs : passe !', async (b) => { await b.path('s', [[1, 3], [2, 3], [2, 2], [2, 1], [2, 0]], 300); }],
-      ['Sur SA case : elle ne te voit pas', async (b) => { b.clearFx(); await b.move('s', 3, 0); b.p.s.s = 0.8; b.place(b.p.s); b.bubble(3, 0.9, '😌'); await W(1500); }],
+      [T('Elle regarde dans 1 direction', 'It faces 1 direction'), async (b) => { b.half(3, 0, 'down'); await W(1400); }],
+      [T('La carte ennemie la fait pivoter', 'The Guard Order card turns it'), async (b) => { b.clearFx(); await b.turn('c', 'right', 600); b.half(3, 0, 'right'); await W(900); }],
+      [T('Elle regarde ailleurs : passe !', "It's looking away: go!"), async (b) => { await b.path('s', [[1, 3], [2, 3], [2, 2], [2, 1], [2, 0]], 300); }],
+      [T('Sur SA case : elle ne te voit pas', "On ITS space: it can't see you"), async (b) => { b.clearFx(); await b.move('s', 3, 0); b.p.s.s = 0.8; b.place(b.p.s); b.bubble(3, 0.9, '😌'); await W(1500); }],
     ] });
 
-  scene({ ic: '🃏', t: 'Le chrono', cols: 7, rows: 2, hud: 30,
+  scene({ ic: '🃏', t: T('Le chrono', 'The clock'), cols: 7, rows: 2, hud: 30,
     setup(b) {
       this.cards = [];
       for (let i = 0; i < 9; i++) { const red = i >= 6; const r = mk('rect', { x: 40 + i * 4, y: 20 - i * 3, width: 70, height: 96, rx: 8, class: 'card ' + (red ? 'mh-r' : 'mh-b') }); b.L.top.appendChild(r); this.cards.push(r); }
     },
     steps: [
-      ['Bleues dessus, rouges dessous', async function () { await W(1400); }],
-      ['1 carte par tour ennemi', async function (b) { for (let k = 0; k < 6; k++) { const c = this.cards.pop(); c.setAttribute('class', c.getAttribute('class') + ' gone'); await W(330); } }],
-      ['Les rouges : ça presse !', async function () { this.cards.forEach(c => c.classList.add('pulse')); await W(1300); }],
-      ['GAME OVER = mission ratée', async function (b) { const c = this.cards.pop(); c.setAttribute('class', 'card mh-go'); const t = mk('text', { x: 300, y: 70, class: 'gotxt', 'text-anchor': 'middle' }, 'GAME OVER'); b.L.top.appendChild(t); await W(1600); }],
+      [T('Bleues dessus, rouges dessous', 'Blue on top, red underneath'), async function () { await W(1400); }],
+      [T('1 carte par tour ennemi', '1 card per enemy turn'), async function (b) { for (let k = 0; k < 6; k++) { const c = this.cards.pop(); c.setAttribute('class', c.getAttribute('class') + ' gone'); await W(330); } }],
+      [T('Les rouges : ça presse !', 'Red cards: hurry!'), async function () { this.cards.forEach(c => c.classList.add('pulse')); await W(1300); }],
+      [T('GAME OVER = mission ratée', 'GAME OVER = mission failed'), async function (b) { const c = this.cards.pop(); c.setAttribute('class', 'card mh-go'); const t = mk('text', { x: 300, y: 70, class: 'gotxt', 'text-anchor': 'middle' }, 'GAME OVER'); b.L.top.appendChild(t); await W(1600); }],
     ] });
 
-  scene({ ic: '👾', t: 'Les boss', cols: 7, rows: 4, hud: 90,
+  scene({ ic: '👾', t: T('Les boss', 'Bosses'), cols: 7, rows: 4, hud: 90,
     setup(b) { b.piece('bo', 'boss', 5, 1, 'left'); b.piece('s', 'snake', 1, 2); b.obstacle(3, 1);
       this.deck = mk('g', { transform: 'translate(20,-80)' });
       for (let i = 0; i < 4; i++) this.deck.appendChild(mk('rect', { x: i * 3, y: -i * 2, width: 46, height: 64, rx: 6, class: 'card bo' }));
       b.L.hud.appendChild(this.deck); },
     steps: [
-      ['Tour du boss : 1 carte', async function (b) { const c = this.deck.lastChild; c.setAttribute('class', 'card bo flip'); await W(900); }],
-      ['Il bouge et attaque', async (b) => { await b.path('bo', [[5, 2], [4, 2]], 360); b.bubble(1, 2, '⚔️', 'mh-red'); await W(1100); }],
-      ['Puis la carte va dessous', async function (b) { const c = this.deck.lastChild; c.setAttribute('class', 'card bo'); this.deck.insertBefore(c, this.deck.firstChild); await W(1200); }],
+      [T('Tour du boss : 1 carte', 'Boss turn: 1 card'), async function (b) { const c = this.deck.lastChild; c.setAttribute('class', 'card bo flip'); await W(900); }],
+      [T('Il bouge et attaque', 'It moves and attacks'), async (b) => { await b.path('bo', [[5, 2], [4, 2]], 360); b.bubble(1, 2, '⚔️', 'mh-red'); await W(1100); }],
+      [T('Puis la carte va dessous', 'Then the card goes to the bottom'), async function (b) { const c = this.deck.lastChild; c.setAttribute('class', 'card bo'); this.deck.insertBefore(c, this.deck.firstChild); await W(1200); }],
     ] });
 
   /* ===================== Overlay ===================== */
@@ -328,9 +329,9 @@
     if (built) return; built = true;
     const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
     root = document.createElement('div'); root.id = 'mgsHelp';
-    root.innerHTML = `<div class="mh-top"><div class="mh-t"><span class="ic"></span><span class="tt"></span></div><button class="mh-x" aria-label="Fermer">✕</button></div>
+    root.innerHTML = `<div class="mh-top"><div class="mh-t"><span class="ic"></span><span class="tt"></span></div><button class="mh-x" aria-label="${T('Fermer', 'Close')}">✕</button></div>
       <div class="mh-chap"></div><div class="mh-stage"><svg></svg></div><div class="mh-cap"></div>
-      <div class="mh-nav"><button class="pv" aria-label="Précédent">◀</button><button class="pp" aria-label="Pause">⏸</button><button class="nx" aria-label="Suivant">▶</button></div>`;
+      <div class="mh-nav"><button class="pv" aria-label="${T('Précédent', 'Previous')}">◀</button><button class="pp" aria-label="${T('Pause', 'Pause')}">⏸</button><button class="nx" aria-label="${T('Suivant', 'Next')}">▶</button></div>`;
     document.body.appendChild(root);
     svg = root.querySelector('svg'); cap = root.querySelector('.mh-cap'); chap = root.querySelector('.mh-chap');
     chap.innerHTML = SC.map((s, i) => `<button data-i="${i}" title="${s.t}">${s.ic}</button>`).join('');
@@ -379,7 +380,7 @@
   const addBtn = () => {
     if (document.querySelector('[data-mgs-help]')) { document.querySelectorAll('[data-mgs-help]').forEach(b => b.addEventListener('click', () => open())); return; }
     const st = document.createElement('style'); st.textContent = css.split('\n').filter(l => l.includes('#mgsHelpBtn')).join('\n'); document.head.appendChild(st);
-    const b = document.createElement('button'); b.id = 'mgsHelpBtn'; b.textContent = '?'; b.title = 'Aide animée (touche ?)'; b.onclick = () => open(); document.body.appendChild(b);
+    const b = document.createElement('button'); b.id = 'mgsHelpBtn'; b.textContent = '?'; b.title = T('Aide animée (touche ?)', 'Animated help (? key)'); b.onclick = () => open(); document.body.appendChild(b);
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', addBtn); else addBtn();
 })();
