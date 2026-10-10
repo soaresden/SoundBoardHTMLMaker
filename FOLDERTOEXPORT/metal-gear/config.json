@@ -1,0 +1,647 @@
+{
+  "project": {
+    "name": "Metal Gear Solid",
+    "version": 1,
+    "themeColor": "#5b8cff",
+    "themeColor2": "#8a5cff",
+    "offline": "button",
+    "versionSwitch": false,
+    "description": "Ambiances et voix de Metal Gear Solid + guide interactif : règles animées, 14 missions, errata, assistant de partie.",
+    "links": [
+      {
+        "title": "📖 Guide & missions",
+        "href": "guide.html"
+      }
+    ]
+  },
+  "musicCategories": [
+    {
+      "name": "❗Alert et GameOver",
+      "pos": 1
+    },
+    {
+      "name": "⏳Stage Setup",
+      "pos": 2
+    },
+    {
+      "name": "Stage 1 - Caverns",
+      "pos": 3
+    },
+    {
+      "name": "Stage 2 - Heliport",
+      "pos": 4
+    },
+    {
+      "name": "Stage 3 - Holding Cell-Armory",
+      "pos": 5
+    },
+    {
+      "name": "🐯Stage 4 - OCELOT",
+      "pos": 6
+    },
+    {
+      "name": "🪖Stage 5 - M1 TANK",
+      "pos": 7
+    },
+    {
+      "name": "Stage 6 - WarHead Storage",
+      "pos": 8
+    },
+    {
+      "name": "🥷Stage 7 - NINJA",
+      "pos": 9
+    },
+    {
+      "name": "🔮Stage 8 - PSYCHO MANTIS",
+      "pos": 10
+    },
+    {
+      "name": "Stage 9 - Escape Cell",
+      "pos": 11
+    },
+    {
+      "name": "🚁Stage 10 - HIND",
+      "pos": 12
+    },
+    {
+      "name": "🎯Stage 11 - SNIPER WOLF",
+      "pos": 13
+    },
+    {
+      "name": "🦅Stage 12 - VULCAN RAVEN",
+      "pos": 14
+    },
+    {
+      "name": "💳Stage 13 - Pan Card",
+      "pos": 15
+    },
+    {
+      "name": "🤖Stage 14 - REX",
+      "pos": 16
+    },
+    {
+      "name": "VR Stage",
+      "pos": 17
+    }
+  ],
+  "sfxCategories": [
+    {
+      "name": "Interaction",
+      "pos": 1
+    },
+    {
+      "name": "Combat",
+      "pos": 2
+    },
+    {
+      "name": "Guardes",
+      "pos": 3
+    },
+    {
+      "name": "Degats",
+      "pos": 4
+    },
+    {
+      "name": "Jingles",
+      "pos": 5
+    }
+  ],
+  "music": [
+    {
+      "file": "06. Encounter.mp3",
+      "title": "Encounter (Alert)",
+      "disc": 0,
+      "track": 6,
+      "category": "❗Alert et GameOver",
+      "pos": 1,
+      "volume": 0.7,
+      "cover": "covers/06._Encounter.mp3.jpg"
+    },
+    {
+      "file": "old alert.mp3",
+      "title": "Old Alert",
+      "disc": 0,
+      "track": 0,
+      "category": "❗Alert et GameOver",
+      "pos": 2,
+      "volume": 0.7,
+      "cover": null
+    },
+    {
+      "file": "19. VR Training.mp3",
+      "title": "VR Training",
+      "disc": 1,
+      "track": 19,
+      "category": "VR Stage",
+      "pos": 1,
+      "volume": 0.7,
+      "cover": "covers/19._VR_Training.mp3.png"
+    },
+    {
+      "file": "Vr2.mp3",
+      "title": "VR 2",
+      "disc": 0,
+      "track": 0,
+      "category": "VR Stage",
+      "pos": 2,
+      "volume": 0.7,
+      "cover": null
+    },
+    {
+      "file": "vr gameover.mp3",
+      "title": "VR Game Over",
+      "disc": 0,
+      "track": 0,
+      "category": "VR Stage",
+      "pos": 3,
+      "volume": 0.7,
+      "cover": null
+    },
+    {
+      "file": "wind.mp3",
+      "title": "Wind",
+      "disc": 0,
+      "track": 0,
+      "category": "Stage 2 - Heliport",
+      "pos": 1,
+      "volume": 0.7,
+      "cover": null
+    },
+    {
+      "file": "snowfield.mp3",
+      "title": "Snowfield",
+      "disc": 0,
+      "track": 0,
+      "category": "Stage 2 - Heliport",
+      "pos": 2,
+      "volume": 0.7,
+      "cover": null
+    },
+    {
+      "file": "01-Brief.mp3",
+      "title": "01-Brief Mission",
+      "disc": 0,
+      "track": 0,
+      "category": "Stage 1 - Caverns",
+      "pos": 1,
+      "volume": 0.7,
+      "cover": null
+    },
+    {
+      "file": "04. Cavern.mp3",
+      "title": "Cavern (Stage 1 & 9)",
+      "disc": 0,
+      "track": 4,
+      "category": "Stage 1 - Caverns",
+      "pos": 2,
+      "volume": 0.7,
+      "cover": "covers/04._Cavern.mp3.jpg"
+    },
+    {
+      "file": "05. Intruder 1.mp3",
+      "title": "Intruder 1 — Holding Cell",
+      "disc": 0,
+      "track": 5,
+      "category": "Stage 3 - Holding Cell-Armory",
+      "pos": 1,
+      "volume": 0.7,
+      "cover": "covers/05._Intruder_1.mp3.jpg"
+    },
+    {
+      "file": "07. Intruder 2.mp3",
+      "title": "Intruder 2 — Armory",
+      "disc": 0,
+      "track": 7,
+      "category": "Stage 3 - Holding Cell-Armory",
+      "pos": 2,
+      "volume": 0.7,
+      "cover": "covers/07._Intruder_2.mp3.jpg"
+    },
+    {
+      "file": "12. Duel.mp3",
+      "title": "Duel — Boss Theme",
+      "disc": 1,
+      "track": 12,
+      "category": "🐯Stage 4 - OCELOT",
+      "pos": 1,
+      "volume": 0.7,
+      "cover": "covers/12._Duel.mp3.png"
+    },
+    {
+      "file": "12. Duel.mp3",
+      "title": "Duel — Boss Theme",
+      "disc": 1,
+      "track": 12,
+      "category": "🪖Stage 5 - M1 TANK",
+      "pos": 1,
+      "volume": 0.7,
+      "cover": "covers/12._Duel.mp3.png"
+    },
+    {
+      "file": "08. Warhead Storage.mp3",
+      "title": "Warhead Storage",
+      "disc": 1,
+      "track": 8,
+      "category": "Stage 6 - WarHead Storage",
+      "pos": 1,
+      "volume": 0.7,
+      "cover": "covers/08._Warhead_Storage.mp3.png"
+    },
+    {
+      "file": "12. Duel.mp3",
+      "title": "Duel — Boss Theme",
+      "disc": 1,
+      "track": 12,
+      "category": "🥷Stage 7 - NINJA",
+      "pos": 1,
+      "volume": 0.7,
+      "cover": "covers/12._Duel.mp3.png"
+    },
+    {
+      "file": "12. Duel.mp3",
+      "title": "Duel — Boss Theme",
+      "disc": 1,
+      "track": 12,
+      "category": "🔮Stage 8 - PSYCHO MANTIS",
+      "pos": 1,
+      "volume": 0.7,
+      "cover": "covers/12._Duel.mp3.png"
+    },
+    {
+      "file": "04. Cavern.mp3",
+      "title": "Cavern (Stage 1 & 9)",
+      "disc": 0,
+      "track": 4,
+      "category": "Stage 9 - Escape Cell",
+      "pos": 1,
+      "volume": 0.7,
+      "cover": "covers/04._Cavern.mp3.jpg"
+    },
+    {
+      "file": "torture.mp3",
+      "title": "Torture",
+      "disc": 0,
+      "track": 0,
+      "category": "Stage 9 - Escape Cell",
+      "pos": 2,
+      "volume": 0.7,
+      "cover": null
+    },
+    {
+      "file": "12. Duel.mp3",
+      "title": "Duel — Boss Theme",
+      "disc": 1,
+      "track": 12,
+      "category": "🚁Stage 10 - HIND",
+      "pos": 1,
+      "volume": 0.7,
+      "cover": "covers/12._Duel.mp3.png"
+    },
+    {
+      "file": "hind.mp3",
+      "title": "HIND Theme",
+      "disc": 0,
+      "track": 0,
+      "category": "🚁Stage 10 - HIND",
+      "pos": 2,
+      "volume": 0.7,
+      "cover": null
+    },
+    {
+      "file": "12. Duel.mp3",
+      "title": "Duel — Boss Theme",
+      "disc": 1,
+      "track": 12,
+      "category": "🎯Stage 11 - SNIPER WOLF",
+      "pos": 1,
+      "volume": 0.7,
+      "cover": "covers/12._Duel.mp3.png"
+    },
+    {
+      "file": "12. Duel.mp3",
+      "title": "Duel — Boss Theme",
+      "disc": 1,
+      "track": 12,
+      "category": "🦅Stage 12 - VULCAN RAVEN",
+      "pos": 1,
+      "volume": 0.7,
+      "cover": "covers/12._Duel.mp3.png"
+    },
+    {
+      "file": "12. Duel.mp3",
+      "title": "Duel — Boss Theme",
+      "disc": 1,
+      "track": 12,
+      "category": "💳Stage 13 - Pan Card",
+      "pos": 1,
+      "volume": 0.7,
+      "cover": "covers/12._Duel.mp3.png"
+    },
+    {
+      "file": "16. Rex's Lair.mp3",
+      "title": "Rex's Lair - Normal Pan",
+      "disc": 1,
+      "track": 16,
+      "category": "💳Stage 13 - Pan Card",
+      "pos": 2,
+      "volume": 0.7,
+      "cover": "covers/16._Rex_s_Lair.mp3.png"
+    },
+    {
+      "file": "15. Colosseo.mp3",
+      "title": "Colosseo - Cold Pan",
+      "disc": 0,
+      "track": 15,
+      "category": "💳Stage 13 - Pan Card",
+      "pos": 3,
+      "volume": 0.7,
+      "cover": "covers/15._Colosseo.mp3.jpg"
+    },
+    {
+      "file": "14. Blast Furnace.mp3",
+      "title": "Blast Furnace - Heat Pan",
+      "disc": 1,
+      "track": 14,
+      "category": "💳Stage 13 - Pan Card",
+      "pos": 4,
+      "volume": 0.7,
+      "cover": "covers/14._Blast_Furnace.mp3.png"
+    },
+    {
+      "file": "16. Rex's Lair.mp3",
+      "title": "Rex's Lair",
+      "disc": 1,
+      "track": 16,
+      "category": "🤖Stage 14 - REX",
+      "pos": 1,
+      "volume": 0.7,
+      "cover": "covers/16._Rex_s_Lair.mp3.png"
+    },
+    {
+      "file": "12. Duel.mp3",
+      "title": "Duel — Boss Theme",
+      "disc": 1,
+      "track": 12,
+      "category": "🤖Stage 14 - REX",
+      "pos": 2,
+      "volume": 0.7,
+      "cover": "covers/12._Duel.mp3.png"
+    },
+    {
+      "file": "00-BriefJeu.mp3",
+      "title": "00-Brief Jeu",
+      "disc": 0,
+      "track": 0,
+      "category": "⏳Stage Setup",
+      "pos": 1,
+      "volume": 0.7,
+      "cover": null
+    },
+    {
+      "file": "intro ninja.mp3",
+      "title": "00-Brief Jeu",
+      "disc": 0,
+      "track": 0,
+      "category": "⏳Stage Setup",
+      "pos": 1,
+      "volume": 0.7,
+      "cover": null
+    },
+    {
+      "file": "ninja fini.mp3",
+      "title": "00-Brief Jeu",
+      "disc": 0,
+      "track": 0,
+      "category": "⏳Stage Setup",
+      "pos": 1,
+      "volume": 0.7,
+      "cover": null
+    }
+  ],
+  "sfx": [
+    {
+      "file": "codec.mp3",
+      "label": "📞 Codec",
+      "category": "Interaction",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "mgs-knock-a.mp3",
+      "label": "👊🧱 Wall knock",
+      "category": "Interaction",
+      "pos": 2,
+      "volume": 1
+    },
+    {
+      "file": "mgs-pick-up-item.mp3",
+      "label": "🎒 Pick up item",
+      "category": "Interaction",
+      "pos": 3,
+      "volume": 1
+    },
+    {
+      "file": "mgs-rations.mp3",
+      "label": "🍴 Ration",
+      "category": "Interaction",
+      "pos": 4,
+      "volume": 1
+    },
+    {
+      "file": "mgs-elevator2.mp3",
+      "label": "🚪↕ Elevator",
+      "category": "Interaction",
+      "pos": 5,
+      "volume": 1
+    },
+    {
+      "file": "mgs-door-open.mp3",
+      "label": "🚪 Door opens",
+      "category": "Interaction",
+      "pos": 6,
+      "volume": 1
+    },
+    {
+      "file": "punch-guard-kox1.mp3",
+      "label": "👊 KO x1",
+      "category": "Combat",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "knock-out-guard-kox2.mp3",
+      "label": "👊✨ KO x2",
+      "category": "Combat",
+      "pos": 2,
+      "volume": 1
+    },
+    {
+      "file": "mgs-silent-takedown.mp3",
+      "label": "🤫 Silent takedown",
+      "category": "Combat",
+      "pos": 3,
+      "volume": 1
+    },
+    {
+      "file": "mgs-socom.mp3",
+      "label": "🔫 SOCOM",
+      "category": "Combat",
+      "pos": 4,
+      "volume": 1
+    },
+    {
+      "file": "mgs-socom-silenced.mp3",
+      "label": "🔫🔇 SOCOM silenced",
+      "category": "Combat",
+      "pos": 5,
+      "volume": 1
+    },
+    {
+      "file": "mgs-fa-mas.mp3",
+      "label": "🔫 FA-MAS",
+      "category": "Combat",
+      "pos": 6,
+      "volume": 1
+    },
+    {
+      "file": "mgs-grenade.mp3",
+      "label": "💣 Grenade",
+      "category": "Combat",
+      "pos": 7,
+      "volume": 1
+    },
+    {
+      "file": "mgs-grenade-chaff.mp3",
+      "label": "💣 Chaff grenade",
+      "category": "Combat",
+      "pos": 8,
+      "volume": 1
+    },
+    {
+      "file": "mgs-explosion.mp3",
+      "label": "💥 Explosion",
+      "category": "Combat",
+      "pos": 9,
+      "volume": 1
+    },
+    {
+      "file": "tindeck_1.mp3",
+      "label": "❗ ALERT",
+      "category": "Guardes",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "mgs-alert-camera.mp3",
+      "label": "❗📸 Camera ALERT",
+      "category": "Guardes",
+      "pos": 2,
+      "volume": 1
+    },
+    {
+      "file": "guard-i-heard-something_SP0Q6Fw.mp3",
+      "label": "👮❔ I heard something",
+      "category": "Guardes",
+      "pos": 3,
+      "volume": 1
+    },
+    {
+      "file": "guard-what-was-that-noise_IVtXtq7.mp3",
+      "label": "👮‍♂️❔ What was that noise?",
+      "category": "Guardes",
+      "pos": 4,
+      "volume": 1
+    },
+    {
+      "file": "guard-whats-that_8vgwEbf.mp3",
+      "label": "👮‍♂️❔ What's that?",
+      "category": "Guardes",
+      "pos": 5,
+      "volume": 1
+    },
+    {
+      "file": "guard-whos-that_x8gyPDo.mp3",
+      "label": "👮‍♂️❗ Who's that?",
+      "category": "Guardes",
+      "pos": 6,
+      "volume": 1
+    },
+    {
+      "file": "guard-there-he-is_JHZ7rPO.mp3",
+      "label": "👮‍♂️❗🔊 There he is!",
+      "category": "Guardes",
+      "pos": 7,
+      "volume": 1
+    },
+    {
+      "file": "guard-this-way_dYsTCuS.mp3",
+      "label": "👮‍♂️❗🔊 This way!",
+      "category": "Guardes",
+      "pos": 8,
+      "volume": 1
+    },
+    {
+      "file": "guard-eat-this_r8zo9ce.mp3",
+      "label": "👮‍♂️❗ Eat this!",
+      "category": "Guardes",
+      "pos": 9,
+      "volume": 1
+    },
+    {
+      "file": "guard-whered-he-go_zHLpH97.mp3",
+      "label": "👮‍♂️❗ Where'd he go?",
+      "category": "Guardes",
+      "pos": 10,
+      "volume": 1
+    },
+    {
+      "file": "guard-return-to-your-positions_9aocsFp.mp3",
+      "label": "👮‍♂️🔊 Return to positions",
+      "category": "Guardes",
+      "pos": 11,
+      "volume": 1
+    },
+    {
+      "file": "mgs-damage-snake.mp3",
+      "label": "🐍💥 Snake takes damage",
+      "category": "Degats",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "mgs-damage-gray-fox.mp3",
+      "label": "🤖💥 Gray Fox takes damage",
+      "category": "Degats",
+      "pos": 2,
+      "volume": 1
+    },
+    {
+      "file": "mgs-damage-meryl.mp3",
+      "label": "👩‍🦰💥 Meryl takes damage",
+      "category": "Degats",
+      "pos": 3,
+      "volume": 1
+    },
+    {
+      "file": "mgs-damage-otacon.mp3",
+      "label": "👓💥 Otacon takes damage",
+      "category": "Degats",
+      "pos": 4,
+      "volume": 1
+    },
+    {
+      "file": "metal-gear-solid-impressive-snake.mp3",
+      "label": "✅ Impressive, Snake!",
+      "category": "Jingles",
+      "pos": 1,
+      "volume": 1
+    },
+    {
+      "file": "snake-dies-with-game-over.mp3",
+      "label": "💀 Game Over",
+      "category": "Jingles",
+      "pos": 2,
+      "volume": 1
+    }
+  ]
+}
