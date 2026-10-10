@@ -101,7 +101,7 @@
     for (let i = 0; i < n; i++) setTimeout(() => { if (water) A.sfx(AU().water); else { const a = AU()[kind] || []; if (a.length) A.sfx(a[stepAlt++ % a.length]); } }, i * 340);
   };
   const missionTrack = m => { const ss = stageSnd(m); return ss.start || ((ss.music || []).find(x => !/brief/i.test(x[0])) || [])[0]; };
-  const briefTrack = m => stageSnd(m).brief || ((SND().setup || [])[0] || [])[0];
+  const briefTrack = m => stageSnd(m).brief || null;   // seulement un brief propre à la mission (00-BriefJeu = intro du jeu, jamais automatique)
   function syncAlert() {
     const g = game(), m = mission(); if (!g || !st.auto) return;
     const alert = g.players.some(p => p.att === 2), al = ((SND().alert || [])[0] || [])[0];
