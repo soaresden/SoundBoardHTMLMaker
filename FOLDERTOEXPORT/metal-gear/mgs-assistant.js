@@ -14,6 +14,7 @@
   const SND = () => window.MGS_SOUNDS || { stages: {}, groups: [], auto: {} };
   const CHARS = () => window.MGS_CHARS || [];
   const CE = { 'Snake': '🐍', 'Meryl': '🔫', 'Otacon': '🤓', 'Gray Fox': '🥷' };
+  const BOSSE = { 4: '🤠', 5: '🪖', 7: '⚔️', 8: '🔮', 10: '🚁', 11: '🐺', 12: '🦅', 14: '🤖' };
   const CC = { 'Snake': '#4aa3ff', 'Meryl': '#ff6b8a', 'Otacon': '#ffd166', 'Gray Fox': '#b8f7c8' };
   const ROSTER = ['Snake', 'Meryl', 'Gray Fox', 'Otacon'];
   const now = () => Date.now();
@@ -58,13 +59,15 @@
     for (let i = 0; i < (+L.guards || 0); i++) pieces.push({ id: 'g' + i, k: 'guard', x: null, y: null, f: 'down' });
     for (let i = 0; i < (+L.cameras || 0); i++) pieces.push({ id: 'c' + i, k: 'cam', x: null, y: null, f: 'down' });
     if (isBoss(m)) pieces.push({ id: 'boss', k: 'boss', x: null, y: null, f: 'down' });
-    return {
+    const obj = {
       n, started: false, t0: null, t1: null, round: 1, phase: 0, step: 0, cur: 0,
       players: pchars(m, n).map(name => ({ name, left: 4, noisy: 0, dmg: 0, att: 0, done: false, hurt: false, water: false, sneakUsed: false,
         s: { act: 0, move: 0, atk: 0, hit: 0, dmgIn: 0, alerts: 0, noise: 0, ko: 0, kill: 0 } })),
       deck: isSneak(m) ? parseDeck(m, n) : null, cam: 'vert', boss: { dmg: 0, threat: 0, cards: 0 },
       ko2: 0, ko1: 0, dead: 0, pieces, ev: {}, over: null, why: '', log: [], alerts: 0,
     };
+    if (isGrid(m)) { obj.pieces = gridPieces(m, n); obj.grid = true; obj.elev = GRID(m).elevStart || false; obj.doors = {}; obj.card = { red: 6, blue: 4, arrow: 'right' }; }
+    return obj;
   }
   const game = () => {
     const m = mission(); if (!m) return null;
@@ -104,6 +107,296 @@
     const alert = g.players.some(p => p.att === 2), al = ((SND().alert || [])[0] || [])[0];
     if (alert && al && A.mode !== 'alert') A.music(al, 'alert');
     else if (!alert && A.mode === 'alert') { A.sfx(AU().clearAlarm); log('✅ Fin de l\'alerte', 'alert'); setTimeout(() => A.music(missionTrack(m), 'mission'), 900); }
+  }
+
+
+  /* ======================= Mode QUADRILLAGE (missions numérisées) ======================= */
+  const GRID = m => (window.MGS_GRIDS || {})[m.id] || null;
+  const isGrid = m => !!(m && GRID(m) && window.MGSGrid);
+  const worlds = {};
+  const fixOf = m => LS.get('mgsg.fix.' + m.id, { walls: [], cells: {} });
+  const world = m => {
+    if (worlds[m.id]) return worlds[m.id];
+    const W = window.MGSGrid.build(GRID(m)), fx = fixOf(m);
+    Object.entries(fx.cells || {}).forEach(([k, v]) => { if (v === ' ') delete W.cells[k]; else W.cells[k] = v; });
+    (fx.walls || []).forEach(k => { if (W.walls.has(k)) W.walls.delete(k); else W.walls.add(k); });
+    return (worlds[m.id] = W);
+  };
+  function toggleFix(m, kind, key, val) {
+    const fx = fixOf(m);
+    if (kind === 'wall') { const i = fx.walls.indexOf(key); if (i >= 0) fx.walls.splice(i, 1); else fx.walls.push(key); }
+    else { const base = window.MGSGrid.build(GRID(m)).cells[key] || ' '; if (val === base) delete fx.cells[key]; else fx.cells[key] = val; }
+    LS.set('mgsg.fix.' + m.id, fx); delete worlds[m.id];
+  }
+  const GG = () => window.MGSGrid;
+  function gridPieces(m, n) {
+    const d = GRID(m), pieces = [];
+    const st0 = d.start || [[0, 0]];
+    pchars(m, n).forEach((name, i) => { const s = st0[Math.min(i, st0.length - 1)]; pieces.push({ id: 'p-' + name, k: 'player', owner: name, x: s[0], y: s[1] }); });
+    (d.guards || []).forEach((gd, i) => pieces.push({ id: 'g' + i, k: 'guard', x: gd[0], y: gd[1], f: gd[2] || 'down' }));
+    (d.cams || []).forEach((c, i) => pieces.push({ id: 'c' + i, k: 'cam', x: c[0], y: c[1], f: c[2], f2: c[3] || c[2] }));
+    if (isBoss(m)) { const b = d.boss || [Math.floor(world(m).cols / 2), 1, 'down']; pieces.push({ id: 'boss', k: 'boss', x: b[0], y: b[1], f: b[2] || 'down' }); }
+    return pieces;
+  }
+  // état pour le moteur
+  function toS(g) {
+    const figs = [], cams = [], tokens = [];
+    g.pieces.forEach(p => {
+      if (p.x == null) return;
+      if (p.k === 'player') figs.push({ id: p.id, kind: 'player', name: p.owner, x: p.x, y: p.y });
+      else if (p.k === 'guard' || p.k === 'boss') figs.push({ id: p.id, kind: p.k, x: p.x, y: p.y, f: p.f || 'down' });
+      else if (p.k === 'cam') cams.push({ id: p.id, x: p.x, y: p.y, faces: { vert: p.f, orange: p.f2 || p.f } });
+      else if (p.k === 'q' || p.k === 'a') tokens.push({ id: p.id, kind: p.k === 'q' ? '?' : '!', owner: p.owner, x: p.x, y: p.y });
+      else tokens.push({ id: p.id, kind: p.k, x: p.x, y: p.y });
+    });
+    return { elev: !!g.elev, doors: g.doors || {}, figs, cams, tokens, camColor: g.cam || 'vert' };
+  }
+  const cellKey = (x, y) => x + ',' + y;
+  const ROTD = { up: 0, right: 90, down: 180, left: 270 };
+
+  function gridBoardHtml(m, g, mode) {
+    const d = GRID(m), W = world(m), S = toS(g);
+    const pend = ui.pend || {};
+    const cells = [], hl = [];
+    const seen = st.showLOS ? new Set() : null;
+    Object.keys(W.cells).forEach(k => {
+      const [x, y] = k.split(',').map(Number); const px = GG().pix(W, x, y); if (!px) return;
+      const c = W.cells[k];
+      if (c === '#') return;
+      if (c === 'L' && !(g.elev === true || g.elev === W.shaftOf[k])) return;
+      cells.push(`<rect class="gc" x="${px.x + 1}" y="${px.y + 1}" width="${px.cw - 2}" height="${px.ch - 2}" rx="4"/>`);
+      if (seen && GG().walkable(W, S, x, y)) { const vis = GG().watchers(W, S, { x, y }).length; if (vis) hl.push(`<rect class="gseen" x="${px.x + 2}" y="${px.y + 2}" width="${px.cw - 4}" height="${px.ch - 4}" rx="4"/>`); }
+    });
+    if (pend.type === 'move' && pend.cells) Object.keys(pend.cells).forEach(k => { const [x, y] = k.split(',').map(Number); const px = GG().pix(W, x, y); hl.push(`<rect class="greach" data-cell="${k}" x="${px.x + 3}" y="${px.y + 3}" width="${px.cw - 6}" height="${px.ch - 6}" rx="6"/>`); });
+    if (pend.type === 'target' && pend.ids) pend.ids.forEach(id => { const p = piece(id); if (!p) return; const px = GG().pix(W, p.x, p.y); hl.push(`<rect class="gtarget" x="${px.x + 2}" y="${px.y + 2}" width="${px.cw - 4}" height="${px.ch - 4}" rx="6"/>`); });
+    if (ui.place) { Object.keys(W.cells).forEach(k => { const [x, y] = k.split(',').map(Number); if (!GG().walkable(W, S, x, y)) return; const px = GG().pix(W, x, y); hl.push(`<rect class="gplace" data-cell="${k}" x="${px.x + 3}" y="${px.y + 3}" width="${px.cw - 6}" height="${px.ch - 6}" rx="6"/>`); }); }
+    if (ui.losRect) { const [x0, y0, x1, y1] = ui.losRect.r; const a = GG().pix(W, x0, y0), b = GG().pix(W, x1, y1); if (a && b) hl.push(`<rect class="glos ${ui.losRect.ok ? 'ok' : ''}" x="${a.x}" y="${a.y}" width="${b.x + b.cw - a.x}" height="${b.y + b.ch - a.y}" rx="8"/>`); }
+    // icônes de mise en place : events non atteints
+    Object.entries(d.events || {}).forEach(([k, e]) => { if (g.ev[k]) return; const px = GG().pix(W, e.x, e.y); hl.push(`<g class="gev" transform="translate(${px.cx},${px.cy})"><rect x="-14" y="-14" width="28" height="28" rx="5"/><text text-anchor="middle" dominant-baseline="central">${k}</text></g>`); });
+    const r0 = Math.min(d.parts[0].cw, d.parts[0].ch);
+    const pcs = g.pieces.filter(p => p.x != null).map(p => {
+      const px = GG().pix(W, p.x, p.y); if (!px) return '';
+      const cur = mode === 'play' && p.k === 'player' && g.phase === 1 && g.players[g.cur] && g.players[g.cur].name === p.owner;
+      const tk = ['q', 'a', 'ko2', 'ko1', 'dead'].includes(p.k);
+      // les jetons se décalent en coin pour ne pas cacher la figurine
+      const ox = tk ? px.cw * 0.28 : 0, oy = tk ? px.ch * 0.28 : 0;
+      const sel = ui.sel === p.id ? 'sel' : '';
+      const R = r0 * (tk ? 0.2 : 0.36);
+      let inner = '';
+      if (p.k === 'player') inner = `<circle r="${R}" fill="${CC[p.owner] || '#fff'}" stroke="#fff" stroke-width="${R * 0.18}"/><text class="gtx" font-size="${R * 1.15}">${CE[p.owner] || p.owner[0]}</text>`;
+      else if (p.k === 'guard' || p.k === 'boss' || p.k === 'cam') {
+        const col = p.k === 'boss' ? '#e08aff' : p.k === 'cam' ? '#3dffa0' : '#9fd2ff', fill = p.k === 'boss' ? '#4a1f5a' : p.k === 'cam' ? '#123a2a' : '#28395a';
+        const f = p.k === 'cam' ? (g.cam === 'orange' ? (p.f2 || p.f) : p.f) : p.f;
+        inner = `<g class="grot" style="transform:rotate(${ROTD[f] || 0}deg)"><rect x="${-R}" y="${-R}" width="${2 * R}" height="${2 * R}" rx="${R * 0.3}" fill="${fill}" stroke="${col}" stroke-width="${R * 0.16}"/><path d="M ${-R * 0.45} ${-R * 1.02} L 0 ${-R * 1.6} L ${R * 0.45} ${-R * 1.02} Z" fill="${col}"/></g><text class="gtx" font-size="${R * 1.05}">${p.k === 'guard' ? '💂' : p.k === 'boss' ? (BOSSE[m.id] || '👾') : '📹'}</text>${p.hurt ? `<circle r="${R * 1.25}" fill="none" stroke="#ff4d5e" stroke-width="3"/>` : ''}`;
+      } else {
+        const cfg = { q: ['#1f8bff', '?'], a: ['#e01f35', '!'], ko2: ['#2a2a12', '★★'], ko1: ['#2a2a12', '★'], dead: ['#2b2b33', '☠'] }[p.k];
+        inner = `<rect x="${-R}" y="${-R}" width="${2 * R}" height="${2 * R}" rx="${R * 0.25}" fill="${cfg[0]}" stroke="#fff" stroke-width="2"/><text class="gtx" font-size="${R * (p.k === 'ko2' ? 0.8 : 1.1)}" fill="${p.k.startsWith('ko') ? '#ffd166' : '#fff'}">${cfg[1]}</text>`;
+      }
+      return `<g class="gp ${p.k} ${sel} ${cur ? 'cur' : ''}" data-pc="${p.id}" style="transform:translate(${px.cx + ox}px,${px.cy + oy}px)">${inner}</g>`;
+    }).join('');
+    if (ui.edit) {
+      W.walls.forEach(k => { const [a, b] = k.split('|').map(s => s.split(',').map(Number)); const pa = GG().pix(W, a[0], a[1]); if (!pa) return;
+        const ln = a[1] === b[1] ? [pa.x + pa.cw, pa.y, pa.x + pa.cw, pa.y + pa.ch] : [pa.x, pa.y + pa.ch, pa.x + pa.cw, pa.y + pa.ch];
+        hl.push(`<line class="gwall" x1="${ln[0]}" y1="${ln[1]}" x2="${ln[2]}" y2="${ln[3]}"/>`); });
+      Object.keys(W.cells).forEach(k => { if (W.cells[k] !== '#') return; const [x, y] = k.split(',').map(Number); const px = GG().pix(W, x, y); hl.push(`<rect class="gobst" x="${px.x + 3}" y="${px.y + 3}" width="${px.cw - 6}" height="${px.ch - 6}"/>`); });
+    }
+    const info = ui.edit ? (ui.edit === 'wall' ? '✏️ Touche près du BORD d\'une case pour ajouter / retirer un mur' : '✏️ Touche une case pour la passer obstacle ↔ sol') : ui.place ? '👆 Touche une case pour poser le pion' : pend.type === 'move' ? '👆 Touche une case verte' : pend.type === 'target' ? '👆 Touche la cible encadrée en rouge' : ui.sel ? '👆 Touche une case pour déplacer ce pion, ou ✕' : 'Touche un pion pour ses options';
+    return `<div class="ma-bd"><div class="ma-bdt"><button class="ma-b sm" data-a="zoom" data-v="-1">🔍−</button><button class="ma-b sm" data-a="zoom" data-v="1">🔍+</button>
+        <button class="ma-b sm ${st.showLOS ? 'on' : ''}" data-a="los" title="Montrer les cases vues par les gardes et caméras">👁️ Zones vues</button>
+        <button class="ma-b sm ${ui.edit ? 'on' : ''}" data-a="edit" title="Corriger les murs et obstacles du plan">✏️ Corriger</button>
+        ${ui.edit ? `<button class="ma-b sm ${ui.edit === 'wall' ? 'on' : ''}" data-a="editMode" data-v="wall">🧱 Mur</button><button class="ma-b sm ${ui.edit === 'cell' ? 'on' : ''}" data-a="editMode" data-v="cell">🟥 Obstacle</button><button class="ma-b sm" data-a="editExport">📤 Exporter</button><button class="ma-b sm red" data-a="editReset">↺</button>` : ''}
+        <span style="flex:1;opacity:.85;font-size:.9rem">${info}</span></div>
+      <div class="ma-bds"><svg class="ma-svg" id="maSvg" viewBox="0 0 ${d.w} ${d.h}" style="width:${Math.round(100 * (st.zoom || 1))}%"><image href="${d.img}" width="${d.w}" height="${d.h}"/>
+        <g>${cells.join('')}</g><g>${hl.join('')}</g><g>${pcs}</g></svg></div></div>`;
+  }
+  function svgPoint(svg, e) { const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY; return pt.matrixTransform(svg.getScreenCTM().inverse()); }
+  function cellAt(m, ux, uy) {
+    for (const p of GRID(m).parts) {
+      const cx = Math.floor((ux - p.x0) / p.cw), cy = Math.floor((uy - p.y0) / p.ch);
+      if (cx >= 0 && cy >= 0 && cx < p.cols && cy < p.rows) return { x: cx + (p.gx || 0), y: cy + (p.gy || 0) };
+    }
+    return null;
+  }
+  function bindGrid() {
+    const svg = $('#maSvg', root); if (!svg) return;
+    svg.addEventListener('click', e => {
+      const m = mission(), g = game();
+      const pc = e.target.closest('[data-pc]');
+      const u = svgPoint(svg, e); const c = cellAt(m, u.x, u.y);
+      if (ui.edit && c) return editAt(m, c, u);
+      if (pc && !(ui.pend && ui.pend.type === 'move') && !ui.place) return gridTapPiece(piece(pc.dataset.pc), c);
+      if (c) gridTapCell(c);
+    });
+  }
+  function editAt(m, c, u) {
+    const W = world(m), px = GG().pix(W, c.x, c.y);
+    if (ui.edit === 'cell') { const cur = W.cells[cellKey(c.x, c.y)] || ' '; toggleFix(m, 'cell', cellKey(c.x, c.y), cur === '#' ? '.' : '#'); render(); return; }
+    const fx = (u.x - px.x) / px.cw, fy = (u.y - px.y) / px.ch;
+    const d = [['left', fx], ['right', 1 - fx], ['up', fy], ['down', 1 - fy]].sort((a, b) => a[1] - b[1])[0][0];
+    const [dx, dy] = GG().DIRS[d], n = { x: c.x + dx, y: c.y + dy };
+    const a = (n.x < c.x || n.y < c.y) ? n : c, b = a === n ? c : n;
+    toggleFix(m, 'wall', `${a.x},${a.y}|${b.x},${b.y}`); render();
+  }
+  function gridTapPiece(p, c) {
+    const g = game();
+    if (ui.pend && ui.pend.type === 'target') { if (ui.pend.ids.includes(p.id)) return chooseTarget(p); toast('Ce n\'est pas une cible valable (encadrées en rouge).'); return; }
+    if (ui.sel && ui.sel !== p.id && c) return gridTapCell(c);
+    ui.sel = ui.sel === p.id ? null : p.id;
+    if (p.k === 'player' && st.screen === 'play' && g.phase === 1) { const i = g.players.findIndex(x => x.name === p.owner); if (i >= 0 && !g.players[i].done && i !== g.cur) { g.cur = i; ui.sel = null; } }
+    render();
+  }
+  function gridTapCell(c) {
+    const m = mission(), g = game(), W = world(m), S = toS(g), k = cellKey(c.x, c.y);
+    if (ui.pend && ui.pend.type === 'move') { if (ui.pend.cells[k]) return gridMove(c, ui.pend.cells[k]); toast('Case hors de portée (cases vertes).'); return; }
+    if (ui.place) { if (!GG().walkable(W, S, c.x, c.y)) return; snap(); const p = piece(ui.place); p.x = c.x; p.y = c.y; ui.place = null; save(); render(); return; }
+    if (ui.sel) { const p = piece(ui.sel); if (p && GG().walkable(W, S, c.x, c.y)) { snap(); p.x = c.x; p.y = c.y; if (p.k === 'player') followTokens(g, p.owner); log(`✋ Pion corrigé : ${p.k === 'player' ? p.owner : p.k} → ${k}`, 'sys'); save(); } ui.sel = null; render(); }
+  }
+  function followTokens(g, name) { /* le jeton Attention reste là où il a été posé (règles) */ }
+
+  /* animation d'un pion le long d'un chemin (sans re-rendu) */
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  async function animTo(m, id, x, y, f, ms = 330) {
+    const el = root.querySelector(`[data-pc="${id}"]`); const W = world(m); const px = GG().pix(W, x, y);
+    if (el && px) { el.style.transition = `transform ${ms}ms cubic-bezier(.4,.1,.3,1)`; el.style.transform = `translate(${px.cx}px,${px.cy}px)`; if (f) { const r = el.querySelector('.grot'); if (r) r.style.transform = `rotate(${ROTD[f]}deg)`; } }
+    await sleep(ms);
+  }
+  async function gridMove(dest, info) {
+    const m = mission(), g = game(), W = world(m), p = g.players[g.cur], a = ACTS.find(q => q.id === ui.pend.act);
+    const pp = playerPiece(g, p.name); if (!pp) return;
+    snap(); ui.pend = null; ui.busy = true;
+    spend(g, p, a); p.s.move++;
+    const kind = a.id === 'dash' ? 'dash' : 'sneak';
+    const seenBy = new Map(); const leaps = [];
+    const S0 = toS(g);
+    const d = GRID(m);
+    for (const node of info.path) {
+      if (p.water || GG().code(W, node.x, node.y) === '~') A.sfx(AU().water); else { const arr = AU()[kind] || []; if (arr.length) A.sfx(arr[stepAlt++ % arr.length]); }
+      await animTo(m, pp.id, node.x, node.y);
+      pp.x = node.x; pp.y = node.y;
+      (node.leap || []).forEach(id => { const f = S0.figs.find(q => q.id === id); if (f && f.kind === 'guard') leaps.push(id); });
+      const S = toS(g);
+      GG().watchers(W, S, { x: node.x, y: node.y }).forEach(w => { if (!seenBy.has(w.id)) seenBy.set(w.id, w); });
+      Object.entries(d.events || {}).forEach(([k, e]) => { if (!g.ev[k] && e.x === node.x && e.y === node.y) triggerEvent(m, g, k); });
+    }
+    ui.busy = false;
+    log(`${a.i} ${p.name} : ${a.n} → case ${dest.x},${dest.y}`, '', p.name);
+    if (seenBy.size) {
+      const list = [...seenBy.values()]; const cam = list.some(w => w.cam);
+      if (cam) A.sfx(AU().camSpot);
+      setTimeout(() => { setAtt(g, p, 2, cam && list.length === 1 ? 'vu par une caméra' : 'vu par un garde'); save(); render(); }, cam ? 650 : 0);
+      toast(`👁️ <b>${p.name} est repéré</b> par ${list.map(w => w.cam ? 'une caméra' : 'un garde').join(', ')} !`, 3500);
+    }
+    if (leaps.length) {
+      setAtt(g, p, 2, 'saut par-dessus un garde');
+      ui.queue = leaps.map(() => ({ kind: 'guardAtk', victim: p.name, def: defOf(p.name), fixed: ['b', 'b'], title: `🤸 Le garde sauté attaque ${p.name} : 2 dés noirs`, defLabel: `de ${p.name}` }));
+      openPad(ui.queue.shift());
+    }
+    if ((d.exits || []).some(e => e[0] === dest.x && e[1] === dest.y)) setTimeout(() => toast('🚪 <b>Sur la sortie !</b> Termine ton tour ici pour valider l\'objectif (si les conditions sont remplies).', 5000), 600);
+    if (a.noisy && !leaps.length) toast(`${a.i} <b>${a.n}</b> : 🔊 bruyant → noise check à la fin de ton tour.`);
+    save(); render();
+  }
+  function triggerEvent(m, g, k) {
+    const e = (GRID(m).events || {})[k], ev = (m.events || []).find(x => x.k === k);
+    g.ev[k] = true; A.sfx(AU()[(stageSnd(m).events || {})[k] || 'pop'] || AU().pop);
+    log(`🅰️ Event ${k} atteint`, 'sys');
+    if (e && e.fx) {
+      if (e.fx.elev) g.elev = true;
+      (e.fx.spawn || []).forEach((s, i) => g.pieces.push({ id: 'gs' + k + i + (Date.now() % 1000), k: 'guard', x: s[0], y: s[1], f: s[2] || 'down' }));
+      if (e.fx.elev) setTimeout(() => A.sfx(AU().elevator), 700);
+    }
+    setTimeout(() => toast(`<span class="ma-ev">${k}</span> ${ev ? ev.d : ''}`, 7000), 300);
+  }
+
+  /* cibles possibles d'une attaque */
+  function gridTargets(m, g, p, a) {
+    const W = world(m), S = toS(g), me = S.figs.find(f => f.kind === 'player' && f.name === p.name);
+    if (!me) return [];
+    if (a.atk === 'silent') return GG().behindTargets(W, S, me).map(f => f.id);
+    if (a.dice && (a.id === 'h2h' || a.id === 'combo')) return GG().adjacentTargets(W, S, me).map(f => f.id);
+    return GG().losTargets(W, S, me).map(f => f.id);
+  }
+
+  /* ---------- phase ennemie : activation guidée des gardes ---------- */
+  const MODE = { alert: '🚨 ALERTE (chiffre rouge)', investigate: '❓ ENQUÊTE (chiffre bleu)', patrol: '🚶 PATROUILLE (chiffre bleu)' };
+  function gridEnemyHtml(m, g) {
+    if (ui.pad) return padHtml(m, g);
+    const s = g.step, cls = k => s === k ? 'cur' : s > k ? 'ok' : '';
+    const hasCam = g.pieces.some(p => p.k === 'cam');
+    const card = g.card || (g.card = { red: 6, blue: 4, arrow: 'right' });
+    const num = (key, col) => `<div class="ma-att"><span style="min-width:96px">${col === 'r' ? '🔴 Chiffre rouge' : '🔵 Chiffre bleu'}</span>${[1, 2, 3, 4, 5, 6, 7, 8].map(n => `<button class="ma-b sm ${card[key] === n ? 'on' : ''}" data-a="card" data-k="${key}" data-v="${n}">${n}</button>`).join('')}</div>`;
+    let h = `<div class="ma-card"><h4>🃏 Carte Guard Order</h4>
+      <div class="ma-step ${cls(0)}"><span class="k">0</span><div class="bd">Pioche la carte du dessus. <b>GAME OVER</b> ? → perdu.<br><button class="ma-b pri" data-a="draw" ${s > 0 ? 'disabled' : ''}>🃏 Carte piochée</button> <button class="ma-b red" data-a="gameover" ${s > 0 ? 'disabled' : ''}>💀 GAME OVER</button></div></div>
+      <div class="ma-step ${cls(1)}"><span class="k">I</span><div class="bd"><b>Section I</b> : quelle icône ?<br>
+        <button class="ma-b sm" data-a="s1" data-v="waken" ${s !== 1 ? 'disabled' : ''}>✨ Réveil</button> <button class="ma-b sm" data-a="s1" data-v="radio" ${s !== 1 ? 'disabled' : ''}>📻 Radio-In</button> <button class="ma-b sm" data-a="s1" data-v="lost" ${s !== 1 ? 'disabled' : ''}>☠ Lost Contact</button> <button class="ma-b sm" data-a="s1" data-v="stay" ${s !== 1 ? 'disabled' : ''}>❓ Stay Alert</button></div></div>
+      <div class="ma-step ${cls(2)}"><span class="k">II</span><div class="bd"><b>Section II — caméras</b>${hasCam ? ` (face ${g.cam === 'vert' ? '🟩 verte' : '🟧 orange'})<br><button class="ma-b sm" data-a="cam" data-v="flip" ${s !== 2 ? 'disabled' : ''}>🔄 La carte fait pivoter</button> <button class="ma-b sm" data-a="cam" data-v="keep" ${s !== 2 ? 'disabled' : ''}>Pas de pivot</button>` : ` : aucune caméra. <button class="ma-b sm" data-a="cam" data-v="keep" ${s !== 2 ? 'disabled' : ''}>OK</button>`}</div></div>
+      <div class="ma-step ${cls(3)}"><span class="k">III</span><div class="bd"><b>Section III</b> : recopie la carte puis active les gardes.${num('red', 'r')}${num('blue', 'b')}
+        <div class="ma-att"><span style="min-width:96px">↪ Flèche</span><button class="ma-b sm ${card.arrow === 'left' ? 'on' : ''}" data-a="card" data-k="arrow" data-v="left">⟲ gauche</button><button class="ma-b sm ${card.arrow === 'right' ? 'on' : ''}" data-a="card" data-k="arrow" data-v="right">⟳ droite</button></div>
+        ${s === 3 ? seqHtml(m, g) : ''}</div></div></div>`;
+    return h;
+  }
+  function seqHtml(m, g) {
+    const sq = ui.seq;
+    if (!sq) return `<button class="ma-b pri big" data-a="seqStart">▶ Activer les gardes</button>`;
+    if (ui.react) return `<div class="ma-ask warn"><p>🃏 <b>Guard Reaction</b> : le garde est sur ${ui.react.tokens.map(t => t.kind === '?' || t.kind === '!' ? `le jeton ${t.kind} de ${t.owner}` : t.kind === 'dead' ? 'un corps' : 'un garde KO').join(', ')}. Pioche une carte Guard Reaction et lis-la : que dit-elle ?</p>
+      ${ui.react.tokens.map(t => `<div style="margin:4px 0"><b>${t.kind}</b> ${t.owner || ''} : <button class="ma-b sm" data-a="react" data-v="rm" data-t="${t.id}">Retirer</button> ${t.kind === '?' ? `<button class="ma-b sm" data-a="react" data-v="up" data-t="${t.id}">? → !</button>` : ''}${t.kind === 'ko2' || t.kind === 'ko1' ? `<button class="ma-b sm" data-a="react" data-v="wake" data-t="${t.id}">Il le réveille</button>` : ''} <button class="ma-b sm" data-a="react" data-v="keep" data-t="${t.id}">Rien</button></div>`).join('')}
+      <button class="ma-b" data-a="reactDone">✔ Fait</button></div>`;
+    if (sq.i >= sq.ids.length) return `<div class="ma-res">✅ Tous les gardes ont joué.</div><button class="ma-b pri big" data-a="nextRound">▶ Round ${g.round + 1}</button>`;
+    const id = sq.ids[sq.i], gp = piece(id);
+    return `<div class="ma-ask"><p><b>Garde ${sq.i + 1}/${sq.ids.length}</b>${sq.last ? `<br>${sq.last}` : ''}</p>
+      <button class="ma-b pri big" data-a="seqGo" ${ui.busy ? 'disabled' : ''}>▶ Activer ${sq.i ? 'le suivant' : 'le premier'}</button> <button class="ma-b sm" data-a="seqSkip">Passer</button></div>`;
+  }
+  async function runGuard(m, g) {
+    const sq = ui.seq, id = sq.ids[sq.i], W = world(m);
+    const gp = piece(id); if (!gp || gp.k !== 'guard') { sq.i++; save(); render(); return; }
+    ui.sel = id; ui.busy = true; render();
+    const r = GG().activate(W, toS(g), id, g.card);
+    const tgt = r.target ? ` → vers le ${r.target.kind} ${r.target.owner ? 'de ' + r.target.owner : ''}` : '';
+    sq.last = `${MODE[r.mode]}${tgt}`;
+    toast(`💂 Garde ${sq.i + 1} : <b>${MODE[r.mode]}</b>${tgt}`, 2500);
+    let seen = null, react = null;
+    for (const s of r.steps) {
+      if (s.t === 'move') { await animTo(m, id, s.x, s.y, s.f, 380); gp.x = s.x; gp.y = s.y; gp.f = s.f; }
+      else if (s.t === 'turn') { await animTo(m, id, gp.x, gp.y, s.f, 260); gp.f = s.f; }
+      else if (s.t === 'see') seen = s; else if (s.t === 'reaction') react = s;
+    }
+    gp.x = r.g.x; gp.y = r.g.y; gp.f = r.g.f;
+    const moves = r.steps.filter(s => s.t === 'move').length;
+    log(`💂 Garde ${sq.i + 1} : ${MODE[r.mode]}, ${moves} case(s)${seen ? ', voit ' + seen.player : ''}${react ? ', Guard Reaction' : ''}`, seen ? 'alert' : 'sys');
+    ui.busy = false; ui.sel = null; sq.i++;
+    sq.last += ` — ${moves} case(s)${seen ? ` — 👁️ voit ${seen.player} !` : react ? ' — arrive sur un jeton' : ''}. Réplique sur le plateau.`;
+    if (seen) {
+      const q = g.players.find(p => p.name === seen.player);
+      A.sfx('guard-there-he-is_JHZ7rPO.mp3'); setAtt(g, q, 2, 'vu par un garde');
+      const pp = playerPiece(g, q.name), ps = pp && GG().pix(W, pp.x, pp.y);
+      openPad({ kind: 'guardAtk', victim: q.name, def: defOf(q.name), fixed: ['b', 'b'], title: `👁️ Le garde attaque ${q.name} : lance 2 dés noirs`, hint: 'Focus possible : modifie la valeur avant de la taper.', defLabel: `de ${q.name}` });
+    } else if (react) { A.sfx('guard-what-was-that-noise_IVtXtq7.mp3'); ui.react = react; }
+    save(); render();
+  }
+  // Réveil / Radio-In / Lost Contact / Stay Alert en mode quadrillage
+  function gridSection1(m, g, v) {
+    const W = world(m);
+    if (v === 'waken') {
+      const az = GG().activeZones(W, toS(g)); let up = 0, down = 0;
+      g.pieces.forEach(p => { if (!az.has(GG().zoneOf(W, p.x, p.y))) return; if (p.k === 'ko1') { p.k = 'guard'; p.f = p.f || 'down'; up++; } else if (p.k === 'ko2') { p.k = 'ko1'; down++; } });
+      A.sfx('guard-whered-he-go_zHLpH97.mp3'); log(`✨ Réveil : ${up} garde(s) debout, ${down} KO ★★ → ★`, 'sys');
+      toast(`✨ Réveil : ${up} garde(s) se relèvent (oriente-les : touche-les puis ⟲⟳), ${down} KO passent à ★.`, 5000);
+    }
+    if (v === 'radio') {
+      const S = toS(g), az = GG().activeZones(W, S); let n = 0;
+      (GRID(m).barracks || []).forEach(b => {
+        const z = GG().zoneOf(W, b.x, b.y); if (!az.has(z)) return;
+        const have = g.pieces.filter(p => p.k === 'guard' && GG().zoneOf(W, p.x, p.y) === z).length;
+        for (let i = have; i < b.count; i++) { g.pieces.push({ id: 'gr' + Date.now() % 100000 + i, k: 'guard', x: b.x, y: b.y, f: b.f || 'down' }); n++; }
+      });
+      A.sfx('guard-return-to-your-positions_9aocsFp.mp3'); log(`📻 Radio-In : ${n} renfort(s)`, 'sys');
+      toast(n ? `📻 ${n} garde(s) en renfort sur l'icône radio du Barracks.` : '📻 Radio-In : pas de renfort (Guard Count atteint ou pas de Barracks).', 4500);
+    }
+    if (v === 'lost') { const dead = g.pieces.filter(p => p.k === 'dead').length, n = Math.floor(dead / 3); if (g.deck) { g.deck.drawn += n; g.deck.burned += n; } log(`☠ Lost Contact : ${n} carte(s) brûlée(s)`, 'sys'); toast(n ? `☠ ${n} carte(s) brûlée(s) (révélées, mises dessous). GAME OVER parmi elles ? → perdu.` : '☠ Lost Contact : moins de 3 morts, rien.', 4500); }
+    if (v === 'stay') { const names = GG().stayAlert(W, toS(g)); names.forEach(nm => { const p = g.players.find(x => x.name === nm); if (p && p.att === 0) setAtt(g, p, 1, 'Stay Alert'); }); log(`❓ Stay Alert : ${names.join(', ') || 'personne'}`, 'sys'); if (!names.length) toast('❓ Stay Alert : personne à 2 cases d\'un garde.'); }
+  }
+  function camCheck(m, g) {
+    const W = world(m), S = toS(g);
+    g.players.forEach(p => { const pp = S.figs.find(f => f.kind === 'player' && f.name === p.name); if (!pp) return; const cams = (S.cams || []).filter(c => !(c.x === pp.x && c.y === pp.y) && GG().los(W, S, c, pp, GG().camFacing(S, c)).ok); if (cams.length && p.att !== 2) { A.sfx(AU().camSpot); setTimeout(() => { setAtt(g, p, 2, 'vu par une caméra'); save(); render(); }, 700); } });
   }
 
   /* ======================= CSS ======================= */
@@ -229,6 +522,22 @@
   .mcw{width:170px;height:104px;display:block;margin:6px 0}
   .mcw-c{fill:#151c40;stroke:#26306a}.mcw-c.lit{fill:rgba(255,209,102,.28);stroke:#ffd166}
   .mcw-cam{transition:transform .9s cubic-bezier(.4,.1,.3,1);transform-origin:0 0}
+  .ma-svg{display:block;margin:0 auto;max-width:none;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+  .ma-svg .gc{fill:transparent;stroke:rgba(10,20,60,.28);stroke-width:1.2}
+  .ma-svg .greach{fill:rgba(61,255,160,.28);stroke:#2fbf7a;stroke-width:3;cursor:pointer;animation:gpul 1.2s infinite alternate}
+  .ma-svg .gplace{fill:rgba(91,140,255,.18);stroke:#5b8cff;stroke-width:2;stroke-dasharray:6 5;cursor:pointer}
+  .ma-svg .gtarget{fill:rgba(224,31,53,.22);stroke:#ff4d5e;stroke-width:4;animation:gpul 1s infinite alternate}
+  .ma-svg .gseen{fill:rgba(255,209,102,.30)}
+  .ma-svg .gwall{stroke:#ff2bd6;stroke-width:7;stroke-linecap:round}
+  .ma-svg .gobst{fill:rgba(255,40,60,.35);stroke:#ff2b3c;stroke-width:2}
+  .ma-svg .glos{fill:none;stroke:#ff4d5e;stroke-width:4;stroke-dasharray:12 7}
+  .ma-svg .gev rect{fill:#c4202f;stroke:#fff;stroke-width:2}.ma-svg .gev text{fill:#fff;font:900 18px system-ui}
+  .ma-svg .gp{cursor:pointer;transition:transform .33s cubic-bezier(.4,.1,.3,1)}
+  .ma-svg .gp .grot{transition:transform .26s}
+  .ma-svg .gtx{font-weight:900;text-anchor:middle;dominant-baseline:central;fill:#fff;pointer-events:none}
+  .ma-svg .gp.sel circle,.ma-svg .gp.sel rect{stroke:#fff!important;stroke-width:5}
+  .ma-svg .gp.cur circle{animation:gcur 1.2s infinite}
+  @keyframes gpul{to{opacity:.55}} @keyframes gcur{50%{stroke:#ffd166;stroke-width:7}}
   @media (max-width:900px){.ma-play{grid-template-columns:1fr}.ma-bd{position:static}.ma-bds{max-height:52vh}}
   @media (max-width:640px){.ma-h .lg{display:none}}
   `;
@@ -330,9 +639,10 @@
   }
 
   /* ======================= Plateau (commun setup / partie) ======================= */
-  const PIC = { player: p => (p.owner || '?')[0], guard: () => '', boss: () => '👾', cam: () => '📹', q: () => '?', a: () => '!', ko2: () => '★★', ko1: () => '★', dead: () => '☠' };
+  const PIC = { player: p => CE[p.owner] || (p.owner || '?')[0], guard: () => '💂', boss: () => (BOSSE[st.mid] || '👾'), cam: () => '📹', q: () => '?', a: () => '!', ko2: () => '★★', ko1: () => '★', dead: () => '☠' };
   const ROT = { up: 0, right: 90, down: 180, left: 270 };
   function boardHtml(m, g, mode) {
+    if (isGrid(m)) return gridBoardHtml(m, g, mode);
     const src = (m.images || [])[0];
     const placed = g.pieces.filter(p => p.x != null);
     const pcs = placed.map(p => {
@@ -352,6 +662,7 @@
       ${unplaced.length ? `<div class="ma-tray"><span style="opacity:.75;align-self:center">À poser :</span>${unplaced.map(p => `<button class="ma-b sm ${ui.place === p.id ? 'wait' : ''}" data-a="place" data-v="${p.id}">${label(p)}</button>`).join('')}</div>` : ''}</div>`;
   }
   function bindBoard() {
+    if (isGrid(mission())) return bindGrid();
     const map = $('#maMap', root); if (!map) return;
     const setPs = () => map.style.setProperty('--ps', Math.max(20, Math.min(46, map.clientWidth * 0.042)) + 'px');
     setPs(); const img = $('img', map); if (img && !img.complete) img.onload = setPs;
@@ -415,7 +726,7 @@
     const errs = (m.errata || []).filter(e => /setup|mise en place|carte|barracks|tuile|plan|icône|placer/i.test(e));
     if (!ui.place && !g.started && !ui.sel) nextUnplaced(g);
     body.innerHTML = `${errs.length ? `<div class="ma-card err"><h4>⚠️ Errata pour la mise en place</h4>${list(errs)}</div>` : ''}
-      <div class="ma-play"><div>${boardHtml(m, g, 'setup')}<p style="opacity:.7;font-size:.9rem;margin:6px 2px">Pose les pions comme sur le vrai plateau (zone de départ, gardes et leur regard avec ⟲⟳). Facultatif : tu peux jouer sans poser les gardes.</p></div>
+      <div class="ma-play"><div>${boardHtml(m, g, 'setup')}<p style="opacity:.7;font-size:.9rem;margin:6px 2px">${g.grid ? 'Les pions sont placés comme sur le livret. Vérifie avec ton vrai plateau ; pour corriger, touche un pion puis une case (⟲⟳ pour le regard).' : 'Pose les pions comme sur le vrai plateau (zone de départ, gardes et leur regard avec ⟲⟳). Facultatif : tu peux jouer sans poser les gardes.'}</p></div>
       <div><div class="ma-card" style="margin-top:0"><h4>🧰 Matériel</h4><p>${chars.map(c => `<span class="chip">${CE[c] || ''} ${c}</span>`).join('')}</p>${m.tiles && m.tiles.length ? `<p><b>Tuiles :</b> ${m.tiles.join(', ')}</p>` : ''}${deck ? `<p><b>Guard Order :</b> ${deck}</p>` : ''}</div>
         ${selPanel(m, g)}
         <div class="ma-card"><h4>✅ Checklist</h4><ul class="ma-chk">${stepsL.map((s, i) => `<li class="${chk[i] ? 'ok' : ''}" data-chk="${i}"><span class="bx">${chk[i] ? '✓' : ''}</span><span class="tx">${s}</span></li>`).join('')}</ul></div>
@@ -480,7 +791,7 @@
     const pp = playerPiece(g, p.name); let t = attPiece(g, p.name);
     if (!t) { t = { id: 'att-' + p.name, k: 'q', owner: p.name, x: null, y: null }; g.pieces.push(t); }
     t.k = p.att === 2 ? 'a' : 'q';
-    if (pp && pp.x != null) { t.x = Math.min(100, pp.x + 2.4); t.y = Math.min(100, pp.y + 2.4); }
+    if (pp && pp.x != null) { if (g.grid) { t.x = pp.x; t.y = pp.y; } else { t.x = Math.min(100, pp.x + 2.4); t.y = Math.min(100, pp.y + 2.4); } }
   }
 
   function vPlay(m) {
@@ -534,6 +845,11 @@
     if (pd.type === 'move') return `<div class="ma-ask"><p>${a.i} <b>${a.n}</b> : ${a.tip}<br>👆 <b>Touche sur le plan la case où ${p.name} va.</b></p>
       ${pp && pp.x != null ? '' : '<p style="opacity:.8">Ton pion n\'est pas sur le plan : pose-le (« À poser »), ou valide sans le plan.</p>'}
       <button class="ma-b" data-a="moveNo">✔ Fait (sans le plan)</button> <button class="ma-b red" data-a="cancel">Annuler</button></div>`;
+    if (pd.type === 'elev') {
+      const W6 = world(m), names = { B2: 'Sous-sol B2', B1: 'Sous-sol B1', L1: 'Rez-de-chaussée L1', main: 'Ascenseur' };
+      if (pd.mode === 'call') return `<div class="ma-ask"><p>🛗 Appeler l'ascenseur à la cage <b>${names[pd.to] || pd.to}</b> ? (il est actuellement en ${names[g.elev] || g.elev})</p><button class="ma-b pri" data-a="elevGo" data-v="${pd.to}">🛗 Appeler (1 action)</button> <button class="ma-b red" data-a="cancel">Annuler</button></div>`;
+      return `<div class="ma-ask"><p>🛗 Où va l'ascenseur ? (tout ce qui est dedans voyage avec)</p>${Object.keys(W6.shafts).filter(k => k !== g.elev).map(k => `<button class="ma-b pri" data-a="elevGo" data-v="${k}">${names[k] || k}</button>`).join(' ')} <button class="ma-b red" data-a="cancel">Annuler</button></div>`;
+    }
     if (pd.type === 'target') return `<div class="ma-ask"><p>${a.i} <b>${a.n}</b> : ${a.tip}<br>👆 <b>Touche le garde visé sur le plan.</b></p>
       <button class="ma-b" data-a="targetNo">Cible hors plan</button> <button class="ma-b red" data-a="cancel">Annuler</button></div>`;
     return '';
@@ -648,6 +964,7 @@
         <div class="ma-att"><span>💥 Dégâts au boss</span><button class="ma-b sm" data-a="bd" data-v="-1">−</button><b style="font-size:1.2rem">${g.boss.dmg}</b><button class="ma-b sm" data-a="bd" data-v="1">＋1</button><span style="margin-left:8px">📈 Menace</span><button class="ma-b sm" data-a="bt" data-v="-1">−</button><b>${g.boss.threat}</b><button class="ma-b sm" data-a="bt" data-v="1">＋</button></div>
         ${m.boss && m.boss.health ? `<p style="opacity:.75">Santé : ${m.boss.health}. Ses réactions se déclenchent à CHAQUE fois.</p>` : ''}<button class="ma-b" data-a="bossDown">💀 Boss vaincu</button></div>`;
     }
+    if (isSneak(m) && isGrid(m)) return h + gridEnemyHtml(m, g);
     if (isSneak(m)) {
       const s = g.step, cls = k => s === k ? 'cur' : s > k ? 'ok' : '', hasCam = (m.legend && m.legend.cameras) || g.pieces.some(p => p.k === 'cam');
       h += `<div class="ma-card"><h4>🃏 Carte Guard Order — étape par étape</h4>
@@ -672,6 +989,37 @@
   /* ---------- actions ---------- */
   function spend(g, p, a) { p.left -= a.c; if (a.noisy) p.noisy += a.c; if (a.c) p.s.act++; }
   function startAct(m, g, p, a) {
+    if (isGrid(m)) {
+      const pp = playerPiece(g, p.name);
+      const goal = GRID(m).goal || {};
+      if ((a.id === 'elev' || a.id === 'interact') && goal.interact && pp && GG().code(world(m), pp.x, pp.y) === goal.interact) {
+        spend(g, p, a); afterSimple(g, p, a);
+        if (goal.noAlert && g.pieces.some(x => x.k === 'a')) toast('⚠️ Un jeton <b>!</b> est sur le plateau : l\'objectif n\'est pas rempli (il faut l\'activer sans alerte).', 4500);
+        else setTimeout(() => { win(m, g, 'Objectif atteint (ascenseur activé)'); save(); render(); }, 1200);
+        return true;
+      }
+      const W6 = world(m);
+      if (a.gun && pp && W6.noFire.has(cellKey(pp.x, pp.y))) { toast('🚫 <b>No Fire Zone</b> : pas d\'arme à distance ni d\'explosif ici (les gardes, eux, peuvent tirer).', 4500); return false; }
+      if (a.id === 'elev' && Object.keys(W6.shafts).length > 1 && pp) {
+        const here = W6.shaftOf[cellKey(pp.x, pp.y)];
+        if (here && here === g.elev) { ui.pend = { type: 'elev', act: a.id, mode: 'ride' }; return false; }
+        const adj = GG().shaftAdjacent(W6, pp.x, pp.y);
+        if (adj.length) { ui.pend = { type: 'elev', act: a.id, mode: 'call', to: adj[0] }; return false; }
+        toast('🛗 Tu dois être <b>dans l\'ascenseur</b> ou <b>à côté d\'une cage</b>.'); return false;
+      }
+      if (a.move) {
+        if (!pp || pp.x == null) { toast('Pose d\'abord ton pion sur le plan.'); return false; }
+        const S = toS(g), me = S.figs.find(f => f.id === pp.id);
+        const cells = GG().reach(world(m), S, me, a.move);
+        if (!Object.keys(cells).length) { toast('Aucune case accessible.'); return false; }
+        ui.pend = { type: 'move', act: a.id, cells }; return false;
+      }
+      if (a.atk && !(isBoss(m) && !isSneak(m))) {
+        const ids = gridTargets(m, g, p, a);
+        if (!ids.length) { toast(a.atk === 'silent' ? '🤫 Il faut être <b>dans le dos</b> d\'un garde adjacent.' : a.dice ? '👊 Aucun garde adjacent.' : '🔫 Aucune cible en ligne de vue.', 3500); return false; }
+        ui.pend = { type: 'target', act: a.id, ids }; return false;
+      }
+    }
     if (a.move) { ui.pend = { type: 'move', act: a.id }; return false; }
     if (a.atk) {
       if (isBoss(m) && !isSneak(m) && a.atk !== 'silent') {
@@ -768,8 +1116,9 @@
       case 'act': { const ac = ACTS.find(x => x.id === v); if (!ac || ac.c > p.left) { undo.pop(); return; } if (!startAct(m, g, p, ac)) undo.pop(); break; }
       case 'moveNo': { const ac = ACTS.find(q => q.id === ui.pend.act); spend(g, p, ac); p.s.move++; steps(ac.id === 'dash' ? 'dash' : 'sneak', ac.move, p.water); log(`${ac.i} ${p.name} : ${ac.n}`, '', p.name); ui.pend = null; break; }
       case 'targetNo': undo.pop(); chooseTarget(null); return;
-      case 'pok': applyPad(m, g); break;
+      case 'pok': applyPad(m, g); if (ui.queue && ui.queue.length) openPad(ui.queue.shift()); break;
       case 'end': {
+        if (p.noisy && g.grid) { const S = toS(g), me = S.figs.find(f => f.kind === 'player' && f.name === p.name); if (me && !GG().guardInZone(world(m), S, me)) { p.noisy = 0; toast('🔊 Aucun garde dans ta zone : pas de noise check.'); } }
         if (p.hurt) p.ask = 'hurt'; else if (p.noisy) p.ask = 'noise';
         else { p.done = true; log(`🏁 Fin du tour de ${p.name} (pas de bruit)`, '', p.name); endTurnFollow(g); }
         break;
@@ -777,17 +1126,19 @@
       case 'hurt': { if (v === 'up') setAtt(g, p, 2, 'garde blessé resté debout'); else g.pieces.forEach(x => { x.hurt = false; }); p.hurt = false; if (p.noisy) p.ask = 'noise'; else { p.ask = null; p.done = true; endTurnFollow(g); } break; }
       case 'noisePad': openPad({ kind: 'noise', actor: p.name, fixed: Array(p.noisy).fill('w'), title: `🔊 Noise check : lance ${p.noisy} dé(s) blanc(s)`, hint: 'Tape chaque résultat (« ! » si tu le vois).', showDef: false }); break;
       case 'noise': p.ask = null; p.done = true; log(`🏁 Fin du tour de ${p.name} (pas de garde dans la zone)`, '', p.name); endTurnFollow(g); break;
-      case 'toEnemy': g.phase = 2; g.step = 0; log(`👹 Round ${g.round} : phase ennemie`, 'sys'); break;
+      case 'toEnemy': ui.seq = null; g.phase = 2; g.step = 0; log(`👹 Round ${g.round} : phase ennemie`, 'sys'); break;
       case 'draw': if (g.deck) g.deck.drawn++; g.step = 1; log('🃏 Carte Guard Order piochée', 'sys'); break;
       case 'gameover': gameOver(m, g, 'La carte GAME OVER est sortie : temps écoulé.'); break;
       case 's1': {
+        if (g.grid) { gridSection1(m, g, v); g.step = 2; break; }
         if (v === 'waken') { const up = g.ko1; g.ko1 = g.ko2; g.ko2 = 0; g.pieces.forEach(x => { if (x.k === 'ko1') x.k = 'guard'; else if (x.k === 'ko2') x.k = 'ko1'; }); A.sfx('guard-whered-he-go_zHLpH97.mp3'); log(`✨ Réveil : ${up} garde(s) se relèvent, ★★ → ★`, 'sys'); toast(`✨ Réveil (zones actives) : ${up} garde(s) ★ se relèvent, les ★★ passent à ★. Fais pareil sur le plateau.`, 4500); }
         if (v === 'radio') { A.sfx('guard-return-to-your-positions_9aocsFp.mp3'); log('📻 Radio-In', 'sys'); toast('📻 Radio-In : complète chaque zone active jusqu\'au Guard Count du Barracks (icône radio). ＋💂 pour les poser à l\'écran.', 5000); }
         if (v === 'lost') { const n = Math.floor(g.dead / 3); if (g.deck) { g.deck.drawn += n; g.deck.burned += n; } log(`☠ Lost Contact : ${n} carte(s) brûlée(s)`, 'sys'); toast(n ? `☠ Lost Contact : ${n} carte(s) brûlée(s). Si l'une est GAME OVER → perdu !` : '☠ Lost Contact : moins de 3 morts, rien.', 4500); }
         if (v === 'stay') { log('❓ Stay Alert', 'sys'); toast('❓ Stay Alert : tout joueur à ≤ 2 cases d\'un garde (sans obstacle) pose son jeton ? (bouton « ? » sur sa fiche).', 5000); }
         g.step = 2; break;
       }
-      case 'cam': if (v === 'flip') { g.cam = g.cam === 'vert' ? 'orange' : 'vert'; A.sfx(AU().camRotate); g.pieces.forEach(x => { if (x.k === 'cam') { const o = ['up', 'right', 'down', 'left']; x.f = o[(o.indexOf(x.f || 'down') + 1) % 4]; } }); log('📹 Les caméras pivotent', 'sys'); } g.step = 3; break;
+      case 'cam': if (g.grid) { if (v === 'flip') { g.cam = g.cam === 'vert' ? 'orange' : 'vert'; A.sfx(AU().camRotate); log('📹 Les caméras pivotent', 'sys'); camCheck(m, g); } g.step = 3; break; }
+        if (v === 'flip') { g.cam = g.cam === 'vert' ? 'orange' : 'vert'; A.sfx(AU().camRotate); g.pieces.forEach(x => { if (x.k === 'cam') { const o = ['up', 'right', 'down', 'left']; x.f = o[(o.indexOf(x.f || 'down') + 1) % 4]; } }); log('📹 Les caméras pivotent', 'sys'); } g.step = 3; break;
       case 'camSeen': { const q = g.players[+v]; A.sfx(AU().camSpot); setTimeout(() => { setAtt(g, q, 2, 'vu par une caméra'); save(); render(); }, 700); break; }
       case 'seen': { const q = g.players[+v]; A.sfx('guard-there-he-is_JHZ7rPO.mp3'); setAtt(g, q, 2, 'vu par un garde'); ui.sel = null; openPad({ kind: 'guardAtk', victim: q.name, def: defOf(q.name), fixed: ['b', 'b'], title: `👁️ Le garde attaque ${q.name} : lance 2 dés noirs`, hint: 'Focus possible : modifie la valeur avant de la taper.', defLabel: `de ${q.name}` }); break; }
       case 'react': A.sfx('guard-what-was-that-noise_IVtXtq7.mp3'); log('🃏 Guard Reaction', 'sys'); toast('🃏 Guard Reaction : pioche une carte, résous chaque jeton de la case (haut → bas). Mets à jour les jetons ? / ! (touche-les sur le plan).', 5000); break;
@@ -796,7 +1147,30 @@
       case 'bd': g.boss.dmg = Math.max(0, g.boss.dmg + +v); break;
       case 'bt': g.boss.threat = Math.max(0, g.boss.threat + +v); break;
       case 'bossDown': { const d = (stageSnd(m).voices || []).find(x => /death/i.test(x[0])); A.sfx(d ? d[0] : AU().win); log('👾 Boss vaincu !', 'win'); win(m, g, 'Boss vaincu'); break; }
-      case 'nextRound': g.round++; g.phase = 0; g.step = 0; log(`— Round ${g.round} —`, 'sys'); break;
+      case 'elevGo': {
+        const W6 = world(m), from = g.elev, to = v, map = GG().elevatorMap(W6, from, to), ac = ACTS.find(x => x.id === 'elev');
+        spend(g, p, ac); A.sfx(AU().elevCall); setTimeout(() => A.sfx(AU().elevator), 700);
+        g.pieces.forEach(x => { if (x.x == null) return; const k = cellKey(x.x, x.y); if (map[k]) { const [nx, ny] = map[k].split(',').map(Number); x.x = nx; x.y = ny; } });
+        g.elev = to; ui.pend = null;
+        log(`🛗 ${p.name} : ascenseur ${from} → ${to}`, '', p.name); toast(`🛗 L'ascenseur part vers <b>${to}</b>. Déplace l'ascenseur et les figurines dedans sur le vrai plateau.`, 4000);
+        break;
+      }
+      case 'edit': undo.pop(); ui.edit = ui.edit ? null : 'wall'; render(); return;
+      case 'editMode': undo.pop(); ui.edit = v; render(); return;
+      case 'editReset': undo.pop(); if (confirm('Effacer toutes tes corrections de ce plan ?')) { LS.set('mgsg.fix.' + m.id, { walls: [], cells: {} }); delete worlds[m.id]; render(); } return;
+      case 'editExport': { undo.pop(); const t = JSON.stringify({ mission: m.id, fix: fixOf(m) }); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast('📤 Corrections copiées : colle-les-moi pour que je les intègre au plan.', 4000), () => prompt('Copie ces corrections :', t)); return; }
+      case 'los': undo.pop(); st.showLOS = !st.showLOS; save(); render(); return;
+      case 'card': g.card[b.dataset.k] = b.dataset.k === 'arrow' ? v : +v; break;
+      case 'seqStart': { const ids = GG().activationOrder(world(m), toS(g)); if (!ids.length) { toast('Aucun garde dans une zone active : rien ne bouge.'); g.step = 4; ui.seq = { ids: [], i: 0 }; } else { ui.seq = { ids, i: 0 }; log(`💂 Activation des gardes (rouge ${g.card.red}, bleu ${g.card.blue}, flèche ${g.card.arrow === 'left' ? '⟲' : '⟳'})`, 'sys'); } break; }
+      case 'seqGo': runGuard(m, g); return;
+      case 'seqSkip': ui.seq.i++; break;
+      case 'react': { const tid = b.dataset.t, tk = piece(tid); if (tk) { const pl = tk.owner && g.players.find(x => x.name === tk.owner);
+          if (v === 'rm') { if (pl) setAtt(g, pl, 0, null, true); else g.pieces = g.pieces.filter(x => x.id !== tid); log('🃏 Guard Reaction : jeton retiré', 'sys'); }
+          if (v === 'up' && pl) setAtt(g, pl, 2, 'Guard Reaction', true);
+          if (v === 'wake') { tk.k = 'guard'; tk.f = tk.f || 'down'; log('🃏 Guard Reaction : garde réveillé', 'sys'); } }
+        ui.react.tokens = ui.react.tokens.filter(x => x.id !== tid); if (!ui.react.tokens.length) ui.react = null; break; }
+      case 'reactDone': ui.react = null; break;
+      case 'nextRound': ui.seq = null; ui.react = null; g.round++; g.phase = 0; g.step = 0; log(`— Round ${g.round} —`, 'sys'); break;
       case 'event': { const ev = (m.events || []).find(x => x.k === v); g.ev[v] = !g.ev[v]; if (g.ev[v]) { A.sfx(AU()[(stageSnd(m).events || {})[v] || 'pop'] || AU().pop); log(`🅰️ Event ${v} atteint`, 'sys'); toast(`<span class="ma-ev">${v}</span> ${ev ? ev.d : ''}`, 6500); } break; }
       case 'cue': A.music(v, 'mission'); break;
       case 'win': win(m, g, 'Objectif rempli'); break;
