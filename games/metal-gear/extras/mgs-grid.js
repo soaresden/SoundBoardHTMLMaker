@@ -294,5 +294,5 @@
     return m;
   }
   const shaftAdjacent = (W, x, y) => { const out = new Set(); ORDER.forEach(d => { const [dx, dy] = DIRS[d]; const k = K(x + dx, y + dy); if (W.shaftOf[k] && !wallBetween(W, { x, y }, { x: x + dx, y: y + dy })) out.add(W.shaftOf[k]); }); return [...out]; };
-  window.MGSGrid = { elevatorMap, shaftAdjacent, build, pix, code, zoneOf, walkable, los, watchers, stepFrom, reach, shortest, activate, activationOrder, activeZones, stayAlert, guardInZone, behindTargets, adjacentTargets, losTargets, camFacing, dirOf, DIRS, ORDER, K };
+  window.MGSGrid = { wallBetween, elevatorMap, shaftAdjacent, build, pix, code, zoneOf, walkable, los, watchers, stepFrom, reach, shortest, activate, activationOrder, activeZones, stayAlert, guardInZone, behindTargets, adjacentTargets, losTargets, camFacing, dirOf, DIRS, ORDER, K };
 })();

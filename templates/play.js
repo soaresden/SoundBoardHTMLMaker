@@ -498,7 +498,7 @@
       return true;
     },
     playSfx(file, vol) {
-      const t = sfxs.find(x => x.file === file);
+      const t = sfx.find(x => x.file === file);
       playSfx(file, vol != null ? vol : (t ? t.volume : 1));
     },
     stopMusic, stopAll,

@@ -52,6 +52,46 @@
     if (m.id === 'VR60') blue = 17 + Math.max(0, n - 1);
     return { red: r ? +r : 7, blue, drawn: 0, burned: 0 };
   }
+  /* 🎒 Équipement : cartes de départ du personnage + cartes numérotées de la Memory Box (#001…) */
+  const ITYPES = { ration: ['🍴', 'Ration', 1], chaff: ['✨', 'Chaff', 1], grenade: ['💣', 'Grenade', 1], gun: ['🔫', 'Arme', null], sgun: ['🔇', 'Arme silencieuse', null], other: ['🎒', 'Autre', null] };
+  const START_GEAR = {
+    'Meryl': [['Handgun .50 Cal', 'gun'], ['Light Assault Rifle', 'gun']],
+    'Gray Fox': [['Stealth Camouflage', 'other'], ['High-Frequency Blade', 'other'], ['Arm Cannon', 'gun']],
+    'Otacon': [['ADV. Stealth Camouflage', 'other'], ['Rations', 'ration']],
+  };
+  const EQUIP_LIMIT = 3, BOX_MAX = 23;
+  const mkItem = (name, type, num) => ({ id: 'i' + Math.random().toString(36).slice(2, 8), name, type, num: num || null, uses: ITYPES[type][2] });
+  function startInv(m, name) {
+    const inv = (START_GEAR[name] || []).map(([n, t]) => mkItem(n, t));
+    if (m && m.id === 5) inv.push(Object.assign(mkItem('Grenades (Special Action)', 'grenade'), { uses: 2 }));
+    return inv;
+  }
+  const hasItem = (p, type) => !p.inv || p.inv.some(i => i.type === type && (i.uses == null || i.uses > 0));
+  function useItem(p, type) {
+    if (!p.inv) return;
+    const it = p.inv.find(i => i.type === type && (i.uses == null || i.uses > 0)); if (!it || it.uses == null) return;
+    it.uses--;
+    if (it.uses <= 0) { p.inv = p.inv.filter(x => x !== it); toast(`${ITYPES[type][0]} <b>${esc(it.name)}</b> épuisé : défausse la carte (elle reste dans la Memory Box).`, 3500); }
+  }
+  function invChips(p) {
+    if (!p.inv) return '<span style="opacity:.6">équipement non renseigné</span>';
+    return p.inv.length ? p.inv.map(i => `<span class="chip ${i.uses === 0 ? 'off' : ''}">${ITYPES[i.type][0]} ${esc(i.name)}${i.uses != null ? ' ×' + i.uses : ''}</span>`).join('') : '<span style="opacity:.6">aucun objet</span>';
+  }
+  function invEditor(m, g, only) {
+    const box = LS.get('mgsg.cards', {});
+    const pend = ui.cardAsk;
+    return g.players.map((p, pi) => { if (only != null && pi !== only) return '';
+      p.inv = p.inv || [];
+      const cards = p.inv.filter(i => i.num).length;
+      return `<div class="ma-inv"><div class="ma-inv-h">${CE[p.name] || ''} <b>${p.name}</b><span style="flex:1"></span><span class="${cards > EQUIP_LIMIT ? 'warn' : ''}" style="opacity:.8;font-size:.85rem">cartes Memory Box : ${cards}/${EQUIP_LIMIT}</span></div>
+        <div>${p.inv.map(i => `<span class="chip">${ITYPES[i.type][0]} ${esc(i.name)}${i.num ? ` <small>#${String(i.num).padStart(3, '0')}</small>` : ''}${i.uses != null ? ` <button class="ma-mini" data-a="invUse" data-p="${pi}" data-i="${i.id}" data-v="-1">−</button><b>${i.uses}</b><button class="ma-mini" data-a="invUse" data-p="${pi}" data-i="${i.id}" data-v="1">＋</button>` : ''} <button class="ma-mini red" data-a="invRm" data-p="${pi}" data-i="${i.id}">✕</button></span>`).join('') || '<span style="opacity:.6">rien pour l\'instant</span>'}</div>
+        <div class="ma-inv-add"><span style="opacity:.75">＋ objet :</span>${Object.entries(ITYPES).map(([k, t]) => `<button class="ma-b sm" data-a="invAdd" data-p="${pi}" data-v="${k}">${t[0]} ${t[1]}</button>`).join('')}</div>
+        <div class="ma-inv-add"><span style="opacity:.75">📦 Memory Box :</span>${Array.from({ length: BOX_MAX }, (_, k) => { const n = k + 1, got = p.inv.some(i => i.num === n), kn = box[n];
+          return `<button class="ma-b sm num ${got ? 'on' : ''}" data-a="invCard" data-p="${pi}" data-v="${n}" title="${kn ? esc(kn.name) : 'type inconnu'}">${kn ? ITYPES[kn.type][0] : ''}#${String(n).padStart(3, '0')}</button>`; }).join('')}</div>
+        ${pend && pend.p === pi ? `<div class="ma-ask"><p>Carte <b>#${String(pend.n).padStart(3, '0')}</b> : qu'est-ce que c'est ? (je m'en souviendrai pour les prochaines missions)</p>${Object.entries(ITYPES).map(([k, t]) => `<button class="ma-b sm" data-a="invCardType" data-v="${k}">${t[0]} ${t[1]}</button>`).join(' ')} <button class="ma-b sm red" data-a="invCardNo">Annuler</button></div>` : ''}
+      </div>`;
+    }).join('');
+  }
   function newGame(m, n) {
     const L = m.legend || {};
     const pieces = [];
@@ -61,7 +101,7 @@
     if (isBoss(m)) pieces.push({ id: 'boss', k: 'boss', x: null, y: null, f: 'down' });
     const obj = {
       n, started: false, t0: null, t1: null, round: 1, phase: 0, step: 0, cur: 0,
-      players: pchars(m, n).map(name => ({ name, left: 4, noisy: 0, dmg: 0, att: 0, done: false, hurt: false, water: false, sneakUsed: false,
+      players: pchars(m, n).map(name => ({ name, inv: startInv(m, name), left: 4, noisy: 0, dmg: 0, att: 0, done: false, hurt: false, water: false, sneakUsed: false,
         s: { act: 0, move: 0, atk: 0, hit: 0, dmgIn: 0, alerts: 0, noise: 0, ko: 0, kill: 0 } })),
       deck: isSneak(m) ? parseDeck(m, n) : null, cam: 'vert', boss: { dmg: 0, threat: 0, cards: 0 },
       ko2: 0, ko1: 0, dead: 0, pieces, ev: {}, over: null, why: '', log: [], alerts: 0,
@@ -72,7 +112,8 @@
   const game = () => {
     const m = mission(); if (!m) return null;
     if (!st.games[m.id] || st.games[m.id].n !== st.n) st.games[m.id] = newGame(m, st.n);
-    return st.games[m.id];
+    const gg = st.games[m.id]; if (!gg.started) gg.players.forEach(p => { if (!p.inv) p.inv = startInv(m, p.name); });
+    return gg;
   };
   function log(txt, kind = '', who = '') {
     const g = game(); if (!g) return;
@@ -91,8 +132,8 @@
     },
     sfx(file) {
       if (!file) return;
-      if (window.SB) window.SB.playSfx(file);
-      else { const a = new Audio('sfx/' + file); a.volume = this.vol; a.play().catch(() => {}); }
+      try { if (window.SB) return window.SB.playSfx(file); } catch (e) { console.warn('SB.playSfx', e); }
+      const a = new Audio('sfx/' + file); a.volume = this.vol; a.play().catch(() => {});
     },
     stop() { this.cur = null; this.mode = null; if (window.SB) window.SB.stopMusic(); else if (this.own) this.own.pause(); bar(); },
   };
@@ -149,7 +190,7 @@
       else if (p.k === 'q' || p.k === 'a') tokens.push({ id: p.id, kind: p.k === 'q' ? '?' : '!', owner: p.owner, x: p.x, y: p.y });
       else tokens.push({ id: p.id, kind: p.k, x: p.x, y: p.y });
     });
-    return { elev: !!g.elev, doors: g.doors || {}, figs, cams, tokens, camColor: g.cam || 'vert' };
+    return { elev: g.elev || false, doors: g.doors || {}, figs, cams, tokens, camColor: g.cam || 'vert' };
   }
   const cellKey = (x, y) => x + ',' + y;
   const ROTD = { up: 0, right: 90, down: 180, left: 270 };
@@ -206,7 +247,7 @@
         <button class="ma-b sm ${ui.edit ? 'on' : ''}" data-a="edit" title="Corriger les murs et obstacles du plan">✏️ Corriger</button>
         ${ui.edit ? `<button class="ma-b sm ${ui.edit === 'wall' ? 'on' : ''}" data-a="editMode" data-v="wall">🧱 Mur</button><button class="ma-b sm ${ui.edit === 'cell' ? 'on' : ''}" data-a="editMode" data-v="cell">🟥 Obstacle</button><button class="ma-b sm" data-a="editExport">📤 Exporter</button><button class="ma-b sm red" data-a="editReset">↺</button>` : ''}
         <span style="flex:1;opacity:.85;font-size:.9rem">${info}</span></div>
-      <div class="ma-bds"><svg class="ma-svg" id="maSvg" viewBox="0 0 ${d.w} ${d.h}" style="width:${Math.round(100 * (st.zoom || 1))}%"><image href="${d.img}" width="${d.w}" height="${d.h}"/>
+      <div class="ma-bds"><svg class="ma-svg" id="maSvg" viewBox="0 0 ${d.w} ${d.h}" preserveAspectRatio="xMidYMid meet" style="${(st.zoom || 1) > 1 ? `width:${Math.round(100 * st.zoom)}%;height:auto` : 'width:100%;height:100%'}"><image href="${d.img}" width="${d.w}" height="${d.h}"/>
         <g>${cells.join('')}</g><g>${hl.join('')}</g><g>${pcs}</g></svg></div></div>`;
   }
   function svgPoint(svg, e) { const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY; return pt.matrixTransform(svg.getScreenCTM().inverse()); }
@@ -224,7 +265,8 @@
       const pc = e.target.closest('[data-pc]');
       const u = svgPoint(svg, e); const c = cellAt(m, u.x, u.y);
       if (ui.edit && c) return editAt(m, c, u);
-      if (pc && !(ui.pend && ui.pend.type === 'move') && !ui.place) return gridTapPiece(piece(pc.dataset.pc), c);
+      const pcp = pc && piece(pc.dataset.pc), mine = pcp && pcp.k === 'player' && g.players[g.cur] && g.players[g.cur].name === pcp.owner;
+      if (pc && (!(ui.pend && ui.pend.type === 'move') || mine) && !ui.place) return gridTapPiece(pcp, c);
       if (c) gridTapCell(c);
     });
   }
@@ -241,13 +283,24 @@
     const g = game();
     if (ui.pend && ui.pend.type === 'target') { if (ui.pend.ids.includes(p.id)) return chooseTarget(p); toast('Ce n\'est pas une cible valable (encadrées en rouge).'); return; }
     if (ui.sel && ui.sel !== p.id && c) return gridTapCell(c);
+    if (p.k === 'player' && st.screen === 'play' && g.phase === 1 && g.players[g.cur] && g.players[g.cur].name === p.owner && !ui.pad) {
+      if (ui.pend) ui.pend = null; else if (!armMove(mission(), g, g.players[g.cur], 'sneak')) toast('Plus de déplacement possible.');
+      ui.sel = null; render(); return;
+    }
     ui.sel = ui.sel === p.id ? null : p.id;
     if (p.k === 'player' && st.screen === 'play' && g.phase === 1) { const i = g.players.findIndex(x => x.name === p.owner); if (i >= 0 && !g.players[i].done && i !== g.cur) { g.cur = i; ui.sel = null; } }
     render();
   }
   function gridTapCell(c) {
     const m = mission(), g = game(), W = world(m), S = toS(g), k = cellKey(c.x, c.y);
-    if (ui.pend && ui.pend.type === 'move') { if (ui.pend.cells[k]) return gridMove(c, ui.pend.cells[k]); toast('Case hors de portée (cases vertes).'); return; }
+    if (ui.pend && ui.pend.type === 'move') {
+      if (ui.busy) return;
+      if (ui.pend.cells && ui.pend.cells[k]) return gridMove(c, ui.pend.cells[k]);
+      const me = playerPiece(g, g.players[g.cur].name);
+      if (me && me.x === c.x && me.y === c.y) { ui.pend = null; render(); return; }
+      toast('Case hors de portée (cases vertes).'); return;
+    }
+    if (!ui.place && !ui.sel && !ui.pend && st.screen === 'play' && g.phase === 1 && g.players[g.cur]) { const me = playerPiece(g, g.players[g.cur].name); if (me && me.x === c.x && me.y === c.y) return gridTapPiece(me, c); }
     if (ui.place) { if (!GG().walkable(W, S, c.x, c.y)) return; snap(); const p = piece(ui.place); p.x = c.x; p.y = c.y; ui.place = null; save(); render(); return; }
     if (ui.sel) { const p = piece(ui.sel); if (p && GG().walkable(W, S, c.x, c.y)) { snap(); p.x = c.x; p.y = c.y; if (p.k === 'player') followTokens(g, p.owner); log(`✋ Pion corrigé : ${p.k === 'player' ? p.owner : p.k} → ${k}`, 'sys'); save(); } ui.sel = null; render(); }
   }
@@ -260,10 +313,35 @@
     if (el && px) { el.style.transition = `transform ${ms}ms cubic-bezier(.4,.1,.3,1)`; el.style.transform = `translate(${px.cx}px,${px.cy}px)`; if (f) { const r = el.querySelector('.grot'); if (r) r.style.transform = `rotate(${ROTD[f]}deg)`; } }
     await sleep(ms);
   }
+  function armMove(m, g, p, id) {
+    const a = ACTS.find(q => q.id === id), pp = playerPiece(g, p.name);
+    if (!a || a.c > p.left || !pp || pp.x == null) return false;
+    const S = toS(g), cells = GG().reach(world(m), S, S.figs.find(f => f.id === pp.id), a.move);
+    if (!Object.keys(cells).length) return false;
+    ui.pend = { type: 'move', act: id, cells }; return true;
+  }
+  // une action est-elle jouable maintenant ? → null, sinon la raison (plateau quadrillé)
+  function whyNot(m, g, p, a) {
+    if (a.c > p.left) return 'plus assez de points';
+    if (a.need && !hasItem(p, a.need)) return { ration: 'pas de ration', chaff: 'pas de chaff', grenade: 'pas de grenade', gun: 'pas d\'arme', sgun: 'pas d\'arme silencieuse' }[a.need];
+    if (!isGrid(m)) return null;
+    const pp = playerPiece(g, p.name); if (!pp || pp.x == null) return a.move || a.atk ? 'pion pas posé' : null;
+    const W = world(m), S = toS(g), me = S.figs.find(f => f.id === pp.id), here = cellKey(pp.x, pp.y);
+    const near = ks => g.pieces.some(x => ks.includes(x.k) && x.x != null && Math.abs(x.x - pp.x) + Math.abs(x.y - pp.y) <= 1 && !GG().wallBetween(W, x, pp));
+    if (a.gun && W.noFire.has(here)) return 'No Fire Zone';
+    if (a.id === 'sneak' || a.id === 'dash') return Object.keys(GG().reach(W, S, me, a.move)).length ? null : 'bloqué';
+    if (a.id === 'drag' || a.id === 'disguise') return near(['ko1', 'ko2', 'dead']) ? null : 'aucun corps à côté';
+    if (a.id === 'h2h' || a.id === 'combo') return GG().adjacentTargets(W, S, me).length ? null : 'aucun garde à côté';
+    if (a.id === 'silent') return GG().behindTargets(W, S, me).length ? null : 'pas dans le dos d\'un garde';
+    if (a.id === 'shoot' || a.id === 'shootS') return GG().losTargets(W, S, me).length ? null : 'aucune cible en vue';
+    if (a.id === 'elev') return W.shaftOf[here] || GG().shaftAdjacent(W, pp.x, pp.y).length ? null : 'pas d\'ascenseur ici';
+    return null;
+  }
   async function gridMove(dest, info) {
     const m = mission(), g = game(), W = world(m), p = g.players[g.cur], a = ACTS.find(q => q.id === ui.pend.act);
     const pp = playerPiece(g, p.name); if (!pp) return;
     snap(); ui.pend = null; ui.busy = true;
+    const pp0 = { x: pp.x, y: pp.y };
     spend(g, p, a); p.s.move++;
     const kind = a.id === 'dash' ? 'dash' : 'sneak';
     const seenBy = new Map(); const leaps = [];
@@ -292,7 +370,13 @@
       openPad(ui.queue.shift());
     }
     if ((d.exits || []).some(e => e[0] === dest.x && e[1] === dest.y)) setTimeout(() => toast('🚪 <b>Sur la sortie !</b> Termine ton tour ici pour valider l\'objectif (si les conditions sont remplies).', 5000), 600);
-    if (a.noisy && !leaps.length) toast(`${a.i} <b>${a.n}</b> : 🔊 bruyant → noise check à la fin de ton tour.`);
+    // fin de course contre un mur / obstacle → « on the wall »
+    const last = info.path[info.path.length - 1], prev = info.path.length > 1 ? info.path[info.path.length - 2] : { x: pp0.x, y: pp0.y };
+    const [ddx, ddy] = GG().DIRS[GG().dirOf(prev, last)], nx = { x: last.x + ddx, y: last.y + ddy };
+    if (!GG().walkable(W, toS(g), nx.x, nx.y) || GG().wallBetween(W, last, nx)) setTimeout(() => A.sfx(AU().wall), 120);
+    if (a.noisy && !leaps.length && p.noisy === a.c) toast(`${a.i} <b>${a.n}</b> : 🔊 bruyant → noise check à la fin de ton tour.`);
+    ui.lastMove = a.id;
+    if (!ui.pad && !g.over && (a.id === 'sneak' || a.id === 'dash')) armMove(m, g, p, a.id);
     save(); render();
   }
   function triggerEvent(m, g, k) {
@@ -404,6 +488,7 @@
   #mgsA{position:fixed;inset:0;z-index:99995;display:none;flex-direction:column;color:#e6eaff;font:15px/1.45 "Segoe UI",system-ui,sans-serif;
     background:radial-gradient(1100px 600px at 50% -12%,rgba(92,140,255,.30),transparent 62%),radial-gradient(700px 500px at 92% 18%,rgba(138,92,255,.18),transparent 60%),#080b22}
   #mgsA.show{display:flex} #mgsA *{box-sizing:border-box} #mgsA b{color:#fff}
+  #mgsA{height:100dvh}
   .ma-h{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:8px 10px;padding-top:calc(8px + env(safe-area-inset-top));border-bottom:1px solid #26306a;background:rgba(8,10,32,.75)}
   .ma-h .lg{font:900 1rem system-ui;letter-spacing:1px;color:#9ec0ff;white-space:nowrap;margin-right:4px}
   .ma-h .ttl{font:800 1.05rem system-ui;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
@@ -475,7 +560,16 @@
   .ma-acts{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px}
   .ma-act{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:60px;border-radius:12px;border:1px solid #2f3a80;background:#141a46;color:#fff;font:700 12.5px system-ui;cursor:pointer;padding:5px}
   .ma-act .i{font-size:21px} .ma-act small{color:#9aa6d6;font-weight:600}
-  .ma-act.loud{border-color:#a3304a}.ma-act.noisy{border-color:#9a6a2a}.ma-act:disabled{opacity:.3}
+  .ma-act.loud{border-color:#a3304a}.ma-act.noisy{border-color:#9a6a2a}.ma-act:disabled{opacity:.32;filter:grayscale(1)}
+  .ma-act:disabled small{color:#ff9aa5}
+  .ma-inv{padding:6px 0;border-bottom:1px dashed #26306a}.ma-inv:last-child{border-bottom:0}
+  .ma-inv-h{display:flex;align-items:center;gap:6px;margin-bottom:3px}.ma-inv-h .warn{color:#ff8a96!important;opacity:1!important}
+  .ma-inv-add{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:4px}.ma-inv-add .num{min-width:0;padding:3px 6px;font-size:.8rem}
+  .ma-invl{display:flex;flex-wrap:wrap;gap:2px;align-items:center;margin:4px 0;font-size:.9rem}.ma-invl .chip{padding:1px 8px;font-size:.8rem}
+  .ma-mini{border:1px solid #39407a;background:#1a2150;color:#fff;border-radius:7px;min-width:24px;height:24px;padding:0 5px;margin:0 2px;font:700 13px system-ui;cursor:pointer}
+  .ma-mini.red{border-color:#a3304a;color:#ff9aa5}.ma-mini.on{background:#2f4bd0}
+  .ma-act.on{background:#1f7a4a;border-color:#3dffa0;box-shadow:0 0 0 2px #3dffa0 inset}
+  .ma-mv{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0;padding:6px 8px;border-radius:10px;background:rgba(61,255,160,.12);border:1px solid #3dffa0}
   .ma-att{display:flex;gap:6px;align-items:center;margin:6px 0;flex-wrap:wrap}
   .ma-att .q.on{background:#1f8bff;border-color:#cfe6ff}.ma-att .a.on{background:#e01f35;border-color:#ffd0d6}
   .ma-hp{display:flex;gap:3px}.ma-hp i{width:16px;height:16px;border-radius:4px;background:#e01f35}.ma-hp i.d{background:#2a2f55}
@@ -538,7 +632,30 @@
   .ma-svg .gp.sel circle,.ma-svg .gp.sel rect{stroke:#fff!important;stroke-width:5}
   .ma-svg .gp.cur circle{animation:gcur 1.2s infinite}
   @keyframes gpul{to{opacity:.55}} @keyframes gcur{50%{stroke:#ffd166;stroke-width:7}}
-  @media (max-width:900px){.ma-play{grid-template-columns:1fr}.ma-bd{position:static}.ma-bds{max-height:52vh}}
+  .ma-c.fit{overflow:hidden;padding:6px 8px}
+  .ma-c.fit .ma-play{height:100%;grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);gap:8px}
+  .ma-c.fit .ma-play>div{min-height:0;height:100%;overflow:auto;-webkit-overflow-scrolling:touch}
+  .ma-c.fit .ma-play>div:first-child{overflow:hidden}
+  .ma-c.fit .ma-bd{height:100%;display:flex;flex-direction:column;position:static;padding:6px}
+  .ma-c.fit .ma-bdt{margin-bottom:4px}
+  .ma-c.fit .ma-bds{flex:1;min-height:0;max-height:none}
+  .ma-c.fit .ma-play>div:first-child>p{display:none}
+  .ma-c.fit .ma-card{margin:6px 0;padding:8px 10px}
+  .ma-c.fit .ma-hud{margin-bottom:4px}.ma-c.fit .ma-hud .pill{padding:4px 8px}
+  .ma-c.fit .ma-ph{margin:4px 0}.ma-c.fit .ma-ph .ma-b{min-height:34px}
+  .ma-c.fit .ma-deck i{height:12px;width:8px}
+  .ma-c.fit .ma-p{padding:8px 10px}.ma-c.fit .ma-p h5{font-size:1.02rem}
+  .ma-c.fit .ma-tok{margin:4px 0}.ma-c.fit .ma-tok i{width:22px;height:22px}
+  .ma-c.fit .ma-att{margin:4px 0}
+  .ma-c.fit .ma-acts{grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:4px}
+  .ma-c.fit .ma-act{min-height:40px;font-size:11px;padding:2px 3px;border-radius:9px;line-height:1.1}.ma-c.fit .ma-act .i{font-size:16px}.ma-c.fit .ma-act small{font-size:9.5px}
+  .ma-c.fit .ma-p>p{display:none}.ma-c.fit .ma-mv{margin:4px 0;padding:3px 6px}
+  .ma-c.fit .ma-step{padding:6px 8px;margin:5px 0}.ma-c.fit .ma-step .k{flex-basis:28px;height:28px}
+  .ma-c.fit .ma-kp .ma-b{min-height:44px}.ma-c.fit .ma-die{width:44px;height:44px;font-size:20px}
+  .ma-rot{display:none;position:absolute;inset:0;z-index:20;background:rgba(6,8,26,.97);align-items:center;justify-content:center;text-align:center;font:600 1.1rem system-ui}
+  .ma-rot div{font-size:3rem;line-height:1.3}.ma-rot b{font-size:1.4rem}.ma-rot span{font-size:1rem;opacity:.75}
+  @media (orientation:portrait) and (pointer:coarse){#mgsA[data-screen="play"] .ma-rot,#mgsA[data-screen="setup"] .ma-rot{display:flex}}
+  @media (max-width:900px){.ma-play{grid-template-columns:1fr}.ma-bd{position:static}.ma-bds{max-height:52vh}.ma-c.fit .ma-play{grid-template-columns:minmax(0,1.4fr) minmax(260px,1fr)}.ma-c.fit .ma-bds{max-height:none}}
   @media (max-width:640px){.ma-h .lg{display:none}}
   `;
 
@@ -551,6 +668,7 @@
     root.innerHTML = `<div class="ma-h"><span class="lg">◤ MGS</span><button class="ma-b sm" id="maHome" title="Missions">🗂️</button><span class="ttl" id="maTtl"></span>
         <button class="ma-b sm" id="maLog" title="Journal de la partie">📜</button><button class="ma-b sm" id="maSnd" title="Sons (manuel)">🔊</button><button class="ma-b sm" id="maHelp" title="Aide animée">❓</button><button class="ma-b sm red" id="maX" title="Fermer">✕</button></div>
       <div class="ma-steps" id="maSteps"></div><div class="ma-c" id="maBody"></div>
+      <div class="ma-rot"><div>📱↻<br><b>Tourne la tablette en paysage</b><br><span>le plateau tient alors en entier à l'écran</span></div></div>
       <div class="ma-bar"><span class="np" id="maNp">♪ —</span><button class="ma-b sm" id="maAuto">🎬 Auto</button><button class="ma-b sm" id="maStop" title="Stop musique">⏹</button></div>`;
     document.body.appendChild(root);
     body = $('#maBody', root);
@@ -590,9 +708,16 @@
     $('#maSteps', root).style.display = m && st.screen !== 'home' ? '' : 'none';
     $('#maSteps', root).innerHTML = SCR.map(([k, t]) => `<button class="ma-b ${st.screen === k ? 'on' : ''}" data-go="${k}">${t}</button>`).join('');
     $('#maTtl', root).textContent = m && st.screen !== 'home' ? `${typeof m.id === 'number' ? 'Stage ' + m.id : m.id} · ${m.name}` : 'Assistant de partie';
+    const fit = (st.screen === 'play' || st.screen === 'setup') && m && isGrid(m);
+    body.classList.toggle('fit', !!fit); root.dataset.screen = st.screen;
+    // garde la position de défilement (page, plateau, panneau) : un tap ne doit jamais faire « remonter » l'écran
+    const keep = [body, ...body.querySelectorAll('.ma-bds, .ma-play>div')].map(el => [el.scrollTop, el.scrollLeft]);
+    const same = keepScr === st.screen; keepScr = st.screen;
     ({ home: vHome, brief: vBrief, rules: vRules, setup: vSetup, play: vPlay, debrief: vDebrief, log: vLog, snd: vSnd }[st.screen] || vHome)(m);
+    if (same) [body, ...body.querySelectorAll('.ma-bds, .ma-play>div')].forEach((el, i) => { if (keep[i]) { el.scrollTop = keep[i][0]; el.scrollLeft = keep[i][1]; } });
     bar();
   }
+  let keepScr = null;
 
   /* ======================= 🗂️ Missions ======================= */
   function vHome() {
@@ -729,6 +854,7 @@
       <div class="ma-play"><div>${boardHtml(m, g, 'setup')}<p style="opacity:.7;font-size:.9rem;margin:6px 2px">${g.grid ? 'Les pions sont placés comme sur le livret. Vérifie avec ton vrai plateau ; pour corriger, touche un pion puis une case (⟲⟳ pour le regard).' : 'Pose les pions comme sur le vrai plateau (zone de départ, gardes et leur regard avec ⟲⟳). Facultatif : tu peux jouer sans poser les gardes.'}</p></div>
       <div><div class="ma-card" style="margin-top:0"><h4>🧰 Matériel</h4><p>${chars.map(c => `<span class="chip">${CE[c] || ''} ${c}</span>`).join('')}</p>${m.tiles && m.tiles.length ? `<p><b>Tuiles :</b> ${m.tiles.join(', ')}</p>` : ''}${deck ? `<p><b>Guard Order :</b> ${deck}</p>` : ''}</div>
         ${selPanel(m, g)}
+        <div class="ma-card"><h4>🎒 Équipement de départ</h4><p style="opacity:.8;margin:2px 0 6px">Ajoute les cartes que chacun prend (limite ${EQUIP_LIMIT} cartes de la Memory Box, les cartes de départ du personnage en plus). Sans ration, pas d'action Ration ; sans arme, pas de tir, etc.</p>${invEditor(m, g)}</div>
         <div class="ma-card"><h4>✅ Checklist</h4><ul class="ma-chk">${stepsL.map((s, i) => `<li class="${chk[i] ? 'ok' : ''}" data-chk="${i}"><span class="bx">${chk[i] ? '✓' : ''}</span><span class="tx">${s}</span></li>`).join('')}</ul></div>
         <div class="ma-next">${g.started ? `<button class="ma-b pri big" data-go="play">▶ Retour à la partie</button>` : `<button class="ma-b pri big" data-a="start">🎬 Continuer : commencer la partie</button>`}</div></div></div>`;
     bindBoard();
@@ -756,10 +882,10 @@
     { id: 'h2h', i: '👊', n: 'Corps-à-corps', c: 1, atk: 'ko', dice: ['w'], sfx: 'punch-guard-kox1.mp3', tip: 'Cible adjacente, 1 dé blanc, dégâts KO.' },
     { id: 'combo', i: '🥊', n: 'Combo', c: 2, atk: 'ko', dice: ['w', 'w', 'b'], sfx: 'knock-out-guard-kox2.mp3', tip: 'Cible adjacente, 2 blancs + 1 noir, dégâts KO.' },
     { id: 'silent', i: '🤫', n: 'Élim. silencieuse', c: 2, only: 'Snake', atk: 'silent', sfx: 'mgs-silent-takedown.mp3', tip: 'DANS LE DOS d\'un garde adjacent → jeton Mort, sans bruit.' },
-    { id: 'shoot', i: '🔫', n: 'Tir', c: 1, atk: 'kill', dice: null, loud: 1, gun: 1, sfx: 'mgs-socom.mp3', tip: 'LOUD (sauf si la carte dit silencieux). Lance les dés de la carte.' },
-    { id: 'shootS', i: '🔇', n: 'Tir silencieux', c: 1, atk: 'kill', dice: null, gun: 1, sfx: 'mgs-socom-silenced.mp3', tip: 'Silencieux : vérifie sur la carte.' },
-    { id: 'gren', i: '💣', n: 'Grenade', c: 1, loud: 1, gun: 1, sfx: 'mgs-grenade.mp3', then: 'mgs-explosion.mp3', tip: 'LOUD → ! sous toi. Effet : voir la carte.' },
-    { id: 'chaff', i: '✨', n: 'Chaff', c: 1, gun: 1, auto: 'chaff', thenAuto: 'chaffJam', tip: 'Voir la carte Équipement.' },
+    { id: 'shoot', i: '🔫', n: 'Tir', c: 1, need: 'gun', atk: 'kill', dice: null, loud: 1, gun: 1, sfx: 'mgs-socom.mp3', tip: 'LOUD (sauf si la carte dit silencieux). Lance les dés de la carte.' },
+    { id: 'shootS', i: '🔇', n: 'Tir silencieux', c: 1, need: 'sgun', atk: 'kill', dice: null, gun: 1, sfx: 'mgs-socom-silenced.mp3', tip: 'Silencieux : vérifie sur la carte.' },
+    { id: 'gren', i: '💣', n: 'Grenade', c: 1, need: 'grenade', loud: 1, gun: 1, sfx: 'mgs-grenade.mp3', then: 'mgs-explosion.mp3', tip: 'LOUD → ! sous toi. Effet : voir la carte.' },
+    { id: 'chaff', i: '✨', n: 'Chaff', c: 1, need: 'chaff', gun: 1, auto: 'chaff', thenAuto: 'chaffJam', tip: 'Voir la carte Équipement.' },
     { id: 'knock', i: '✊', n: 'Toquer', c: 1, sfx: 'mgs-knock-a.mp3', att: 1, tip: 'Ton jeton ? sur ta case : le garde le plus proche viendra.' },
     { id: 'drag', i: '🫳', n: 'Traîner corps', c: 1, noisy: 1, move: 1, tip: 'Prends un KO/Mort à côté, bouge d\'1, pose-le à côté. 🔊' },
     { id: 'interact', i: '🚪', n: 'Porte / objet', c: 1, auto: 'door', tip: 'Porte verrouillée : dés du dashboard, relance en recommençant, tout dans le même tour.' },
@@ -769,7 +895,7 @@
     { id: 'search', i: '🔎', n: 'System Search', c: 1, only: 'Otacon', tip: 'Terminal piraté : pioche 1 carte System (max 3).' },
     { id: 'access', i: '⚙️', n: 'Access', c: 1, only: 'Otacon', tip: 'Jusqu\'à 4 dés noirs sur les cartes System.' },
     { id: 'focus', i: '🎯', n: 'Focus', c: 1, tip: 'Coût sur la face grise (ajoute un point si 2).' },
-    { id: 'ration', i: '🍴', n: 'Ration', c: 1, auto: 'ration', tip: 'Voir la carte.' },
+    { id: 'ration', i: '🍴', n: 'Ration', c: 1, need: 'ration', auto: 'ration', tip: 'Voir la carte.' },
     { id: 'leap', i: '🤸', n: 'Saute un garde', c: 0, leap: 1, tip: 'Chaque garde sauté t\'attaque (2 dés noirs) et ton jeton passe sur !.' },
     { id: 'item', i: '🎒', n: 'Objet trouvé', c: 0, auto: 'pop', thenAuto: 'pickup', tip: 'Un objet apparaît / ramassé.' },
     { id: 'wall', i: '🧱', n: 'Dos au mur', c: 0, auto: 'wall', tip: 'Ambiance.' },
@@ -827,14 +953,23 @@
     const evs = m.events || [], cq = stageSnd(m).cues || [];
     let h = `${g.players.length > 1 ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">${g.players.map((x, i) => `<button class="ma-b sm ${i === cur ? 'on' : ''}" data-a="who" data-v="${i}">${x.done ? '✔ ' : ''}${CE[x.name] || ''} ${x.name}</button>`).join('')}</div>` : ''}
       <div class="ma-p" style="--c:${CC[p.name] || '#2a3474'}"><h5>${CE[p.name] || ''} Au tour de ${p.name}<span style="flex:1"></span><span class="ma-hp">${hp ? Array.from({ length: hp }, (_, k) => `<i class="${k < p.dmg ? 'd' : ''}"></i>`).join('') : '💔' + p.dmg}</span></h5>
-      <div class="ma-tok">${[0, 1, 2, 3].map(k => `<i class="${k < p.left ? '' : 'u'}"></i>`).join('')}<span style="flex:1;opacity:.8">${p.left} point${p.left > 1 ? 's' : ''} d'action${p.noisy ? ` · 🔊×${p.noisy}` : ''}</span><button class="ma-b sm ${p.water ? 'on' : ''}" data-a="water" title="Dans l'eau">💧</button></div>
+      <div class="ma-tok">${[0, 1, 2, 3].map(k => `<i class="${k < p.left ? '' : 'u'}"></i>`).join('')}<span style="flex:1;opacity:.8">${p.left} point${p.left > 1 ? 's' : ''} d'action${p.noisy ? ` · 🔊×${p.noisy}` : ''}</span><button class="ma-b sm ${p.water ? 'on' : ''}" data-a="water" title="Dans l'eau">💧</button>${!ui.pad && !p.ask && !(ui.pend && !(ui.pend.type === 'move' && isGrid(m))) ? `<button class="ma-b sm pri" data-a="end">🏁 Fin du tour</button>` : ''}</div>
+      <div class="ma-invl">🎒 ${invChips(p)}<button class="ma-mini ${ui.inv ? 'on' : ''}" data-a="invToggle">✏️</button></div>
+      ${ui.inv ? `<div class="ma-card" style="margin:4px 0">${invEditor(m, g, cur)}</div>` : ''}
       <div class="ma-att"><span style="opacity:.75">Attention</span><button class="ma-b sm ${p.att === 0 ? 'on' : ''}" data-a="att" data-v="0">—</button><button class="ma-b sm q ${p.att === 1 ? 'on' : ''}" data-a="att" data-v="1">?</button><button class="ma-b sm a ${p.att === 2 ? 'on' : ''}" data-a="att" data-v="2">!</button><span style="flex:1"></span><button class="ma-b sm" data-a="dmg" data-v="-1">−</button><button class="ma-b sm red" data-a="dmg" data-v="1">💥 Dégât</button></div>`;
+    const moving = ui.pend && ui.pend.type === 'move' && isGrid(m);
     if (ui.pad) h += padHtml(m, g);
-    else if (ui.pend) h += pendHtml(m, g, p);
+    else if (ui.pend && !moving) h += pendHtml(m, g, p);
     else if (p.ask) h += askHtml(p);
-    else h += `<p style="opacity:.8;margin:6px 0">Choisis une action : elle coûte des points, tu montres sur le plan, l'assistant joue le son et te guide.</p>
-      <div class="ma-acts">${actsFor(p).map(a => `<button class="ma-act ${a.loud ? 'loud' : a.noisy ? 'noisy' : ''}" data-a="act" data-v="${a.id}" ${a.c > p.left ? 'disabled' : ''}><span class="i">${a.i}</span>${a.n}<small>${a.c ? a.c + ' pt' + (a.c > 1 ? 's' : '') : 'gratuit'}${a.loud ? ' · LOUD' : a.noisy ? ' · 🔊' : ''}</small></button>`).join('')}</div>
-      <div style="margin-top:8px"><button class="ma-b pri" data-a="end">🏁 Fin du tour de ${p.name}</button></div>`;
+    else {
+      const ma = moving && ACTS.find(x => x.id === ui.pend.act);
+      h += moving ? `<div class="ma-mv">${ma.i} <b>${ma.n}</b> : 👆 touche une case verte <span style="flex:1"></span><button class="ma-b sm" data-a="undo" ${undo.length ? '' : 'disabled'}>↶ Annuler</button><button class="ma-b sm red" data-a="cancel">✕</button></div>`
+        : `<p style="opacity:.8;margin:6px 0">Choisis une action (ou touche ton pion pour marcher).</p>`;
+      const grid = isGrid(m);
+      h += `<div class="ma-acts">${actsFor(p).filter(a => !(grid && (a.id === 'leap' || a.id === 'wall'))).map(a => { const why = whyNot(m, g, p, a), on = moving && ui.pend.act === a.id;
+        return `<button class="ma-act ${a.loud ? 'loud' : a.noisy ? 'noisy' : ''} ${on ? 'on' : ''}" data-a="act" data-v="${a.id}" ${why ? 'disabled' : ''} title="${esc(why || a.tip)}"><span class="i">${a.i}</span>${a.n}<small>${why ? '⛔ ' + why : (a.c ? a.c + ' pt' + (a.c > 1 ? 's' : '') : 'gratuit') + (a.loud ? ' · LOUD' : a.noisy ? ' · 🔊' : '')}</small></button>`; }).join('')}</div>
+`;
+    }
     h += `</div>`;
     if (evs.length || cq.length) h += `<div class="ma-card"><h4>🅰️ Sur le plateau</h4><div style="display:flex;gap:6px;flex-wrap:wrap">${evs.map(e => `<button class="ma-b sm ${g.ev[e.k] ? 'on' : ''}" data-a="event" data-v="${e.k}"><span class="ma-ev">${e.k}</span>${g.ev[e.k] ? 'atteint ✔' : 'atteint ?'}</button>`).join('')}${cq.map(([f, t]) => `<button class="ma-b sm" data-a="cue" data-v="${esc(f)}">${esc(t)}</button>`).join('')}</div></div>`;
     return h;
@@ -944,6 +1079,7 @@
     log('🏆 MISSION RÉUSSIE : ' + why, 'win');
   }
   function endTurnFollow(g) {
+    ui.pend = null; ui.lastMove = null;
     const i = g.players.findIndex(x => !x.done);
     if (i >= 0) { g.cur = i; setTimeout(() => { A.sfx(AU().codec); turnBanner(`${CE[g.players[i].name] || ''} Au tour de ${g.players[i].name}`); }, 250); }
     else toast('✅ Tout le monde a joué → <b>Phase Ennemie</b>');
@@ -1009,10 +1145,8 @@
       }
       if (a.move) {
         if (!pp || pp.x == null) { toast('Pose d\'abord ton pion sur le plan.'); return false; }
-        const S = toS(g), me = S.figs.find(f => f.id === pp.id);
-        const cells = GG().reach(world(m), S, me, a.move);
-        if (!Object.keys(cells).length) { toast('Aucune case accessible.'); return false; }
-        ui.pend = { type: 'move', act: a.id, cells }; return false;
+        if (!armMove(m, g, p, a.id)) toast('Aucune case accessible.');
+        return false;
       }
       if (a.atk && !(isBoss(m) && !isSneak(m))) {
         const ids = gridTargets(m, g, p, a);
@@ -1023,7 +1157,7 @@
     if (a.move) { ui.pend = { type: 'move', act: a.id }; return false; }
     if (a.atk) {
       if (isBoss(m) && !isSneak(m) && a.atk !== 'silent') {
-        spend(g, p, a); if (a.sfx) A.sfx(a.sfx); if (a.loud) setAtt(g, p, 2, 'action LOUD');
+        spend(g, p, a); if (a.need) useItem(p, a.need); if (a.sfx) A.sfx(a.sfx); if (a.loud) setAtt(g, p, 2, 'action LOUD');
         openPad({ kind: 'boss', actor: p.name, def: bossDef(m), title: `${a.i} ${a.n} sur ${esc((m.boss || {}).name || 'le boss')}`, fixed: a.dice || null, color: 'b', defLabel: 'du boss', back: p.name === 'Snake' && !p.sneakUsed, icon: a.i });
         return true;
       }
@@ -1032,6 +1166,8 @@
     spend(g, p, a); afterSimple(g, p, a); return true;
   }
   function afterSimple(g, p, a) {
+    if (a.need) useItem(p, a.need);
+    if (a.id === 'item') ui.inv = true;
     if (a.sfx) A.sfx(a.sfx); if (a.auto) A.sfx(AU()[a.auto]);
     if (a.then) setTimeout(() => A.sfx(a.then), 900); if (a.thenAuto) setTimeout(() => A.sfx(AU()[a.thenAuto]), 900);
     log(`${a.i} ${p.name} : ${a.n}`, '', p.name);
@@ -1052,7 +1188,7 @@
   }
   function chooseTarget(tg) {
     const g = game(), m = mission(), p = g.players[g.cur], a = ACTS.find(q => q.id === ui.pend.act); snap();
-    ui.pend = null; spend(g, p, a);
+    ui.pend = null; spend(g, p, a); if (a.need) useItem(p, a.need);
     if (a.sfx) A.sfx(a.sfx);
     if (a.loud) setAtt(g, p, 2, 'action LOUD');
     if (a.atk === 'silent') { g.dead++; p.s.kill++; p.s.atk++; if (tg) { tg.k = 'dead'; tg.hurt = false; } log(`🤫 ${p.name} : élimination silencieuse`, '', p.name); toast('🤫 Garde éliminé sans bruit : remplace-le par un jeton Mort.'); save(); render(); return; }
@@ -1080,11 +1216,25 @@
       case 'unsel': ui.sel = null; render(); return;
       case 'cancel': ui.pend = null; render(); return;
       case 'pcancel': ui.pad = null; render(); return;
-      case 'undo': { const s = undo.pop(); if (s) { st.games[m.id] = JSON.parse(s); ui = { sel: null, pend: null, place: null, pad: null }; save(); syncAlert(); render(); } return; }
+      case 'undo': { const s = undo.pop(); if (s) { const lm = ui.lastMove; st.games[m.id] = JSON.parse(s); ui = { sel: null, pend: null, place: null, pad: null };
+        const g2 = game(); if (lm && isGrid(m) && g2.started && g2.phase === 1 && g2.players[g2.cur]) armMove(m, g2, g2.players[g2.cur], lm);
+        save(); syncAlert(); render(); } return; }
       case 'pk': { const pd = ui.pad; const lim = pd.fixed ? pd.fixed.length : 12; const i = pd.vals.length; if (i >= lim) return; const col = pd.fixed ? pd.fixed[i] : pd.color; if (v === '!' && col !== 'w') return; pd.vals.push(v === '!' ? '!' : +v); render(); return; }
       case 'pdel': ui.pad.vals.pop(); render(); return;
       case 'pdef': ui.pad.def = Math.max(1, Math.min(8, ui.pad.def + +v)); render(); return;
       case 'pcol': ui.pad.color = ui.pad.color === 'w' ? 'b' : 'w'; render(); return;
+      case 'invToggle': ui.inv = !ui.inv; ui.cardAsk = null; render(); return;
+      case 'invAdd': { const q = g.players[+b.dataset.p]; q.inv = q.inv || []; q.inv.push(mkItem(ITYPES[v][1], v)); save(); render(); return; }
+      case 'invRm': { const q = g.players[+b.dataset.p]; q.inv = q.inv.filter(i => i.id !== b.dataset.i); save(); render(); return; }
+      case 'invUse': { const q = g.players[+b.dataset.p], it = q.inv.find(i => i.id === b.dataset.i); if (it) it.uses = Math.max(0, it.uses + +v); save(); render(); return; }
+      case 'invCard': { const q = g.players[+b.dataset.p], n = +v; q.inv = q.inv || [];
+        if (q.inv.some(i => i.num === n)) { q.inv = q.inv.filter(i => i.num !== n); save(); render(); return; }
+        const kn = LS.get('mgsg.cards', {})[n];
+        if (kn) { q.inv.push(mkItem(kn.name, kn.type, n)); save(); } else ui.cardAsk = { p: +b.dataset.p, n };
+        render(); return; }
+      case 'invCardType': { const ca = ui.cardAsk; if (!ca) return; const box = LS.get('mgsg.cards', {}); const nm = `Carte #${String(ca.n).padStart(3, '0')} (${ITYPES[v][1]})`;
+        box[ca.n] = { type: v, name: nm }; LS.set('mgsg.cards', box); const q = g.players[ca.p]; q.inv.push(mkItem(nm, v, ca.n)); ui.cardAsk = null; save(); render(); return; }
+      case 'invCardNo': ui.cardAsk = null; render(); return;
     }
     if (!g) return;
     snap();
@@ -1113,7 +1263,7 @@
       case 'water': p.water = !p.water; if (p.water) A.sfx(AU().water); break;
       case 'att': setAtt(g, p, +v, null, true); break;
       case 'dmg': if (+v > 0) damage(m, g, p, 1, ''); else p.dmg = Math.max(0, p.dmg - 1); break;
-      case 'act': { const ac = ACTS.find(x => x.id === v); if (!ac || ac.c > p.left) { undo.pop(); return; } if (!startAct(m, g, p, ac)) undo.pop(); break; }
+      case 'act': { if (ui.pend && ui.pend.type === 'move' && ui.pend.act === v) { undo.pop(); ui.pend = null; break; } const ac = ACTS.find(x => x.id === v); if (!ac || ac.c > p.left) { undo.pop(); return; } if (!startAct(m, g, p, ac)) undo.pop(); break; }
       case 'moveNo': { const ac = ACTS.find(q => q.id === ui.pend.act); spend(g, p, ac); p.s.move++; steps(ac.id === 'dash' ? 'dash' : 'sneak', ac.move, p.water); log(`${ac.i} ${p.name} : ${ac.n}`, '', p.name); ui.pend = null; break; }
       case 'targetNo': undo.pop(); chooseTarget(null); return;
       case 'pok': applyPad(m, g); if (ui.queue && ui.queue.length) openPad(ui.queue.shift()); break;
@@ -1237,9 +1387,16 @@
     let scr = st.screen || 'home';
     if (opts.tab && map[opts.tab]) scr = map[opts.tab]; else if (opts.mid != null) scr = 'brief';
     root.classList.add('show'); document.documentElement.style.overflow = 'hidden';
+    try {
+      const de = document.documentElement;
+      if (!document.fullscreenElement && de.requestFullscreen && matchMedia('(pointer:coarse)').matches) {
+        de.requestFullscreen({ navigationUI: 'hide' }).then(() => { wentFS = true; if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {}); }).catch(() => {});
+      }
+    } catch (_) {}
     go(scr);
   }
-  function close() { root.classList.remove('show'); document.documentElement.style.overflow = ''; clearInterval(timer); clearInterval(typeTimer); }
+  let wentFS = false;
+  function close() { if (wentFS && document.fullscreenElement && document.exitFullscreen) { document.exitFullscreen().catch(() => {}); wentFS = false; } root.classList.remove('show'); document.documentElement.style.overflow = ''; clearInterval(timer); clearInterval(typeTimer); }
   window.MGSAssistant = { open, close };
   const bind = () => document.querySelectorAll('[data-mgs-assistant]').forEach(b => b.addEventListener('click', () => open()));
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind); else bind();
